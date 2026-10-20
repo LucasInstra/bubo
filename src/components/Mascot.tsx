@@ -10,6 +10,10 @@ export const MASCOT_SHAPES = [
   "hexagon",
   "cloud",
   "drop",
+  "blob",
+  "egg",
+  "diamond",
+  "star",
 ] as const;
 
 export type MascotShape = (typeof MASCOT_SHAPES)[number];
@@ -36,9 +40,23 @@ export const SHAPE_LABELS: Record<MascotShape, string> = {
   hexagon: "hexagon",
   cloud: "cloud",
   drop: "drop",
+  blob: "blob",
+  egg: "egg",
+  diamond: "diamond",
+  star: "star",
 };
 
 const TAU = Math.PI * 2;
+
+/** Mixes a hex color towards black, keeping the flat look of the body. */
+function shade(hex: string, factor: number, alpha: number): string {
+  const value = hex.replace("#", "");
+  if (value.length !== 6) return `rgba(20, 16, 32, ${alpha})`;
+  const red = Math.round(Number.parseInt(value.slice(0, 2), 16) * factor);
+  const green = Math.round(Number.parseInt(value.slice(2, 4), 16) * factor);
+  const blue = Math.round(Number.parseInt(value.slice(4, 6), 16) * factor);
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
 
 interface MascotProps {
   state: OrbState;
@@ -48,6 +66,20 @@ interface MascotProps {
   size?: number;
   boopable?: boolean;
   showMouth?: boolean;
+}
+
+function superellipse(path: Path2D, radius: number, power: number) {
+  const steps = 72;
+  for (let index = 0; index <= steps; index += 1) {
+    const angle = (index / steps) * TAU;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const x = radius * Math.sign(cos) * Math.abs(cos) ** (2 / power);
+    const y = radius * Math.sign(sin) * Math.abs(sin) ** (2 / power);
+    if (index === 0) path.moveTo(x, y);
+    else path.lineTo(x, y);
+  }
+  path.closePath();
 }
 
 function roundedPolygon(path: Path2D, points: number[][], corner: number) {
@@ -150,6 +182,38 @@ function bodyPath(shape: string, radius: number): Path2D {
       path.closePath();
       break;
 
+    case "blob":
+      superellipse(path, radius * 0.97, 3.1);
+      break;
+
+    case "egg":
+      path.ellipse(0, radius * 0.06, radius * 0.8, radius * 1.02, 0, 0, TAU);
+      break;
+
+    case "diamond":
+      roundedPolygon(
+        path,
+        [
+          [0, -radius * 1.02],
+          [radius * 0.94, 0],
+          [0, radius * 1.02],
+          [-radius * 0.94, 0],
+        ],
+        radius * 0.22,
+      );
+      break;
+
+    case "star": {
+      const points: number[][] = [];
+      for (let index = 0; index < 10; index += 1) {
+        const angle = -Math.PI / 2 + (index * Math.PI) / 5;
+        const distance = index % 2 === 0 ? radius * 1.02 : radius * 0.46;
+        points.push([Math.cos(angle) * distance, Math.sin(angle) * distance]);
+      }
+      roundedPolygon(path, points, radius * 0.1);
+      break;
+    }
+
     case "round":
     default:
       path.arc(0, 0, radius * 0.95, 0, TAU);
@@ -200,6 +264,8 @@ export function Mascot({
     let wonder = 0;
     let lastState = stateRef.current;
     let lastTime = 0;
+    let happyUntil = -1;
+    let winkUntil = -1;
 
     const onPointerMove = (event: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -211,7 +277,11 @@ export function Mascot({
     };
 
     const onPointerDown = () => {
-      if (boopable) boopRef.current = 1;
+      if (!boopable) return;
+      const now = (performance.now() - start) / 1000;
+      boopRef.current = 1;
+      happyUntil = now + 0.9;
+      winkUntil = now + 0.32;
     };
 
     window.addEventListener("pointermove", onPointerMove);
@@ -229,16 +299,24 @@ export function Mascot({
       if (current !== lastState) {
         wonder = 1;
         lastState = current;
+        if (current === "idle") boopRef.current = Math.max(boopRef.current, 0.55);
       }
       wonder *= 0.93;
       smoothed = smoothed * 0.9 + energyRef.current * 0.1;
       boopRef.current *= 0.9;
 
-      const boop = Math.sin(boopRef.current * Math.PI) * radius * 0.18;
-      const squish = Math.sin(time * (current === "thinking" ? 3.2 : 1.7));
-      const breathe = 1 + squish * 0.016 + smoothed * 0.02;
+      const boop = Math.sin(boopRef.current * Math.PI) * radius * 0.2;
+      const squish = Math.sin(time * (current === "thinking" ? 3.4 : 1.9));
+      const breathe = 1 + squish * (current === "thinking" ? 0.03 : 0.026) + smoothed * 0.03;
+      const sway = Math.sin(time * 0.9) * radius * 0.022;
       const tilt =
-        current === "thinking" ? Math.sin(time * 1.8) * 0.05 : Math.sin(time * 0.7) * 0.015;
+        current === "thinking"
+          ? Math.sin(time * 2.1) * 0.07
+          : current === "streaming"
+            ? Math.sin(time * 3) * 0.03
+            : Math.sin(time * 0.7) * 0.02;
+      const happy = Math.max(0, Math.min(1, (happyUntil - time) / 0.35));
+      const winking = winkUntil > time;
 
       const seesPointer = time - gaze.seen < 2.5;
       if (!seesPointer && time > nextWander) {
@@ -264,7 +342,11 @@ export function Mascot({
         else {
           blinkStart = -1;
           openness = 1;
-          nextBlink = time + (current === "streaming" ? 4.2 : 1.8) + Math.random() * 3.4;
+          // now and then a quick double blink, like a real face
+          nextBlink =
+            time +
+            (Math.random() < 0.28 ? 0.19 : current === "streaming" ? 4.2 : 1.8) +
+            Math.random() * (Math.random() < 0.28 ? 0.05 : 3.2);
         }
       }
 
@@ -273,7 +355,7 @@ export function Mascot({
 
       context.clearRect(0, 0, size, size);
       context.save();
-      context.translate(center, center + boop);
+      context.translate(center + sway, center + boop);
       context.rotate(tilt);
       context.scale(1 / breathe, breathe);
 
@@ -302,62 +384,62 @@ export function Mascot({
       context.fillRect(-radius * 1.4, -radius * 1.4, radius * 2.8, radius * 2.8);
       context.restore();
 
-      // eyes: a single solid highlight each, tilted inward like the reference
-      const eyeWidth = radius * 0.2;
-      const eyeHeight = radius * 0.48 * (1 + wonder * 0.1);
-      const eyeOffset = radius * 0.28;
+      // eyes: one solid capsule each, no pupil; happy turns them into arcs
+      const eyeWidth = radius * 0.225;
+      const eyeHeight = radius * 0.52 * (1 + wonder * 0.1);
+      const eyeOffset = radius * 0.285;
       const eyeY = radius * 0.05 + gaze.y * radius * 0.03;
 
       for (const side of [-1, 1]) {
         const eyeX = side * eyeOffset + gaze.x * radius * 0.05;
+        const blinkScale = winking && side === -1 ? 0.08 : eyeOpen;
 
         context.save();
         context.translate(eyeX, eyeY);
         context.rotate(side * -0.16);
-        context.scale(1, eyeOpen);
 
-        context.fillStyle = "rgba(252,252,255,0.97)";
-        context.beginPath();
-        context.roundRect(-eyeWidth / 2, -eyeHeight / 2, eyeWidth, eyeHeight, eyeWidth / 2);
-        context.fill();
+        if (happy > 0.55) {
+          context.strokeStyle = "rgba(252,252,255,0.97)";
+          context.lineWidth = eyeWidth * 0.75;
+          context.lineCap = "round";
+          context.beginPath();
+          context.arc(0, eyeHeight * 0.2, eyeWidth * 0.9, Math.PI * 1.14, Math.PI * 1.86);
+          context.stroke();
+        } else {
+          context.scale(1, blinkScale);
+          context.fillStyle = "rgba(252,252,255,0.97)";
+          context.beginPath();
+          context.roundRect(-eyeWidth / 2, -eyeHeight / 2, eyeWidth, eyeHeight, eyeWidth / 2);
+          context.fill();
+        }
 
         context.restore();
       }
 
       if (showMouth) {
         const mouthY = radius * 0.36;
+        const mouthColor = shade(color, 0.32, 0.8);
         const talking =
           current === "streaming" ? 0.25 + Math.abs(Math.sin(time * 14)) * smoothed : 0;
 
+        let width = radius * 0.15;
+        let height = radius * 0.05;
+
         if (talking > 0.05) {
-          context.fillStyle = "rgba(20,16,32,0.8)";
-          context.beginPath();
-          context.ellipse(
-            0,
-            mouthY,
-            radius * 0.1,
-            radius * (0.02 + talking * 0.09),
-            0,
-            0,
-            TAU,
-          );
-          context.fill();
+          height = radius * (0.05 + talking * 0.12);
+          width = radius * 0.14;
         } else if (current === "thinking") {
-          context.strokeStyle = "rgba(20,16,32,0.4)";
-          context.lineWidth = Math.max(1.1, radius * 0.03);
-          context.lineCap = "round";
-          context.beginPath();
-          context.moveTo(-radius * 0.08, mouthY);
-          context.lineTo(radius * 0.08, mouthY);
-          context.stroke();
-        } else {
-          context.strokeStyle = "rgba(20,16,32,0.45)";
-          context.lineWidth = Math.max(1.1, radius * 0.03);
-          context.lineCap = "round";
-          context.beginPath();
-          context.arc(0, mouthY - radius * 0.07, radius * 0.14, Math.PI * 0.2, Math.PI * 0.8);
-          context.stroke();
+          width = radius * 0.1;
+          height = radius * 0.045;
+        } else if (happy > 0.5) {
+          width = radius * 0.17;
+          height = radius * 0.055;
         }
+
+        context.fillStyle = mouthColor;
+        context.beginPath();
+        context.roundRect(-width / 2, mouthY - height / 2, width, height, height / 2);
+        context.fill();
       }
 
       // thinking dots, a small nod to the codex loader

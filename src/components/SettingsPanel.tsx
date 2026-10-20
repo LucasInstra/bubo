@@ -36,6 +36,7 @@ export function SettingsPanel({
   const [notice, setNotice] = useState("");
 
   const patch = (part: Partial<Settings>) => setDraft((current) => ({ ...current, ...part }));
+  const dirty = apiKey.length > 0 || JSON.stringify(draft) !== JSON.stringify(settings);
 
   const refreshQueue = useCallback(async () => {
     try {
@@ -129,6 +130,14 @@ export function SettingsPanel({
                     aria-label={`color ${option}`}
                   />
                 ))}
+                <label className="swatch-custom" title="Custom color">
+                  <input
+                    type="color"
+                    value={draft.color}
+                    onChange={(event) => patch({ color: event.target.value })}
+                    aria-label="Custom color"
+                  />
+                </label>
               </div>
               <div className="shapes">
                 {MASCOT_SHAPES.map((option) => (
@@ -315,11 +324,17 @@ export function SettingsPanel({
         >
           Start a new chat
         </button>
+      </div>
 
-        {notice && <div className="hint">{notice}</div>}
-        {error && <div className="settings-error">{error}</div>}
-
-        <button className="primary" onClick={save} disabled={busy}>
+      <div className="settings-footer">
+        {error ? (
+          <span className="settings-error">{error}</span>
+        ) : notice ? (
+          <span className="hint">{notice}</span>
+        ) : (
+          <span className="hint">{dirty ? "unsaved changes" : ""}</span>
+        )}
+        <button className="primary" onClick={save} disabled={busy || !dirty}>
           {busy ? "saving..." : "Save"}
         </button>
       </div>
