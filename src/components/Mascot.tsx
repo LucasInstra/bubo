@@ -568,7 +568,7 @@ export function Mascot({
         gaze.tx = Math.cos(time * 1.35) * 0.85;
         gaze.ty = Math.sin(time * 1.35) * 0.4 + 0.06;
       }
-      const ease = current === "thinking" ? 0.18 : 0.1;
+      const ease = current === "thinking" ? 0.18 : 0.14;
       gaze.x += (gaze.tx - gaze.x) * ease * (delta * 60);
       gaze.y += (gaze.ty - gaze.y) * ease * (delta * 60);
 
@@ -694,14 +694,14 @@ export function Mascot({
       const baseHalf = arcLike ? base.width * 0.82 : base.width / 2;
       const minGap = eyeSpacing === "close" ? 0.04 : eyeSpacing === "wide" ? 0.24 : 0.13;
       const eyeOffset = Math.max(radius * spacingScale, baseHalf + radius * minGap);
-      const eyeY = radius * 0.05 + gaze.y * radius * 0.045;
+      const eyeY = radius * 0.05 + gaze.y * radius * 0.08;
 
       for (const side of [-1, 1]) {
         const style = eyeStyle === "wink" ? (side === -1 ? "arcs" : "bars") : eyeStyle;
         const eye = eyeShape(style, radius, sizeScale);
         const eyeWidth = eye.width;
         const eyeHeight = eye.height * (style === "bars" ? 1 + wonder * 0.1 : 1);
-        const eyeX = side * eyeOffset + gaze.x * radius * 0.085;
+        const eyeX = side * eyeOffset + gaze.x * radius * 0.135;
         const closed = winking && side === -1;
         const cheerful =
           happy > 0.55 && (style === "bars" || style === "dots" || style === "sleepy");
