@@ -4,8 +4,9 @@ mod log;
 mod prompt;
 mod store;
 
-use std::sync::Mutex;
 use serde_json::json;
+use std::sync::Mutex;
+use std::time::Duration;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -28,16 +29,24 @@ fn install_hotkey(
         .parse()
         .map_err(|_| format!("Invalid hotkey: {hotkey}. Try something like Ctrl+Alt+B."))?;
 
+    let previous = slot.lock().ok().and_then(|current| *current);
+
     let _ = app.global_shortcut().unregister_all();
-    app.global_shortcut()
-        .register(parsed)
-        .map_err(|error| format!("Could not register {hotkey}: {error}"))?;
-
-    if let Ok(mut current) = slot.lock() {
-        *current = Some(parsed);
+    match app.global_shortcut().register(parsed) {
+        Ok(()) => {
+            if let Ok(mut current) = slot.lock() {
+                *current = Some(parsed);
+            }
+            Ok(())
+        }
+        Err(error) => {
+            // Never leave the app without a working shortcut.
+            if let Some(previous) = previous {
+                let _ = app.global_shortcut().register(previous);
+            }
+            Err(format!("Could not register {hotkey}: {error}"))
+        }
     }
-
-    Ok(())
 }
 
 #[tauri::command]
@@ -51,7 +60,10 @@ fn save_settings(
     state: State<'_, AppState>,
     settings: config::Settings,
 ) -> Result<(), String> {
-    install_hotkey(&app, &state.shortcut, &settings.hotkey)?;
+    let current = config::load_settings(&app).unwrap_or_default();
+    if current.hotkey.trim() != settings.hotkey.trim() {
+        install_hotkey(&app, &state.shortcut, &settings.hotkey)?;
+    }
 
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.set_always_on_top(settings.pinned);
@@ -106,8 +118,8 @@ async fn chat(
 ) -> Result<String, String> {
     let client = state.http.clone();
     let settings = config::load_settings(&app)?;
-    let api_key = config::load_api_key()?
-        .ok_or("No API key yet. Open settings and paste your Groq key.")?;
+    let api_key =
+        config::load_api_key()?.ok_or("No API key yet. Open settings and paste your Groq key.")?;
 
     let user_row = messages
         .iter()
@@ -124,7 +136,11 @@ async fn chat(
     log::write(
         &app,
         "info",
-        &format!("reply start model={} messages={}", settings.model, messages.len()),
+        &format!(
+            "reply start model={} messages={}",
+            settings.model,
+            messages.len()
+        ),
     );
 
     let reply_body = prompt::reply_body(&settings, &messages);
@@ -149,10 +165,19 @@ async fn chat(
         }
     };
 
+    // Persist the reply before the correction pass so a quit during corrections
+    // never leaves a user message without an answer.
+    let reply_row = state
+        .db
+        .lock()
+        .ok()
+        .and_then(|db| store::insert(&db, "assistant", &full, None).ok());
+
     let _ = app.emit("bubo-reply-done", json!({ "requestId": request_id }));
 
     let corrections_body = prompt::corrections_body(&settings, &messages);
-    let mut fixes = match llm::complete(&app, &client, &settings, &api_key, corrections_body).await {
+    let mut fixes = match llm::complete(&app, &client, &settings, &api_key, corrections_body).await
+    {
         Ok(raw) => llm::parse_fixes(&raw),
         Err(error) => {
             log::write(&app, "warn", &format!("corrections failed: {error}"));
@@ -178,8 +203,8 @@ async fn chat(
         serde_json::to_string(&fixes).ok()
     };
 
-    if let Ok(db) = state.db.lock() {
-        let _ = store::insert(&db, "assistant", &full, fixes_json.as_deref());
+    if let (Ok(db), Some(id)) = (state.db.lock(), reply_row) {
+        let _ = store::set_message_fixes(&db, id, fixes_json.as_deref());
     }
 
     log::write(
@@ -225,9 +250,10 @@ fn drill_reset(state: State<'_, AppState>) -> Result<usize, String> {
 fn drill_next(
     state: State<'_, AppState>,
     include_future: bool,
+    exclude_id: Option<i64>,
 ) -> Result<Option<store::DrillItem>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    store::next_drill(&db, include_future).map_err(|e| e.to_string())
+    store::next_drill(&db, include_future, exclude_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -269,19 +295,31 @@ fn place_bottom_right(window: &tauri::WebviewWindow) {
     let Ok(Some(monitor)) = window.current_monitor() else {
         return;
     };
-    let screen = monitor.size();
+    let area = monitor.work_area();
     let scale = monitor.scale_factor();
-    let window_size = window.outer_size().unwrap_or_default();
-    let margin = (24.0 * scale) as i32;
-    let taskbar = (56.0 * scale) as i32;
+    let size = window.outer_size().unwrap_or(tauri::PhysicalSize::new(
+        (420.0 * scale) as u32,
+        (640.0 * scale) as u32,
+    ));
+    let margin = (16.0 * scale) as i32;
 
-    let x = screen.width as i32 - window_size.width as i32 - margin;
-    let y = screen.height as i32 - window_size.height as i32 - margin - taskbar;
-    let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
+    let x = area.position.x + area.size.width as i32 - size.width as i32 - margin;
+    let y = area.position.y + area.size.height as i32 - size.height as i32 - margin;
+
+    let _ = window.set_position(tauri::PhysicalPosition::new(
+        x.max(area.position.x),
+        y.max(area.position.y),
+    ));
 }
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -302,7 +340,11 @@ pub fn run() {
 
             app.manage(AppState {
                 db: Mutex::new(connection),
-                http: reqwest::Client::new(),
+                http: reqwest::Client::builder()
+                    .connect_timeout(Duration::from_secs(10))
+                    .read_timeout(Duration::from_secs(60))
+                    .build()
+                    .map_err(|error| std::io::Error::other(error.to_string()))?,
                 shortcut: Mutex::new(None),
             });
 
@@ -319,19 +361,20 @@ pub fn run() {
                 let _ = window.set_always_on_top(settings.pinned);
             }
 
-            install_hotkey(
+            if let Err(error) = install_hotkey(
                 app.handle(),
                 &app.state::<AppState>().shortcut,
                 &settings.hotkey,
-            )
-            .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error))?;
+            ) {
+                // A bad or taken shortcut must not stop the app from starting.
+                log::write(app.handle(), "error", &error);
+            }
 
             let show_item = MenuItem::with_id(app, "show", "Show bubo", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
 
-            TrayIconBuilder::with_id("bubo-tray")
-                .icon(app.default_window_icon().unwrap().clone())
+            let mut tray = TrayIconBuilder::with_id("bubo-tray")
                 .tooltip("bubo")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
@@ -354,8 +397,13 @@ pub fn run() {
                     {
                         toggle(tray.app_handle());
                     }
-                })
-                .build(app)?;
+                });
+
+            if let Some(icon) = app.default_window_icon() {
+                tray = tray.icon(icon.clone());
+            }
+
+            tray.build(app)?;
 
             Ok(())
         })

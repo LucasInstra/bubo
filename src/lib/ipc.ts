@@ -32,8 +32,8 @@ export const ipc = {
   history: () => invoke<StoredMessage[]>("history"),
   clearHistory: () => invoke<void>("clear_history"),
   drillStats: () => invoke<DrillStats>("drill_stats"),
-  drillNext: (includeFuture: boolean) =>
-    invoke<DrillItem | null>("drill_next", { includeFuture }),
+  drillNext: (includeFuture: boolean, excludeId: number | null = null) =>
+    invoke<DrillItem | null>("drill_next", { includeFuture, excludeId }),
   drillReview: (id: number, correct: boolean) =>
     invoke<DrillItem | null>("drill_review", { id, correct }),
   drillSkipDue: () => invoke<number>("drill_skip_due"),

@@ -85,16 +85,18 @@ pub async fn stream_reply(
 ) -> Result<String, String> {
     let response = post(&client, settings, api_key, &body).await?;
     let mut chunks = response.bytes_stream();
-    let mut pending = String::new();
+    let mut pending: Vec<u8> = Vec::new();
     let mut full = String::new();
 
     while let Some(chunk) = chunks.next().await {
         let chunk = chunk.map_err(|error| format!("stream error: {error}"))?;
-        pending.push_str(&String::from_utf8_lossy(&chunk));
+        pending.extend_from_slice(&chunk);
 
-        while let Some(newline) = pending.find('\n') {
-            let line = pending[..newline].trim_end_matches('\r').to_string();
-            pending.drain(..=newline);
+        while let Some(position) = pending.iter().position(|byte| *byte == b'\n') {
+            let line = String::from_utf8_lossy(&pending[..position])
+                .trim_end_matches('\r')
+                .to_string();
+            pending.drain(..=position);
 
             let Some(data) = line.strip_prefix("data:") else {
                 continue;
@@ -121,6 +123,10 @@ pub async fn stream_reply(
                 );
             }
         }
+    }
+
+    if full.trim().is_empty() {
+        return Err("the model returned an empty reply".to_string());
     }
 
     Ok(full)
@@ -229,17 +235,20 @@ mod tests {
     #[test]
     fn detects_case_only_corrections() {
         use super::only_case_differs;
-        assert!(only_case_differs("i went out on friday", "I went out on Friday"));
+        assert!(only_case_differs(
+            "i went out on friday",
+            "I went out on Friday"
+        ));
         assert!(!only_case_differs("was very good", "It was very good"));
         assert!(!only_case_differs("i go", "I went"));
     }
 
     #[test]
-    fn caps_the_list_at_four() {        let raw = (0..8)
+    fn caps_the_list_at_four() {
+        let raw = (0..8)
             .map(|index| format!(r#"{{"wrong":"w{index}","right":"r{index}","note":""}}"#))
             .collect::<Vec<_>>()
             .join(",");
         assert_eq!(parse_fixes(&format!("[{raw}]")).len(), 4);
     }
 }
-

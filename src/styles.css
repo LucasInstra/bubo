@@ -112,10 +112,9 @@ button {
   margin-top: 2px;
   padding: 0;
   background: transparent;
-  color: var(--muted);
-  font-size: 9.5px;
+  color: rgba(236, 235, 255, 0.75);
+  font-size: 10.5px;
   letter-spacing: 0.4px;
-  opacity: 0.8;
   animation: fade 0.25s ease-out;
 }
 
@@ -174,9 +173,14 @@ button {
   font-size: 13px;
 }
 
+.ghost.icon:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .ghost.icon.on {
   color: var(--accent);
-  background: rgba(139, 125, 255, 0.14);
+  background: var(--accent-soft);
 }
 
 .badge {
@@ -268,6 +272,23 @@ button {
 .bubble-error {
   color: var(--bad) !important;
   font-size: 12.5px;
+}
+
+.retry {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.retry:hover {
+  border-color: rgba(139, 125, 255, 0.45);
 }
 
 .caret {
@@ -459,6 +480,7 @@ button {
   font-size: 14px;
   line-height: 1.5;
   color: #f3e6ea;
+  overflow-wrap: anywhere;
 }
 
 .drill-streak {
@@ -520,6 +542,7 @@ button {
   font-size: 14px;
   color: var(--good);
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .drill-note {

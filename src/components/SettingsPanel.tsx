@@ -10,6 +10,7 @@ interface SettingsPanelProps {
   onSave: (next: Settings, apiKey: string) => Promise<void>;
   onNewChat: () => Promise<void>;
   onQueueChanged: () => void;
+  onCorrectionsCleared: () => void;
 }
 
 const LEVELS = ["A2", "B1", "B2", "C1"];
@@ -26,6 +27,7 @@ export function SettingsPanel({
   onSave,
   onNewChat,
   onQueueChanged,
+  onCorrectionsCleared,
 }: SettingsPanelProps) {
   const [draft, setDraft] = useState<Settings>(settings);
   const [apiKey, setApiKey] = useState("");
@@ -49,6 +51,12 @@ export function SettingsPanel({
   useEffect(() => {
     void refreshQueue();
   }, [refreshQueue]);
+
+  useEffect(() => {
+    if (!confirmReset) return;
+    const timer = setTimeout(() => setConfirmReset(false), 4000);
+    return () => clearTimeout(timer);
+  }, [confirmReset]);
 
   const save = async () => {
     setBusy(true);
@@ -87,6 +95,7 @@ export function SettingsPanel({
       setConfirmReset(false);
       await refreshQueue();
       onQueueChanged();
+      onCorrectionsCleared();
       setNotice(`${removed} correction(s) cleared.`);
     } catch (problem) {
       setError(String(problem));
@@ -157,6 +166,7 @@ export function SettingsPanel({
                       color={draft.color}
                       eyeStyle={draft.eyeStyle}
                       eyeSize={draft.eyeSize}
+                      animate={false}
                     />
                   </button>
                 ))}

@@ -70,6 +70,7 @@ interface MascotProps {
   showMouth?: boolean;
   eyeStyle?: string;
   eyeSize?: string;
+  animate?: boolean;
 }
 
 function superellipse(path: Path2D, radius: number, power: number) {
@@ -241,6 +242,7 @@ export function Mascot({
   showMouth = true,
   eyeStyle = "bars",
   eyeSize = "medium",
+  animate = true,
 }: MascotProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<OrbState>(state);
@@ -292,9 +294,10 @@ export function Mascot({
       winkUntil = now2 + 0.32;
     };
 
-    window.addEventListener("pointermove", onPointerMove);
-    canvas.addEventListener("pointerdown", onPointerDown);
-
+    if (animate) {
+      window.addEventListener("pointermove", onPointerMove);
+      canvas.addEventListener("pointerdown", onPointerDown);
+    }
     const draw = (now: number) => {
       const time = (now - start) / 1000;
       const delta = Math.min(0.05, Math.max(0.008, time - lastTime || 0.016));
@@ -479,17 +482,21 @@ export function Mascot({
       }
 
       context.restore();
-      frame = requestAnimationFrame(draw);
+      if (animate) frame = requestAnimationFrame(draw);
     };
 
-    frame = requestAnimationFrame(draw);
+    if (animate) {
+      frame = requestAnimationFrame(draw);
+    } else {
+      draw(performance.now());
+    }
 
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerdown", onPointerDown);
     };
-  }, [size, shape, color, boopable, showMouth, eyeStyle, eyeSize]);
+  }, [size, shape, color, boopable, showMouth, eyeStyle, eyeSize, animate]);
 
   return (
     <canvas

@@ -52,6 +52,9 @@ export default function App() {
   const [showDrill, setShowDrill] = useState(false);
 
   const listRef = useRef<HTMLDivElement>(null);
+  const stickRef = useRef(true);
+  const turnRef = useRef(0);
+  const busyRef = useRef(false);
   const statusRef = useRef<OrbState>(status);
   statusRef.current = status;
 
@@ -82,9 +85,15 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const timer = setInterval(() => {
+      void ipc.drillStats().then((stats) => setDue(stats.due)).catch(() => {});
+    }, 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     const list = listRef.current;
-    if (!list) return;
-    list.scrollTop = list.scrollHeight;
+    if (list && stickRef.current) list.scrollTop = list.scrollHeight;
   }, [messages]);
 
   useEffect(() => {
@@ -99,14 +108,10 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [showSettings, showDrill]);
 
-  const send = useCallback(
-    async (text: string) => {
+  const runTurn = useCallback(
+    async (text: string, base: Msg[] = messages) => {
       const value = text.trim();
-      if (!value || statusRef.current !== "idle") return;
-      if (!hasKey) {
-        setShowSettings(true);
-        return;
-      }
+      if (!value) return;
 
       const userMessage: Msg = {
         id: crypto.randomUUID(),
@@ -122,10 +127,13 @@ export default function App() {
         streaming: true,
       };
 
-      const context = [...messages, userMessage]
+      const context = [...base, userMessage]
         .filter((message) => !message.error)
         .slice(-16)
         .map(({ role, content }) => ({ role, content }));
+
+      const turn = turnRef.current + 1;
+      turnRef.current = turn;
 
       setMessages((current) => [...current, userMessage, botMessage]);
       setStatus("thinking");
@@ -145,6 +153,9 @@ export default function App() {
             );
           },
           onDone: () => {
+            // The reply is on screen and persisted; corrections can keep
+            // running in the background without locking the composer.
+            busyRef.current = false;
             setStatus("idle");
             setEnergy(0);
             setMessages((current) =>
@@ -186,12 +197,55 @@ export default function App() {
           ),
         );
       } finally {
-        setStatus("idle");
-        setEnergy(0);
-        void ipc.drillStats().then((stats) => setDue(stats.due));
+        // A newer turn owns the status now; do not reset it under its feet.
+        if (turnRef.current === turn) {
+          setStatus("idle");
+          setEnergy(0);
+        }
+        busyRef.current = false;
+        void ipc.drillStats().then((stats) => setDue(stats.due)).catch(console.error);
       }
     },
-    [messages, hasKey],
+    [messages],
+  );
+
+  const send = useCallback(
+    (text: string): boolean => {
+      if (!text.trim() || busyRef.current || statusRef.current !== "idle") return false;
+      if (!hasKey) {
+        setShowSettings(true);
+        return false;
+      }
+      busyRef.current = true;
+      void runTurn(text);
+      return true;
+    },
+    [hasKey, runTurn],
+  );
+
+  const retry = useCallback(
+    (botMessage: Msg) => {
+      if (statusRef.current !== "idle" || busyRef.current) return;
+      if (!hasKey) {
+        setShowSettings(true);
+        return;
+      }
+      const index = messages.findIndex((message) => message.id === botMessage.id);
+      if (index < 0) return;
+      const user = messages
+        .slice(0, index)
+        .reverse()
+        .find((message) => message.role === "user" && !message.error);
+      if (!user) return;
+
+      const base = messages.filter(
+        (message) => message.id !== botMessage.id && message.id !== user.id,
+      );
+      setMessages(base);
+      busyRef.current = true;
+      void runTurn(user.content, base);
+    },
+    [messages, runTurn, hasKey],
   );
 
   const saveSettings = useCallback(
@@ -221,6 +275,7 @@ export default function App() {
   }, [pinned, settings]);
 
   const newChat = useCallback(async () => {
+    if (statusRef.current !== "idle") return;
     await ipc.clearHistory();
     setMessages([]);
   }, []);
@@ -244,6 +299,7 @@ export default function App() {
               className="ghost icon"
               title="New chat"
               aria-label="New chat"
+              disabled={status !== "idle"}
               onClick={() => void newChat()}
             >
               <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
@@ -365,15 +421,28 @@ export default function App() {
               </div>
             </div>
           ) : (
-            <div className="messages" ref={listRef}>
+            <div
+              className="messages"
+              ref={listRef}
+              onScroll={() => {
+                const list = listRef.current;
+                if (!list) return;
+                stickRef.current =
+                  list.scrollHeight - list.scrollTop - list.clientHeight < 48;
+              }}
+            >
               {messages.map((message) => (
-                <Message key={message.id} message={message} />
+                <Message
+                  key={message.id}
+                  message={message}
+                  onRetry={message.error ? retry : undefined}
+                />
               ))}
             </div>
           )}
         </div>
 
-        <Composer disabled={status !== "idle"} onSend={(text) => void send(text)} />
+        <Composer disabled={status !== "idle"} onSend={send} />
 
         {showSettings && (
           <SettingsPanel
@@ -383,6 +452,13 @@ export default function App() {
             onSave={saveSettings}
             onNewChat={newChat}
             onQueueChanged={() => void ipc.drillStats().then((stats) => setDue(stats.due))}
+            onCorrectionsCleared={() =>
+              setMessages((current) =>
+                current.map((message) =>
+                  message.fixes.length > 0 ? { ...message, fixes: [] } : message,
+                ),
+              )
+            }
           />
         )}
 

@@ -1,7 +1,13 @@
+import { memo } from "react";
 import { stripLegacyFixes } from "../lib/format";
 import type { Msg } from "../lib/types";
 
-export function Message({ message }: { message: Msg }) {
+interface MessageProps {
+  message: Msg;
+  onRetry?: (message: Msg) => void;
+}
+
+export const Message = memo(function Message({ message, onRetry }: MessageProps) {
   const body = stripLegacyFixes(message.content);
   const isUser = message.role === "user";
   const fixes = message.fixes ?? [];
@@ -12,6 +18,12 @@ export function Message({ message }: { message: Msg }) {
         {body}
         {message.streaming && <span className="caret" />}
       </div>
+
+      {message.error && onRetry && (
+        <button className="retry" onClick={() => onRetry(message)}>
+          try again
+        </button>
+      )}
 
       {!message.streaming && fixes.length > 0 && (
         <div className="fixes">
@@ -30,4 +42,4 @@ export function Message({ message }: { message: Msg }) {
       )}
     </div>
   );
-}
+});

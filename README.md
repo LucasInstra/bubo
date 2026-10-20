@@ -33,6 +33,8 @@ As correções são gravadas em duas tabelas: `messages` (o chat) e `fixes` (o q
 
 No drill, você reescreve o trecho errado; acertar sobe o intervalo (1 → 3 → 7 → 21 → 45 dias), errar volta para 10 minutos. "Show answer" conta como erro de propósito.
 
+Se nada estiver devido mas houver cards salvos, o drill continua com "practice ahead" em vez de encerrar a sessão, e nunca repete o card que você acabou de responder.
+
 ## Stack
 
 Tauri v2 (Rust) + React + TypeScript + Vite.

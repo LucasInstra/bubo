@@ -104,6 +104,14 @@ pub fn delete(conn: &Connection, id: i64) -> rusqlite::Result<()> {
     Ok(())
 }
 
+pub fn set_message_fixes(conn: &Connection, id: i64, fixes: Option<&str>) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE messages SET fixes = ?1 WHERE id = ?2",
+        params![fixes, id],
+    )?;
+    Ok(())
+}
+
 pub fn list(conn: &Connection, limit: i64) -> rusqlite::Result<Vec<StoredMessage>> {
     let mut stmt = conn.prepare(
         "SELECT id, role, content, fixes, created_at FROM messages ORDER BY id DESC LIMIT ?1",
@@ -177,7 +185,7 @@ pub fn skip_due(conn: &Connection) -> rusqlite::Result<usize> {
     let now = now();
     conn.execute(
         "UPDATE fixes SET due_at = ?1 WHERE due_at <= ?2",
-        params![now + 86_400, now],
+        params![now + 86_400_000, now],
     )
 }
 
@@ -189,29 +197,46 @@ pub fn reset_fixes(conn: &Connection) -> rusqlite::Result<usize> {
     Ok(removed)
 }
 
-pub fn next_drill(conn: &Connection, include_future: bool) -> rusqlite::Result<Option<DrillItem>> {
+pub fn next_drill(
+    conn: &Connection,
+    include_future: bool,
+    exclude_id: Option<i64>,
+) -> rusqlite::Result<Option<DrillItem>> {
     let now = now();
     if include_future {
         conn.query_row(
-            "SELECT id, wrong, right, note, streak FROM fixes ORDER BY due_at ASC, RANDOM() LIMIT 1",
-            [],
+            "SELECT id, wrong, right, note, streak FROM fixes
+             WHERE (?1 IS NULL OR id != ?1)
+             ORDER BY due_at ASC, RANDOM() LIMIT 1",
+            [exclude_id],
             row_to_item,
         )
         .optional()
     } else {
         conn.query_row(
-            "SELECT id, wrong, right, note, streak FROM fixes WHERE due_at <= ?1
+            "SELECT id, wrong, right, note, streak FROM fixes
+             WHERE due_at <= ?1 AND (?2 IS NULL OR id != ?2)
              ORDER BY due_at ASC, RANDOM() LIMIT 1",
-            [now],
+            params![now, exclude_id],
             row_to_item,
         )
         .optional()
     }
 }
 
-const INTERVALS_DAYS: [i64; 5] = [1, 3, 7, 21, 45];
+const INTERVALS_MS: [i64; 5] = [
+    86_400_000,
+    259_200_000,
+    604_800_000,
+    1_814_400_000,
+    3_888_000_000,
+];
 
-pub fn review_drill(conn: &Connection, id: i64, correct: bool) -> rusqlite::Result<Option<DrillItem>> {
+pub fn review_drill(
+    conn: &Connection,
+    id: i64,
+    correct: bool,
+) -> rusqlite::Result<Option<DrillItem>> {
     let item = conn
         .query_row(
             "SELECT id, wrong, right, note, streak FROM fixes WHERE id = ?1",
@@ -224,15 +249,11 @@ pub fn review_drill(conn: &Connection, id: i64, correct: bool) -> rusqlite::Resu
         return Ok(None);
     };
 
-    let streak = if correct {
-        item.streak + 1
-    } else {
-        0
-    };
+    let streak = if correct { item.streak + 1 } else { 0 };
     let delay = if correct {
-        INTERVALS_DAYS[streak.saturating_sub(1).min(4) as usize] * 86_400
+        INTERVALS_MS[streak.saturating_sub(1).min(4) as usize]
     } else {
-        600
+        600_000
     };
 
     conn.execute(
@@ -257,7 +278,13 @@ mod tests {
     fn stores_and_reads_a_turn_in_order() {
         let conn = memory_db();
         let user_id = insert(&conn, "user", "i go yesterday", None).unwrap();
-        insert(&conn, "assistant", "You went yesterday.", Some(r#"[{"wrong":"i go","right":"I went","note":"passado"}]"#)).unwrap();
+        insert(
+            &conn,
+            "assistant",
+            "You went yesterday.",
+            Some(r#"[{"wrong":"i go","right":"I went","note":"passado"}]"#),
+        )
+        .unwrap();
 
         let messages: Vec<StoredMessage> = list(&conn, 10).unwrap();
         assert_eq!(messages.len(), 2);
@@ -298,14 +325,16 @@ mod tests {
             note: "passado".to_string(),
         };
 
-        super::save_fixes(&conn, &[fix.clone()]).unwrap();
+        super::save_fixes(&conn, std::slice::from_ref(&fix)).unwrap();
         super::save_fixes(&conn, &[fix]).unwrap();
 
         let stats = super::drill_stats(&conn).unwrap();
         assert_eq!(stats.total, 1);
         assert_eq!(stats.due, 1);
 
-        let item = super::next_drill(&conn, false).unwrap().expect("due item");
+        let item = super::next_drill(&conn, false, None)
+            .unwrap()
+            .expect("due item");
         assert_eq!(item.right, "I went yesterday");
 
         let reviewed = super::review_drill(&conn, item.id, true).unwrap().unwrap();
@@ -357,7 +386,7 @@ mod tests {
         assert_eq!(super::drill_stats(&conn).unwrap().due, 1);
         assert_eq!(super::skip_due(&conn).unwrap(), 1);
         assert_eq!(super::drill_stats(&conn).unwrap().due, 0);
-        assert!(super::next_drill(&conn, false).unwrap().is_none());
+        assert!(super::next_drill(&conn, false, None).unwrap().is_none());
     }
 
     #[test]
@@ -388,6 +417,58 @@ mod tests {
         // The startup backfill must not resurrect what was intentionally erased.
         super::backfill_fixes(&conn).unwrap();
         assert_eq!(super::drill_stats(&conn).unwrap().total, 0);
+    }
+
+    #[test]
+    fn a_correct_answer_schedules_one_day_ahead() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        super::save_fixes(
+            &conn,
+            &[Fix {
+                wrong: "i go".to_string(),
+                right: "I went".to_string(),
+                note: String::new(),
+            }],
+        )
+        .unwrap();
+
+        let item = super::next_drill(&conn, true, None).unwrap().unwrap();
+        super::review_drill(&conn, item.id, true).unwrap();
+
+        let due_at: i64 = conn
+            .query_row("SELECT due_at FROM fixes WHERE id = ?1", [item.id], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        let delay = due_at - super::now();
+
+        assert!(
+            delay > 86_000_000 && delay <= 86_400_000,
+            "a correct answer should be due in a day, got {delay} ms"
+        );
+    }
+
+    #[test]
+    fn next_drill_can_exclude_the_last_card() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        super::save_fixes(
+            &conn,
+            &[Fix {
+                wrong: "she don't".to_string(),
+                right: "she doesn't".to_string(),
+                note: String::new(),
+            }],
+        )
+        .unwrap();
+
+        let item = super::next_drill(&conn, true, None).unwrap().unwrap();
+        assert!(super::next_drill(&conn, true, Some(item.id))
+            .unwrap()
+            .is_none());
     }
 
     #[test]
@@ -422,14 +503,58 @@ mod tests {
         )
         .unwrap();
 
-        let item = super::next_drill(&conn, true).unwrap().unwrap();
+        let item = super::next_drill(&conn, true, None).unwrap().unwrap();
         super::review_drill(&conn, item.id, true).unwrap();
         let reviewed = super::review_drill(&conn, item.id, false).unwrap().unwrap();
 
         assert_eq!(reviewed.streak, 0);
         // A miss comes back in ten minutes, so it is scheduled but not due now.
         assert_eq!(super::drill_stats(&conn).unwrap().due, 0);
-        assert!(super::next_drill(&conn, false).unwrap().is_none());
-        assert!(super::next_drill(&conn, true).unwrap().is_some());
+        assert!(super::next_drill(&conn, false, None).unwrap().is_none());
+        assert!(super::next_drill(&conn, true, None).unwrap().is_some());
+
+        let due_at: i64 = conn
+            .query_row("SELECT due_at FROM fixes WHERE id = ?1", [item.id], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert!(
+            due_at - super::now() <= 600_000,
+            "a miss should come back within ten minutes"
+        );
+    }
+
+    #[test]
+    fn intervals_follow_the_ladder() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        super::save_fixes(
+            &conn,
+            &[Fix {
+                wrong: "i go".to_string(),
+                right: "I went".to_string(),
+                note: String::new(),
+            }],
+        )
+        .unwrap();
+
+        let item = super::next_drill(&conn, true, None).unwrap().unwrap();
+        let days = [1_i64, 3, 7, 21, 45];
+
+        for expected_days in days {
+            super::review_drill(&conn, item.id, true).unwrap();
+            let due_at: i64 = conn
+                .query_row("SELECT due_at FROM fixes WHERE id = ?1", [item.id], |row| {
+                    row.get(0)
+                })
+                .unwrap();
+            let delay = due_at - super::now();
+            let expected = expected_days * 86_400_000;
+            assert!(
+                delay > expected - 5_000 && delay <= expected,
+                "expected {expected_days} days, got {delay} ms"
+            );
+        }
     }
 }

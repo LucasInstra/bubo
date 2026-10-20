@@ -5,7 +5,8 @@ use tauri::{AppHandle, Manager};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
-pub struct Settings {    pub base_url: String,
+pub struct Settings {
+    pub base_url: String,
     pub model: String,
     pub level: String,
     pub persona: String,

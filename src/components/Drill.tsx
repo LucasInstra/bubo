@@ -2,15 +2,24 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ipc } from "../lib/ipc";
 import type { DrillItem, DrillStats } from "../lib/types";
 
-type Phase = "loading" | "asking" | "answered" | "none" | "empty";
+type Phase = "loading" | "asking" | "answered" | "none" | "empty" | "error";
 
 const normalize = (value: string) =>
   value
     .toLowerCase()
     .replace(/[’‘]/g, "'")
-    .replace(/[.,!?;:]/g, "")
+    .replace(/[.,!?;:…—–“”«»()[\]{}]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+
+/** Lenient enough that a full sentence containing the fragment still counts. */
+const isCorrect = (answer: string, target: string) => {
+  const typed = normalize(answer);
+  const expected = normalize(target);
+  if (!typed) return false;
+  if (typed === expected) return true;
+  return expected.length > 3 && typed.includes(expected);
+};
 
 interface DrillProps {
   onClose: () => void;
@@ -22,8 +31,11 @@ export function Drill({ onClose }: DrillProps) {
   const [phase, setPhase] = useState<Phase>("loading");
   const [answer, setAnswer] = useState("");
   const [result, setResult] = useState<{ correct: boolean; item: DrillItem } | null>(null);
+  const [ahead, setAhead] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const allowFuture = useRef(false);
+  const lastAnswered = useRef<number | null>(null);
+  const busy = useRef(false);
 
   const load = useCallback(async (includeFuture = allowFuture.current) => {
     allowFuture.current = includeFuture;
@@ -32,12 +44,28 @@ export function Drill({ onClose }: DrillProps) {
     setAnswer("");
 
     try {
-      const [freshStats, next] = await Promise.all([
-        ipc.drillStats(),
-        ipc.drillNext(includeFuture),
-      ]);
+      const freshStats = await ipc.drillStats();
       setStats(freshStats);
+
+      let next = await ipc.drillNext(includeFuture, lastAnswered.current);
+      let practicingAhead = includeFuture;
+
+      // Nothing due but there is material: keep the session going instead of
+      // dead-ending on "all caught up".
+      if (!next && !includeFuture && freshStats.total > 0) {
+        next = await ipc.drillNext(true, lastAnswered.current);
+        practicingAhead = true;
+      }
+
+      // The only saved card was just answered: allow it back instead of
+      // leaving "Practice anyway" pointing at an excluded card.
+      if (!next && includeFuture && lastAnswered.current !== null) {
+        next = await ipc.drillNext(true, null);
+      }
+
+      setAhead(practicingAhead);
       setItem(next);
+
       if (next) {
         setPhase("asking");
         requestAnimationFrame(() => inputRef.current?.focus());
@@ -46,7 +74,7 @@ export function Drill({ onClose }: DrillProps) {
       }
     } catch (error) {
       console.error("drill failed to load", error);
-      setPhase("empty");
+      setPhase("error");
     }
   }, []);
 
@@ -54,17 +82,24 @@ export function Drill({ onClose }: DrillProps) {
     void load(false);
   }, [load]);
 
-  const submit = async (text: string, forced: boolean) => {
-    if (!item || phase !== "asking") return;
-    const correct = forced ? false : normalize(text) === normalize(item.right);
+  const submit = async (text: string, reveal: boolean) => {
+    if (!item || phase !== "asking" || busy.current) return;
+    busy.current = true;
     try {
+      const correct = !reveal && isCorrect(text, item.right);
       const updated = await ipc.drillReview(item.id, correct);
+      lastAnswered.current = item.id;
       setResult({ correct, item: updated ?? item });
       setPhase("answered");
-      const freshStats = await ipc.drillStats();
-      setStats(freshStats);
+      void ipc
+        .drillStats()
+        .then(setStats)
+        .catch(() => {});
     } catch (error) {
       console.error("drill review failed", error);
+      setPhase("error");
+    } finally {
+      busy.current = false;
     }
   };
 
@@ -76,12 +111,22 @@ export function Drill({ onClose }: DrillProps) {
         </button>
         <span>practice</span>
         <span className="drill-count">
+          {ahead && phase !== "empty" ? "practicing ahead · " : ""}
           {stats.due} due · {stats.total} saved
         </span>
       </div>
 
       <div className="settings-body drill-body">
         {phase === "loading" && <p className="drill-hint">getting a card ready…</p>}
+
+        {phase === "error" && (
+          <div className="drill-empty">
+            <p>Something went wrong reading your cards.</p>
+            <button className="primary" onClick={() => void load(false)}>
+              Try again
+            </button>
+          </div>
+        )}
 
         {phase === "empty" && (
           <div className="drill-empty">
@@ -98,7 +143,9 @@ export function Drill({ onClose }: DrillProps) {
         {phase === "none" && (
           <div className="drill-empty">
             <p>All caught up.</p>
-            <p className="drill-hint">You have {stats.total} corrections saved. None are due now.</p>
+            <p className="drill-hint">
+              You have {stats.total} corrections saved. None are due right now.
+            </p>
             <button className="primary" onClick={() => void load(true)}>
               Practice anyway
             </button>
@@ -147,7 +194,13 @@ export function Drill({ onClose }: DrillProps) {
                   </span>
                   <span className="drill-right">{result.item.right}</span>
                   {result.item.note && <span className="drill-note">{result.item.note}</span>}
-                  <button className="primary" onClick={() => void load()}>
+                  <button
+                    className="primary"
+                    onClick={() => void load()}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") void load();
+                    }}
+                  >
                     Next card
                   </button>
                 </div>

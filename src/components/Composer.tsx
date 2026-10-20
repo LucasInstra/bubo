@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 
 interface ComposerProps {
   disabled: boolean;
-  onSend: (text: string) => void;
+  onSend: (text: string) => boolean;
 }
 
 export function Composer({ disabled, onSend }: ComposerProps) {
@@ -19,9 +19,9 @@ export function Composer({ disabled, onSend }: ComposerProps) {
   const submit = () => {
     const text = value.trim();
     if (!text || disabled) return;
+    if (!onSend(text)) return;
     setValue("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
-    onSend(text);
   };
 
   return (
