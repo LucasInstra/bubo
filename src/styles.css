@@ -109,12 +109,14 @@ button {
 }
 
 .status-pill {
+  margin-top: 2px;
   padding: 0;
   background: transparent;
   color: var(--muted);
   font-size: 9.5px;
   letter-spacing: 0.4px;
   opacity: 0.8;
+  animation: fade 0.25s ease-out;
 }
 
 .brand {

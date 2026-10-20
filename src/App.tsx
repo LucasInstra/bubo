@@ -339,7 +339,9 @@ export default function App() {
               eyeSize={settings.eyeSize}
               boopable
             />
-            {settings.showStatus && <span className="status-pill">{STATUS_LABEL[status]}</span>}
+            {settings.showStatus && status !== "idle" && (
+              <span className="status-pill">{STATUS_LABEL[status]}</span>
+            )}
           </div>
 
           {empty && !showSettings ? (

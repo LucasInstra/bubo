@@ -272,6 +272,8 @@ export function Mascot({
     let lastTime = 0;
     let happyUntil = -1;
     let winkUntil = -1;
+    // eased values keep state changes visible instead of snapping
+    const eased = { squint: 1, tiltAmp: 0.02, breatheAmp: 0.026 };
 
     const onPointerMove = (event: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -284,10 +286,10 @@ export function Mascot({
 
     const onPointerDown = () => {
       if (!boopable) return;
-      const now = (performance.now() - start) / 1000;
+      const now2 = (performance.now() - start) / 1000;
       boopRef.current = 1;
-      happyUntil = now + 0.9;
-      winkUntil = now + 0.32;
+      happyUntil = now2 + 1.2;
+      winkUntil = now2 + 0.32;
     };
 
     window.addEventListener("pointermove", onPointerMove);
@@ -305,23 +307,27 @@ export function Mascot({
       if (current !== lastState) {
         wonder = 1;
         lastState = current;
-        if (current === "idle") boopRef.current = Math.max(boopRef.current, 0.55);
+        if (current === "idle") boopRef.current = Math.max(boopRef.current, 0.7);
       }
-      wonder *= 0.93;
+      wonder *= 0.96;
       smoothed = smoothed * 0.9 + energyRef.current * 0.1;
-      boopRef.current *= 0.9;
+      boopRef.current *= 0.93;
+
+      // slow, eased transitions between moods
+      const targetSquint = current === "thinking" ? 0.6 : 1;
+      const targetTilt = current === "thinking" ? 0.07 : current === "streaming" ? 0.035 : 0.02;
+      const targetBreathe = current === "thinking" ? 0.03 : 0.026;
+      const easeRate = Math.min(1, 0.045 * (delta * 60));
+      eased.squint += (targetSquint - eased.squint) * easeRate;
+      eased.tiltAmp += (targetTilt - eased.tiltAmp) * easeRate;
+      eased.breatheAmp += (targetBreathe - eased.breatheAmp) * easeRate;
 
       const boop = Math.sin(boopRef.current * Math.PI) * radius * 0.2;
       const squish = Math.sin(time * (current === "thinking" ? 3.4 : 1.9));
-      const breathe = 1 + squish * (current === "thinking" ? 0.03 : 0.026) + smoothed * 0.03;
+      const breathe = 1 + squish * eased.breatheAmp + smoothed * 0.03;
       const sway = Math.sin(time * 0.9) * radius * 0.022;
-      const tilt =
-        current === "thinking"
-          ? Math.sin(time * 2.1) * 0.07
-          : current === "streaming"
-            ? Math.sin(time * 3) * 0.03
-            : Math.sin(time * 0.7) * 0.02;
-      const happy = Math.max(0, Math.min(1, (happyUntil - time) / 0.35));
+      const tilt = Math.sin(time * 2.1) * eased.tiltAmp;
+      const happy = Math.max(0, Math.min(1, (happyUntil - time) / 0.5));
       const winking = winkUntil > time;
 
       const seesPointer = time - gaze.seen < 2.5;
@@ -356,7 +362,7 @@ export function Mascot({
         }
       }
 
-      const squint = current === "thinking" ? 0.62 : 1;
+      const squint = eased.squint;
       const eyeOpen = Math.max(0.08, openness * squint);
 
       context.clearRect(0, 0, size, size);
