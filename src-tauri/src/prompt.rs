@@ -18,18 +18,53 @@ fn level_hint(level: &str) -> &'static str {
     }
 }
 
+/// The base tone of each ready-made personality. Unknown ids fall back to the
+/// warm coach, so an old settings file never breaks the prompt.
+fn personality_tone(id: &str) -> &'static str {
+    match id {
+        "hype_friend" => {
+            "You are a loud, upbeat best friend. Keep replies short and punchy, with energy you can hear. Celebrate the attempt, not only the win, and never make fun of a mistake. One exclamation mark is enough."
+        }
+        "playful_tease" => {
+            "You are a cheeky sibling. Tease the situation, never the learner, and never their English. One light joke, then real help. Stay warm underneath it."
+        }
+        "friendly_rival" => {
+            "You are a friendly rival with scoreboard energy. Track streaks and personal bests when they come up. Challenge the learner, never shame them, and concede gracefully when they win."
+        }
+        "calm_mentor" => {
+            "You are an unhurried mentor. Use calm, complete sentences and few questions. Treat mistakes as a normal part of learning. Never rush the learner."
+        }
+        "gentle_guide" => {
+            "You are soft and low pressure. Invite instead of instruct, with phrases like \"when you're ready\". Praise effort quietly. Never push."
+        }
+        "curious_nerd" => {
+            "You are delighted by details. Share one small fact or word origin when it fits, then ask a follow-up question. Praise curiosity more than correctness."
+        }
+        "dry_wit" => {
+            "You are deadpan and secretly fond. Use short, flat sentences and at most one dry aside per reply. Praise with understatement. No exclamation marks."
+        }
+        "strict_examiner" => {
+            "You are terse and exacting, with no fluff. Short sentences, no filler, no praise before it is earned. The separate correction step handles grammar, so focus on pushing the conversation forward."
+        }
+        _ => {
+            "You are a steady, encouraging coach. Keep replies to one or two short sentences. Praise the specific thing they did, never the person in general. Ask one question at a time."
+        }
+    }
+}
+
 pub fn reply_system(settings: &Settings) -> String {
+    let tone = personality_tone(&settings.personality);
     let persona = if settings.persona.trim().is_empty() {
-        "Your tone is warm, curious and a little playful. You are a friendly owl.".to_string()
+        tone.to_string()
     } else {
         format!(
-            "Your tone is warm, curious and a little playful. Follow this extra instruction from the learner: {}",
+            "{tone} Extra instruction from the learner: {}",
             settings.persona.trim()
         )
     };
 
     format!(
-        r#"You are bubo, an English tutor living in a tiny desktop popup. The learner is Brazilian and their CEFR level is {level}.
+        r#"You are bubo, a small owl and an English tutor living in a tiny desktop popup. The learner is Brazilian and their CEFR level is {level}.
 {persona}
 {level_hint}
 
@@ -122,4 +157,33 @@ pub fn corrections_body(settings: &Settings, messages: &[ChatMsg]) -> Value {
     }
 
     body
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn personality_tones_are_distinct_and_safe() {
+        let warm = personality_tone("warm_coach");
+        assert!(warm.contains("steady"));
+        assert_ne!(warm, personality_tone("dry_wit"));
+        assert_ne!(
+            personality_tone("hype_friend"),
+            personality_tone("calm_mentor")
+        );
+        assert_eq!(personality_tone("nonsense"), warm);
+    }
+
+    #[test]
+    fn custom_instructions_stack_on_top_of_the_personality() {
+        let settings = Settings {
+            personality: "dry_wit".to_string(),
+            persona: "talk about music".to_string(),
+            ..Settings::default()
+        };
+        let prompt = reply_system(&settings);
+        assert!(prompt.contains("deadpan"));
+        assert!(prompt.contains("talk about music"));
+    }
 }

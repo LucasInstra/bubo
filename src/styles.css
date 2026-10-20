@@ -918,6 +918,47 @@ button {
   padding: 6px 0;
 }
 
+.levels.wrap {
+  flex-wrap: wrap;
+}
+
+.levels.wrap .chip {
+  flex: 1 1 28%;
+}
+
+.personalities {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.persona {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px 5px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-size: 9.5px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.persona:hover {
+  border-color: rgba(139, 125, 255, 0.4);
+}
+
+.persona.on {
+  border-color: rgba(139, 125, 255, 0.75);
+  background: rgba(139, 125, 255, 0.14);
+  color: var(--text);
+}
+
 .note span {
   font-size: 11px;
   line-height: 1.5;

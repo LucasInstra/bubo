@@ -23,6 +23,7 @@ export interface Settings {
   model: string;
   level: string;
   persona: string;
+  personality: string;
   hotkey: string;
   autostart: boolean;
   pinned: boolean;
@@ -35,6 +36,9 @@ export interface Settings {
   textSize: string;
   eyeStyle: string;
   eyeSize: string;
+  eyeSpacing: string;
+  eyeTilt: string;
+  eyeColor: string;
 }
 
 export interface DrillItem {
@@ -64,6 +68,7 @@ export const DEFAULT_SETTINGS: Settings = {
   model: "openai/gpt-oss-120b",
   level: "B1",
   persona: "",
+  personality: "warm_coach",
   hotkey: "Ctrl+Alt+B",
   autostart: false,
   pinned: true,
@@ -76,4 +81,7 @@ export const DEFAULT_SETTINGS: Settings = {
   textSize: "normal",
   eyeStyle: "bars",
   eyeSize: "medium",
+  eyeSpacing: "normal",
+  eyeTilt: "soft",
+  eyeColor: "auto",
 };

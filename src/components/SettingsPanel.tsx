@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { ipc } from "../lib/ipc";
+import { PERSONALITIES, personality, personalityPatch } from "../lib/personalities";
 import type { DrillStats, Settings } from "../lib/types";
-import { MASCOT_COLORS, MASCOT_SHAPES, Mascot, SHAPE_LABELS } from "./Mascot";
+import {
+  EYE_COLORS,
+  EYE_STYLES,
+  MASCOT_COLORS,
+  MASCOT_SHAPES,
+  Mascot,
+  SHAPE_LABELS,
+} from "./Mascot";
 
 interface SettingsPanelProps {
   settings: Settings;
@@ -18,6 +26,27 @@ const TEXT_SIZES = [
   ["small", "Small"],
   ["normal", "Normal"],
   ["large", "Large"],
+];
+const EYE_LABELS: Record<string, string> = {
+  bars: "Bars",
+  dots: "Dots",
+  arcs: "Arcs",
+  sleepy: "Sleepy",
+  sparkle: "Sparkle",
+  heart: "Heart",
+  ring: "Ring",
+  wink: "Wink",
+  angry: "Angry",
+};
+const SPACING_LABELS = [
+  ["close", "Close"],
+  ["normal", "Normal"],
+  ["wide", "Wide"],
+];
+const TILT_LABELS = [
+  ["soft", "Soft"],
+  ["straight", "Straight"],
+  ["sharp", "Sharp"],
 ];
 
 export function SettingsPanel({
@@ -126,6 +155,34 @@ export function SettingsPanel({
         <div className="section-title">Look</div>
 
         <div className="field">
+          <span>Personality</span>
+          <div className="personalities">
+            {PERSONALITIES.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                className={`persona ${draft.personality === preset.id ? "on" : ""}`}
+                title={preset.vibe}
+                onClick={() => patch(personalityPatch(preset.id))}
+              >
+                <Mascot
+                  state="idle"
+                  size={44}
+                  {...preset.look}
+                  eyeColor={draft.eyeColor}
+                  animate={false}
+                />
+                <span>{preset.label}</span>
+              </button>
+            ))}
+          </div>
+          <p className="hint">
+            {personality(draft.personality).vibe}. Tone and look change together, then you can
+            tweak them below.
+          </p>
+        </div>
+
+        <div className="field">
           <span>Your buddy</span>
           <div className="look">
             <div className="look-preview">
@@ -137,6 +194,9 @@ export function SettingsPanel({
                 showMouth={draft.showMouth}
                 eyeStyle={draft.eyeStyle}
                 eyeSize={draft.eyeSize}
+                eyeSpacing={draft.eyeSpacing}
+                eyeTilt={draft.eyeTilt}
+                eyeColor={draft.eyeColor}
                 boopable
               />
             </div>
@@ -177,6 +237,9 @@ export function SettingsPanel({
                       color={draft.color}
                       eyeStyle={draft.eyeStyle}
                       eyeSize={draft.eyeSize}
+                      eyeSpacing={draft.eyeSpacing}
+                      eyeTilt={draft.eyeTilt}
+                      eyeColor={draft.eyeColor}
                       animate={false}
                     />
                   </button>
@@ -188,21 +251,46 @@ export function SettingsPanel({
 
         <div className="field">
           <span>Eyes</span>
-          <div className="levels">
-            {[
-              ["bars", "Bars"],
-              ["dots", "Dots"],
-              ["arcs", "Arcs"],
-              ["sleepy", "Sleepy"],
-            ].map(([value, label]) => (
+          <div className="levels wrap">
+            {EYE_STYLES.map((value) => (
               <button
                 key={value}
                 className={`chip ${draft.eyeStyle === value ? "chip-on" : ""}`}
                 onClick={() => patch({ eyeStyle: value })}
               >
-                {label}
+                {EYE_LABELS[value]}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="field">
+          <span>Eye color</span>
+          <div className="swatches">
+            {EYE_COLORS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={`swatch ${draft.eyeColor === option ? "on" : ""}`}
+                style={{
+                  background:
+                    option === "auto"
+                      ? "linear-gradient(135deg, #fcfcff 0 50%, #241d33 50% 100%)"
+                      : option,
+                }}
+                onClick={() => patch({ eyeColor: option })}
+                aria-label={option === "auto" ? "auto contrast" : `eye color ${option}`}
+                title={option === "auto" ? "Auto contrast" : option}
+              />
+            ))}
+            <label className="swatch-custom" title="Custom eye color">
+              <input
+                type="color"
+                value={draft.eyeColor === "auto" ? "#fcfcff" : draft.eyeColor}
+                onChange={(event) => patch({ eyeColor: event.target.value })}
+                aria-label="Custom eye color"
+              />
+            </label>
           </div>
         </div>
 
@@ -218,6 +306,36 @@ export function SettingsPanel({
                 key={value}
                 className={`chip ${draft.eyeSize === value ? "chip-on" : ""}`}
                 onClick={() => patch({ eyeSize: value })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="field">
+          <span>Eye spacing</span>
+          <div className="levels">
+            {SPACING_LABELS.map(([value, label]) => (
+              <button
+                key={value}
+                className={`chip ${draft.eyeSpacing === value ? "chip-on" : ""}`}
+                onClick={() => patch({ eyeSpacing: value })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="field">
+          <span>Eye tilt</span>
+          <div className="levels">
+            {TILT_LABELS.map(([value, label]) => (
+              <button
+                key={value}
+                className={`chip ${draft.eyeTilt === value ? "chip-on" : ""}`}
+                onClick={() => patch({ eyeTilt: value })}
               >
                 {label}
               </button>
@@ -294,13 +412,14 @@ export function SettingsPanel({
         </label>
 
         <label className="field">
-          <span>bubo's personality (optional)</span>
+          <span>Extra flavor (optional)</span>
           <textarea
             rows={2}
             value={draft.persona}
-            placeholder="e.g. be a bit sarcastic, talk about music"
+            placeholder="e.g. talk about music, mention movies"
             onChange={(event) => patch({ persona: event.target.value })}
           />
+          <span className="hint">Added on top of the personality you picked in Look.</span>
         </label>
 
         <div className="section-title">Connection</div>

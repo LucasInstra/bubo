@@ -10,6 +10,7 @@ pub struct Settings {
     pub model: String,
     pub level: String,
     pub persona: String,
+    pub personality: String,
     pub hotkey: String,
     pub autostart: bool,
     pub pinned: bool,
@@ -22,6 +23,9 @@ pub struct Settings {
     pub text_size: String,
     pub eye_style: String,
     pub eye_size: String,
+    pub eye_spacing: String,
+    pub eye_tilt: String,
+    pub eye_color: String,
 }
 
 impl Default for Settings {
@@ -31,6 +35,7 @@ impl Default for Settings {
             model: "openai/gpt-oss-120b".to_string(),
             level: "B1".to_string(),
             persona: String::new(),
+            personality: "warm_coach".to_string(),
             hotkey: "Ctrl+Alt+B".to_string(),
             autostart: false,
             pinned: true,
@@ -43,6 +48,9 @@ impl Default for Settings {
             text_size: "normal".to_string(),
             eye_style: "bars".to_string(),
             eye_size: "medium".to_string(),
+            eye_spacing: "normal".to_string(),
+            eye_tilt: "soft".to_string(),
+            eye_color: "auto".to_string(),
         }
     }
 }

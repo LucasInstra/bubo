@@ -431,6 +431,9 @@ export default function App() {
               showMouth={settings.showMouth}
               eyeStyle={settings.eyeStyle}
               eyeSize={settings.eyeSize}
+              eyeSpacing={settings.eyeSpacing}
+              eyeTilt={settings.eyeTilt}
+              eyeColor={settings.eyeColor}
               boopable
             />
             {settings.showStatus && status !== "idle" && (

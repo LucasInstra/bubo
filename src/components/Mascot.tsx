@@ -30,8 +30,21 @@ export const MASCOT_COLORS = [
   "#ec4899",
 ] as const;
 
-export const EYE_STYLES = ["bars", "dots", "arcs", "sleepy"] as const;
+export const EYE_STYLES = [
+  "bars",
+  "dots",
+  "arcs",
+  "sleepy",
+  "sparkle",
+  "heart",
+  "ring",
+  "wink",
+  "angry",
+] as const;
 export const EYE_SIZES = ["small", "medium", "large"] as const;
+export const EYE_SPACINGS = ["close", "normal", "wide"] as const;
+export const EYE_TILTS = ["soft", "straight", "sharp"] as const;
+export const EYE_COLORS = ["auto", "#fcfcff", "#fff4d6", "#241d33"] as const;
 
 export const SHAPE_LABELS: Record<MascotShape, string> = {
   round: "round",
@@ -60,6 +73,73 @@ function shade(hex: string, factor: number, alpha: number): string {
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
+/** Perceived brightness, used to pick a readable eye color automatically. */
+function brightness(hex: string): number {
+  const value = hex.replace("#", "");
+  if (value.length !== 6) return 0.5;
+  const linear = (slice: string) => {
+    const channel = Number.parseInt(slice, 16) / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  };
+  return (
+    0.2126 * linear(value.slice(0, 2)) +
+    0.7152 * linear(value.slice(2, 4)) +
+    0.0722 * linear(value.slice(4, 6))
+  );
+}
+
+function sparklePath(context: CanvasRenderingContext2D, width: number, height: number) {
+  const outerX = width / 2;
+  const outerY = height / 2;
+  const innerX = outerX * 0.26;
+  const innerY = outerY * 0.26;
+  context.beginPath();
+  context.moveTo(0, -outerY);
+  context.quadraticCurveTo(innerX, -innerY, outerX, 0);
+  context.quadraticCurveTo(innerX, innerY, 0, outerY);
+  context.quadraticCurveTo(-innerX, innerY, -outerX, 0);
+  context.quadraticCurveTo(-innerX, -innerY, 0, -outerY);
+  context.closePath();
+}
+
+function heartPath(context: CanvasRenderingContext2D, width: number, height: number) {
+  context.beginPath();
+  context.moveTo(0, height * 0.38);
+  context.bezierCurveTo(
+    -width * 0.6,
+    -height * 0.08,
+    -width * 0.52,
+    -height * 0.5,
+    -width * 0.2,
+    -height * 0.5,
+  );
+  context.bezierCurveTo(
+    -width * 0.06,
+    -height * 0.5,
+    0,
+    -height * 0.34,
+    0,
+    -height * 0.18,
+  );
+  context.bezierCurveTo(
+    0,
+    -height * 0.34,
+    width * 0.06,
+    -height * 0.5,
+    width * 0.2,
+    -height * 0.5,
+  );
+  context.bezierCurveTo(
+    width * 0.52,
+    -height * 0.5,
+    width * 0.6,
+    -height * 0.08,
+    0,
+    height * 0.38,
+  );
+  context.closePath();
+}
+
 interface MascotProps {
   state: OrbState;
   color?: string;
@@ -70,6 +150,9 @@ interface MascotProps {
   showMouth?: boolean;
   eyeStyle?: string;
   eyeSize?: string;
+  eyeSpacing?: string;
+  eyeTilt?: string;
+  eyeColor?: string;
   animate?: boolean;
 }
 
@@ -242,6 +325,9 @@ export function Mascot({
   showMouth = true,
   eyeStyle = "bars",
   eyeSize = "medium",
+  eyeSpacing = "normal",
+  eyeTilt = "soft",
+  eyeColor = "auto",
   animate = true,
 }: MascotProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -399,40 +485,85 @@ export function Mascot({
       context.fillRect(-radius * 1.4, -radius * 1.4, radius * 2.8, radius * 2.8);
       context.restore();
 
-      // eyes: one solid shape each, no pupil; style and size are configurable
+      // eyes: one flat shape each, no pupil; style, size, spacing, tilt and
+      // color are configurable, and every solid shape folds when it blinks
       const sizeScale = eyeSize === "small" ? 0.82 : eyeSize === "large" ? 1.22 : 1;
-      let eyeWidth = radius * 0.225 * sizeScale;
-      let eyeHeight = radius * 0.52 * sizeScale * (1 + wonder * 0.1);
-      if (eyeStyle === "dots") eyeHeight = eyeWidth;
-      if (eyeStyle === "sleepy") {
-        eyeWidth = radius * 0.34 * sizeScale;
-        eyeHeight = radius * 0.13 * sizeScale;
-      }
-      const eyeOffset = radius * 0.285;
+      const spacingScale = eyeSpacing === "close" ? 0.235 : eyeSpacing === "wide" ? 0.35 : 0.285;
+      const tiltAngle = eyeTilt === "straight" ? 0 : eyeTilt === "sharp" ? 0.14 : -0.16;
+      const ink =
+        !eyeColor || eyeColor === "auto"
+          ? brightness(color) > 0.3
+            ? "#241d33"
+            : "#fcfcff"
+          : eyeColor;
+      const eyeOffset = radius * spacingScale;
       const eyeY = radius * 0.05 + gaze.y * radius * 0.03;
-      const drawArcs = happy > 0.55 || eyeStyle === "arcs";
 
       for (const side of [-1, 1]) {
+        const style = eyeStyle === "wink" ? (side === -1 ? "arcs" : "bars") : eyeStyle;
         const eyeX = side * eyeOffset + gaze.x * radius * 0.05;
-        const blinkScale = winking && side === -1 ? 0.08 : eyeOpen;
+        const closed = winking && side === -1;
+        const cheerful =
+          happy > 0.55 && (style === "bars" || style === "dots" || style === "sleepy");
+        const drawArc = closed || cheerful || style === "arcs";
+
+        let eyeWidth = radius * 0.225 * sizeScale;
+        let eyeHeight = radius * 0.52 * sizeScale * (1 + wonder * 0.1);
+        if (style === "dots") eyeWidth = eyeHeight = radius * 0.3 * sizeScale;
+        if (style === "sleepy") {
+          eyeWidth = radius * 0.34 * sizeScale;
+          eyeHeight = radius * 0.13 * sizeScale;
+        }
+        if (style === "sparkle") {
+          eyeWidth = radius * 0.46 * sizeScale;
+          eyeHeight = radius * 0.58 * sizeScale;
+        }
+        if (style === "heart") {
+          eyeWidth = radius * 0.48 * sizeScale;
+          eyeHeight = radius * 0.46 * sizeScale;
+        }
+        if (style === "ring") {
+          eyeWidth = radius * 0.4 * sizeScale;
+          eyeHeight = eyeWidth;
+        }
+        if (style === "angry") {
+          eyeWidth = radius * 0.24 * sizeScale;
+          eyeHeight = radius * 0.46 * sizeScale;
+        }
 
         context.save();
         context.translate(eyeX, eyeY);
-        context.rotate(side * -0.16);
+        context.rotate(style === "angry" ? side * 0.34 : side * tiltAngle);
 
-        if (drawArcs) {
-          context.strokeStyle = "rgba(252,252,255,0.97)";
+        if (drawArc) {
+          context.strokeStyle = ink;
           context.lineWidth = Math.max(1.4, eyeWidth * 0.72);
           context.lineCap = "round";
           context.beginPath();
           context.arc(0, eyeHeight * 0.2, eyeWidth * 0.9, Math.PI * 1.14, Math.PI * 1.86);
           context.stroke();
         } else {
-          context.scale(1, blinkScale);
-          context.fillStyle = "rgba(252,252,255,0.97)";
-          context.beginPath();
-          context.roundRect(-eyeWidth / 2, -eyeHeight / 2, eyeWidth, eyeHeight, eyeWidth / 2);
-          context.fill();
+          context.scale(1, Math.max(0.1, eyeOpen));
+          if (style === "sparkle") {
+            context.fillStyle = ink;
+            sparklePath(context, eyeWidth, eyeHeight);
+            context.fill();
+          } else if (style === "heart") {
+            context.fillStyle = ink;
+            heartPath(context, eyeWidth, eyeHeight);
+            context.fill();
+          } else if (style === "ring") {
+            context.strokeStyle = ink;
+            context.lineWidth = Math.max(1, eyeWidth * 0.26);
+            context.beginPath();
+            context.arc(0, 0, eyeWidth / 2, 0, TAU);
+            context.stroke();
+          } else {
+            context.fillStyle = ink;
+            context.beginPath();
+            context.roundRect(-eyeWidth / 2, -eyeHeight / 2, eyeWidth, eyeHeight, eyeWidth / 2);
+            context.fill();
+          }
         }
 
         context.restore();
@@ -496,7 +627,7 @@ export function Mascot({
       window.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerdown", onPointerDown);
     };
-  }, [size, shape, color, boopable, showMouth, eyeStyle, eyeSize, animate]);
+  }, [size, shape, color, boopable, showMouth, eyeStyle, eyeSize, eyeSpacing, eyeTilt, eyeColor, animate]);
 
   return (
     <canvas
