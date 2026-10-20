@@ -54,6 +54,7 @@ export default function App() {
   const [pinned, setPinned] = useState(true);
   const [due, setDue] = useState(0);
   const [showDrill, setShowDrill] = useState(false);
+  const [stageSize, setStageSize] = useState(76);
 
   const listRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef(true);
@@ -128,6 +129,16 @@ export default function App() {
     },
     [],
   );
+
+  useEffect(() => {
+    const update = () => {
+      const width = window.innerWidth;
+      setStageSize(Math.max(62, Math.min(104, Math.round(width * 0.19))));
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [settings.compact]);
 
   const runTurn = useCallback(
     async (text: string, base: Msg[] = messages) => {
@@ -356,6 +367,7 @@ export default function App() {
   const accentVars = {
     "--accent": accent,
     "--accent-soft": withAlpha(accent, 0.16),
+    "--stage-size": `${stageSize}px`,
   } as CSSProperties;
 
   return (
@@ -378,7 +390,7 @@ export default function App() {
             >
               <Mascot
                 state="idle"
-                size={28}
+                size={settings.compact ? 42 : 28}
                 shape="round"
                 color={settings.color}
                 showMouth={false}
@@ -528,7 +540,7 @@ export default function App() {
               <Mascot
                 state={status}
                 mood={mood}
-                size={74}
+                size={stageSize}
                 energy={energy}
                 shape={settings.shape}
                 color={settings.color}

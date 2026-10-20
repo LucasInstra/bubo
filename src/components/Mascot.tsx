@@ -618,6 +618,26 @@ export function Mascot({
           : 0;
 
       context.clearRect(0, 0, size, size);
+
+      // the aura stays centered and fades fully before the canvas edge, so a
+      // hard drag never exposes the invisible square around the mascot
+      const auraRadius = radius * 1.42;
+      const aura = context.createRadialGradient(
+        center,
+        center,
+        radius * 0.35,
+        center,
+        center,
+        auraRadius,
+      );
+      aura.addColorStop(0, `${color}${hovering ? "3a" : "2e"}`);
+      aura.addColorStop(0.6, `${color}10`);
+      aura.addColorStop(1, "rgba(0,0,0,0)");
+      context.fillStyle = aura;
+      context.beginPath();
+      context.arc(center, center, auraRadius, 0, TAU);
+      context.fill();
+
       context.save();
       context.translate(
         center + sway + headX.value + dragX.value,
@@ -627,16 +647,6 @@ export function Mascot({
       context.scale(1 / breathe, breathe);
       context.scale(jellyX, jellyY);
       context.transform(1, pullY * 0.09, pullX * 0.09, 1, 0, 0);
-
-      // soft aura
-      const aura = context.createRadialGradient(0, 0, radius * 0.4, 0, 0, radius * 1.9);
-      aura.addColorStop(0, `${color}${hovering ? "3a" : "2e"}`);
-      aura.addColorStop(0.6, `${color}10`);
-      aura.addColorStop(1, "rgba(0,0,0,0)");
-      context.fillStyle = aura;
-      context.beginPath();
-      context.arc(0, 0, radius * 1.9, 0, TAU);
-      context.fill();
 
       // body
       const body = bodyPath(shape, radius);
