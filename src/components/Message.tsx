@@ -23,9 +23,22 @@ export const Message = memo(function Message({ message, onRetry, onDelete }: Mes
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(body);
+      return;
+    } catch {
+      // Fallback for webviews without clipboard permission.
+    }
+    const area = document.createElement("textarea");
+    area.value = body;
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    try {
+      document.execCommand("copy");
     } catch (error) {
       console.error("clipboard unavailable", error);
     }
+    area.remove();
   };
 
   return (
