@@ -212,6 +212,7 @@ export function BuddyPanel({
                       eyeSpacing={draft.eyeSpacing}
                       eyeTilt={draft.eyeTilt}
                       eyeColor={draft.eyeColor}
+                      canvasPadding={0.2}
                       animate={false}
                     />
                   </button>

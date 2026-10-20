@@ -179,6 +179,7 @@ interface MascotProps {
   eyeTilt?: string;
   eyeColor?: string;
   animate?: boolean;
+  canvasPadding?: number;
 }
 
 function superellipse(path: Path2D, radius: number, power: number) {
@@ -355,12 +356,15 @@ export function Mascot({
   eyeTilt = "soft",
   eyeColor = "auto",
   animate = true,
+  canvasPadding = 0.5,
 }: MascotProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hitRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<OrbState>(state);
   const moodRef = useRef<Mood>(mood);
   const energyRef = useRef(energy);
   const boopRef = useRef(0);
+  const canvasSize = Math.round(size * (1 + canvasPadding));
 
   stateRef.current = state;
   moodRef.current = mood;
@@ -369,11 +373,12 @@ export function Mascot({
   useEffect(() => {
     const canvas = canvasRef.current;
     const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
+    const hit = hitRef.current;
+    if (!canvas || !context || !hit) return;
 
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
+    canvas.width = canvasSize * dpr;
+    canvas.height = canvasSize * dpr;
     context.scale(dpr, dpr);
 
     const gaze = { x: 0, y: 0, tx: 0, ty: 0, seen: -10 };
@@ -420,7 +425,7 @@ export function Mascot({
     };
 
     const onPointerMove = (event: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect();
+      const rect = hit.getBoundingClientRect();
       const halfWidth = rect.width / 2 || 1;
       const halfHeight = rect.height / 2 || 1;
       gaze.tx = Math.max(-1, Math.min(1, (event.clientX - (rect.left + halfWidth)) / halfWidth));
@@ -447,11 +452,11 @@ export function Mascot({
       drag.startY = event.clientY;
       drag.moved = 0;
       try {
-        canvas.setPointerCapture(event.pointerId);
+        hit.setPointerCapture(event.pointerId);
       } catch {
         // the pointer can already be gone on very fast clicks
       }
-      canvas.style.cursor = "grabbing";
+      hit.style.cursor = "grabbing";
     };
 
     const onPointerUp = () => {
@@ -459,7 +464,7 @@ export function Mascot({
       drag.active = false;
       dragX.target = 0;
       dragY.target = 0;
-      canvas.style.cursor = boopable ? "grab" : "default";
+      hit.style.cursor = boopable ? "grab" : "default";
       if (drag.moved < 4) {
         const now2 = (performance.now() - start) / 1000;
         boopRef.current = 1;
@@ -474,7 +479,7 @@ export function Mascot({
       window.addEventListener("blur", onPointerUp);
       canvas.addEventListener("pointerdown", onPointerDown);
       canvas.addEventListener("pointercancel", onPointerUp);
-      if (boopable) canvas.style.cursor = "grab";
+      if (boopable) hit.style.cursor = "grab";
     }
     const draw = (now: number) => {
       const time = (now - start) / 1000;
@@ -482,7 +487,7 @@ export function Mascot({
       lastTime = time;
 
       const current = stateRef.current;
-      const center = size / 2;
+      const center = canvasSize / 2;
 
       if (current !== lastState) {
         wonder = 1;
@@ -617,26 +622,7 @@ export function Mascot({
           ? -radius * 0.035 * moodBlend
           : 0;
 
-      context.clearRect(0, 0, size, size);
-
-      // the aura stays centered and fades fully before the canvas edge, so a
-      // hard drag never exposes the invisible square around the mascot
-      const auraRadius = radius * 1.42;
-      const aura = context.createRadialGradient(
-        center,
-        center,
-        radius * 0.35,
-        center,
-        center,
-        auraRadius,
-      );
-      aura.addColorStop(0, `${color}${hovering ? "3a" : "2e"}`);
-      aura.addColorStop(0.6, `${color}10`);
-      aura.addColorStop(1, "rgba(0,0,0,0)");
-      context.fillStyle = aura;
-      context.beginPath();
-      context.arc(center, center, auraRadius, 0, TAU);
-      context.fill();
+      context.clearRect(0, 0, canvasSize, canvasSize);
 
       context.save();
       context.translate(
@@ -647,6 +633,17 @@ export function Mascot({
       context.scale(1 / breathe, breathe);
       context.scale(jellyX, jellyY);
       context.transform(1, pullY * 0.09, pullX * 0.09, 1, 0, 0);
+
+      // soft aura follows the body; the padded canvas keeps it off the edge
+      const auraRadius = radius * 1.9;
+      const aura = context.createRadialGradient(0, 0, radius * 0.4, 0, 0, auraRadius);
+      aura.addColorStop(0, `${color}${hovering ? "3a" : "2e"}`);
+      aura.addColorStop(0.6, `${color}10`);
+      aura.addColorStop(1, "rgba(0,0,0,0)");
+      context.fillStyle = aura;
+      context.beginPath();
+      context.arc(0, 0, auraRadius, 0, TAU);
+      context.fill();
 
       // body
       const body = bodyPath(shape, radius);
@@ -823,19 +820,37 @@ export function Mascot({
       canvas.removeEventListener("pointerdown", onPointerDown);
       canvas.removeEventListener("pointercancel", onPointerUp);
     };
-  }, [size, shape, color, boopable, showMouth, eyeStyle, eyeSize, eyeSpacing, eyeTilt, eyeColor, animate]);
+  }, [size, canvasSize, shape, color, boopable, showMouth, eyeStyle, eyeSize, eyeSpacing, eyeTilt, eyeColor, animate]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      title={boopable ? "Drag me, or click for a boop" : undefined}
-      style={{
-        width: size,
-        height: size,
-        display: "block",
-        cursor: boopable ? "grab" : "default",
-      }}
-      aria-hidden="true"
-    />
+    <div
+      className="mascot"
+      style={{ position: "relative", width: size, height: size, flex: "none" }}
+    >
+      <canvas
+        ref={canvasRef}
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          width: canvasSize,
+          height: canvasSize,
+          transform: "translate(-50%, -50%)",
+          display: "block",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        ref={hitRef}
+        className="mascot-hit"
+        title={boopable ? "Drag me, or click for a boop" : undefined}
+        style={{
+          position: "absolute",
+          inset: 0,
+          cursor: boopable ? "grab" : "inherit",
+        }}
+      />
+    </div>
   );
 }

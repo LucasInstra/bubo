@@ -377,35 +377,50 @@ export default function App() {
     >
       <div className="panel">
         <header className="head" data-tauri-drag-region>
-          <div className="brand" data-tauri-drag-region>
-            <button
-              className="brand-face"
-              type="button"
-              title="Customize buddy"
-              aria-label="Customize buddy"
-              onClick={() => {
-                setShowSettings(false);
-                setShowBuddy(true);
-              }}
-            >
+          <button
+            className="brand brand-button"
+            type="button"
+            title="Customize buddy"
+            aria-label="Customize buddy"
+            onClick={() => {
+              setShowSettings(false);
+              setShowBuddy(true);
+            }}
+          >
+            <span className="brand-face">
               <Mascot
                 state="idle"
                 size={settings.compact ? 42 : 28}
                 shape="round"
                 color={settings.color}
                 showMouth={false}
-                eyeStyle="bars"
-                eyeSize="medium"
-                eyeSpacing="normal"
-                eyeTilt="soft"
+                eyeStyle={settings.eyeStyle}
+                eyeSize={settings.eyeSize}
+                eyeSpacing={settings.eyeSpacing}
+                eyeTilt={settings.eyeTilt}
                 eyeColor={settings.eyeColor}
               />
-            </button>
-            <div className="brand-copy">
+            </span>
+            <span className="brand-copy">
               <strong>bubo</strong>
               <span className="brand-sub">{mood === "idle" ? "English buddy" : mood}</span>
-            </div>
-          </div>
+            </span>
+            <span className="brand-edit" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                width="12"
+                height="12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 20h4L18.5 9.5l-4-4L4 16v4z" />
+                <path d="M13.5 6.5l4 4" />
+              </svg>
+            </span>
+          </button>
           <div className="head-actions">
             {!settings.compact && (
               <>

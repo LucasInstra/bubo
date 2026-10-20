@@ -104,8 +104,9 @@ button {
   pointer-events: none;
 }
 
-.chat-stage canvas {
-  pointer-events: auto;
+.mascot-hit {
+  touch-action: none;
+  user-select: none;
 }
 
 .status-pill {
@@ -131,6 +132,34 @@ button {
   line-height: 1.05;
 }
 
+.brand-button {
+  border: 0;
+  padding: 2px 4px;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease;
+}
+
+.brand-button:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.brand-edit {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.brand-button:hover .brand-edit {
+  opacity: 1;
+}
+
 .brand-face {
   width: 34px;
   height: 34px;
@@ -141,11 +170,10 @@ button {
   border: 0;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.04);
-  cursor: pointer;
   transition: background 0.12s ease, transform 0.12s ease;
 }
 
-.brand-face:hover {
+.brand-button:hover .brand-face {
   background: rgba(255, 255, 255, 0.09);
   transform: scale(1.06);
 }
