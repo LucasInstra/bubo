@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ipc } from "../lib/ipc";
-import { PERSONALITIES, personality, personalityPatch } from "../lib/personalities";
+import { PERSONALITIES, personality } from "../lib/personalities";
 import type { DrillStats, Settings } from "../lib/types";
 import {
   EYE_COLORS,
@@ -163,22 +163,15 @@ export function SettingsPanel({
                 type="button"
                 className={`persona ${draft.personality === preset.id ? "on" : ""}`}
                 title={preset.vibe}
-                onClick={() => patch(personalityPatch(preset.id))}
+                onClick={() => patch({ personality: preset.id })}
               >
-                <Mascot
-                  state="idle"
-                  size={44}
-                  {...preset.look}
-                  eyeColor={draft.eyeColor}
-                  animate={false}
-                />
-                <span>{preset.label}</span>
+                <span className="persona-label">{preset.label}</span>
+                <span className="persona-vibe">{preset.vibe}</span>
               </button>
             ))}
           </div>
           <p className="hint">
-            {personality(draft.personality).vibe}. Tone and look change together, then you can
-            tweak them below.
+            {personality(draft.personality).vibe}. Only the tone changes, the look stays yours.
           </p>
         </div>
 
