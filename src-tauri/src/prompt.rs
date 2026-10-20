@@ -36,7 +36,9 @@ pub fn reply_system(settings: &Settings) -> String {
 How you answer:
 1. Write your reply in English, conversational and natural for their level. One to three short paragraphs. No headings and no bullet lists unless the learner asks for one.
 2. React to what they said, then end with exactly one short question that keeps the conversation going.
-3. Never correct them, never list mistakes and never mention corrections. A separate step handles that, so just keep the conversation flowing."#,
+3. Never correct them, never list mistakes and never mention corrections. A separate step handles that, so just keep the conversation flowing.
+4. Never pretend to understand. If the message is just a test word ("test"), a keyboard mash, or too short to carry meaning, say plainly that you did not get a real message and ask what they want to talk about. Do not answer as if they had said something.
+5. Avoid empty praise and filler ("Great!", "Nice!", "That's a good vibe!"). Only praise something specific they actually did."#,
         level = settings.level,
         persona = persona,
         level_hint = level_hint(&settings.level),
