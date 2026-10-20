@@ -165,13 +165,27 @@ export function SettingsPanel({
                 title={preset.vibe}
                 onClick={() => patch({ personality: preset.id })}
               >
+                <Mascot
+                  state="idle"
+                  size={44}
+                  shape={draft.shape}
+                  color={draft.color}
+                  eyeStyle={draft.eyeStyle}
+                  eyeSize={draft.eyeSize}
+                  eyeSpacing={draft.eyeSpacing}
+                  eyeTilt={draft.eyeTilt}
+                  eyeColor={draft.eyeColor}
+                  showMouth={draft.showMouth}
+                  animate={false}
+                />
                 <span className="persona-label">{preset.label}</span>
                 <span className="persona-vibe">{preset.vibe}</span>
               </button>
             ))}
           </div>
           <p className="hint">
-            {personality(draft.personality).vibe}. Only the tone changes, the look stays yours.
+            {personality(draft.personality).vibe}. Only the tone changes, the mascot stays as you
+            customized it.
           </p>
         </div>
 
