@@ -389,11 +389,12 @@ export default function App() {
           >
             <span className="brand-face">
               <Mascot
-                state="idle"
+                state={status}
+                mood={mood}
                 size={settings.compact ? 42 : 28}
-                shape="round"
+                shape={settings.shape}
                 color={settings.color}
-                showMouth={false}
+                showMouth={settings.showMouth}
                 eyeStyle={settings.eyeStyle}
                 eyeSize={settings.eyeSize}
                 eyeSpacing={settings.eyeSpacing}
@@ -508,27 +509,43 @@ export default function App() {
                 )}
               </svg>
             </button>
-            <button
-              className="ghost icon"
-              title="Settings"
-              aria-label="Settings"
-              onClick={() => {
-                setShowBuddy(false);
-                setShowSettings(true);
-              }}
-            >
-              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-                <path
-                  d="M4 7h10M18 7h2M4 17h2M10 17h10"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-                <circle cx="16" cy="7" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-                <circle cx="8" cy="17" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-              </svg>
-            </button>
+            {!settings.compact && (
+              <button
+                className="ghost icon"
+                title="Settings"
+                aria-label="Settings"
+                onClick={() => {
+                  setShowBuddy(false);
+                  setShowSettings(true);
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                  <path
+                    d="M4 7h10M18 7h2M4 17h2M10 17h10"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
+                  <circle
+                    cx="16"
+                    cy="7"
+                    r="2.2"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                  />
+                  <circle
+                    cx="8"
+                    cy="17"
+                    r="2.2"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                  />
+                </svg>
+              </button>
+            )}
             <button
               className="ghost icon"
               title={`Hide (${settings.hotkey})`}

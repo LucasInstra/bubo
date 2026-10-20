@@ -78,10 +78,18 @@ export function BuddyPanel({
     }
   };
 
+  const close = async () => {
+    if (!dirty) {
+      onClose();
+      return;
+    }
+    await save();
+  };
+
   return (
     <div className="settings buddy" role="dialog" aria-modal="true" aria-label="Customize buddy">
       <div className="settings-head">
-        <button className="ghost" onClick={onClose} aria-label="Back">
+        <button className="ghost" onClick={() => void close()} aria-label="Back">
           ←
         </button>
         <span>buddy</span>

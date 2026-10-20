@@ -356,7 +356,7 @@ export function Mascot({
   eyeTilt = "soft",
   eyeColor = "auto",
   animate = true,
-  canvasPadding = 0.5,
+  canvasPadding = 0.75,
 }: MascotProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hitRef = useRef<HTMLDivElement>(null);
@@ -441,8 +441,12 @@ export function Mascot({
       const dx = event.clientX - drag.startX;
       const dy = event.clientY - drag.startY;
       drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
-      dragX.target = Math.max(-radius * 0.55, Math.min(radius * 0.55, dx));
-      dragY.target = Math.max(-radius * 0.55, Math.min(radius * 0.55, dy));
+      // soft limit: the further you pull, the more resistance, but no wall
+      const limit = radius * 0.55;
+      const pull = (value: number) =>
+        Math.sign(value) * limit * Math.tanh(Math.abs(value) / limit);
+      dragX.target = pull(dx);
+      dragY.target = pull(dy);
     };
 
     const onPointerDown = (event: PointerEvent) => {
@@ -630,11 +634,8 @@ export function Mascot({
         center + boop + headY.value + dragY.value + moodBob * moodBlend + moodDrop + hop,
       );
       context.rotate(tilt + headRot.value + pullX * 0.05);
-      context.scale(1 / breathe, breathe);
-      context.scale(jellyX, jellyY);
-      context.transform(1, pullY * 0.09, pullX * 0.09, 1, 0, 0);
 
-      // soft aura follows the body; the padded canvas keeps it off the edge
+      // soft aura follows the body, outside the jelly scale so it never clips
       const auraRadius = radius * 1.9;
       const aura = context.createRadialGradient(0, 0, radius * 0.4, 0, 0, auraRadius);
       aura.addColorStop(0, `${color}${hovering ? "3a" : "2e"}`);
@@ -644,6 +645,10 @@ export function Mascot({
       context.beginPath();
       context.arc(0, 0, auraRadius, 0, TAU);
       context.fill();
+
+      context.scale(1 / breathe, breathe);
+      context.scale(jellyX, jellyY);
+      context.transform(1, pullY * 0.09, pullX * 0.09, 1, 0, 0);
 
       // body
       const body = bodyPath(shape, radius);
