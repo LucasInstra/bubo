@@ -24,6 +24,20 @@ export interface Settings {
   persona: string;
   hotkey: string;
   autostart: boolean;
+  pinned: boolean;
+}
+
+export interface DrillItem {
+  id: number;
+  wrong: string;
+  right: string;
+  note: string;
+  streak: number;
+}
+
+export interface DrillStats {
+  total: number;
+  due: number;
 }
 
 export interface StoredMessage {
@@ -41,4 +55,5 @@ export const DEFAULT_SETTINGS: Settings = {
   persona: "",
   hotkey: "Ctrl+Alt+B",
   autostart: false,
+  pinned: true,
 };

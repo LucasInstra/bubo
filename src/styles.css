@@ -120,12 +120,34 @@ button {
 }
 
 .ghost.icon {
+  position: relative;
   width: 26px;
   height: 26px;
   padding: 0;
   display: grid;
   place-items: center;
   font-size: 13px;
+}
+
+.ghost.icon.on {
+  color: var(--accent);
+  background: rgba(139, 125, 255, 0.14);
+}
+
+.badge {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  min-width: 12px;
+  height: 12px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: var(--good);
+  color: #08231a;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 12px;
+  text-align: center;
 }
 
 /* messages */
@@ -325,6 +347,139 @@ button {
 .chip-on {
   background: var(--accent-soft);
   border-color: rgba(139, 125, 255, 0.5);
+}
+
+.chip-practice {
+  border-color: rgba(110, 231, 183, 0.35);
+  background: rgba(110, 231, 183, 0.07);
+  color: var(--good);
+}
+
+/* practice / drill */
+
+.drill-body {
+  gap: 10px;
+}
+
+.drill-count {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.drill-hint {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.drill-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  padding-top: 8px;
+  font-size: 13px;
+}
+
+.drill-empty p {
+  margin: 0;
+}
+
+.drill-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.drill-label {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  color: var(--muted);
+}
+
+.drill-wrong {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #f3e6ea;
+}
+
+.drill-streak {
+  font-size: 10px;
+  color: var(--good);
+}
+
+.drill-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  user-select: text;
+}
+
+.drill-input:focus {
+  border-color: rgba(139, 125, 255, 0.45);
+  box-shadow: 0 0 0 3px rgba(139, 125, 255, 0.1);
+}
+
+.drill-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.drill-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border-left: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.drill-result.is-good {
+  border-left-color: var(--good);
+  background: rgba(110, 231, 183, 0.06);
+}
+
+.drill-result.is-bad {
+  border-left-color: var(--bad);
+  background: rgba(253, 164, 175, 0.06);
+}
+
+.drill-verdict {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  color: var(--muted);
+}
+
+.drill-right {
+  font-size: 14px;
+  color: var(--good);
+  line-height: 1.5;
+}
+
+.drill-note {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.drill-result .primary {
+  align-self: flex-start;
+  margin-top: 2px;
 }
 
 /* composer */

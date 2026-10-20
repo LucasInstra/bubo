@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { Fix, Msg, Settings, StoredMessage } from "./types";
+import type { DrillItem, DrillStats, Fix, Msg, Settings, StoredMessage } from "./types";
 
 interface DeltaEvent {
   requestId: string;
@@ -28,8 +28,14 @@ export const ipc = {
   hasApiKey: () => invoke<boolean>("has_api_key"),
   saveApiKey: (key: string) => invoke<void>("save_api_key", { key }),
   setAutostart: (enabled: boolean) => invoke<void>("set_autostart", { enabled }),
+  setPinned: (pinned: boolean) => invoke<void>("set_pinned", { pinned }),
   history: () => invoke<StoredMessage[]>("history"),
   clearHistory: () => invoke<void>("clear_history"),
+  drillStats: () => invoke<DrillStats>("drill_stats"),
+  drillNext: (includeFuture: boolean) =>
+    invoke<DrillItem | null>("drill_next", { includeFuture }),
+  drillReview: (id: number, correct: boolean) =>
+    invoke<DrillItem | null>("drill_review", { id, correct }),
   hideWindow: () => invoke<void>("hide_window"),
   quit: () => invoke<void>("quit_app"),
 

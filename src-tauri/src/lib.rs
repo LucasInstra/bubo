@@ -10,11 +10,34 @@ use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_autostart::ManagerExt;
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 struct AppState {
     db: Mutex<rusqlite::Connection>,
     http: reqwest::Client,
+    shortcut: Mutex<Option<Shortcut>>,
+}
+
+fn install_hotkey(
+    app: &AppHandle,
+    slot: &Mutex<Option<Shortcut>>,
+    hotkey: &str,
+) -> Result<(), String> {
+    let parsed: Shortcut = hotkey
+        .trim()
+        .parse()
+        .map_err(|_| format!("Invalid hotkey: {hotkey}. Try something like Ctrl+Alt+B."))?;
+
+    let _ = app.global_shortcut().unregister_all();
+    app.global_shortcut()
+        .register(parsed)
+        .map_err(|error| format!("Could not register {hotkey}: {error}"))?;
+
+    if let Ok(mut current) = slot.lock() {
+        *current = Some(parsed);
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -23,8 +46,23 @@ fn get_settings(app: AppHandle) -> Result<config::Settings, String> {
 }
 
 #[tauri::command]
-fn save_settings(app: AppHandle, settings: config::Settings) -> Result<(), String> {
+fn save_settings(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    settings: config::Settings,
+) -> Result<(), String> {
+    install_hotkey(&app, &state.shortcut, &settings.hotkey)?;
+
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.set_always_on_top(settings.pinned);
+    }
+
     config::save_settings_file(&app, &settings)
+}
+
+#[tauri::command]
+fn set_pinned(window: tauri::Window, pinned: bool) -> Result<(), String> {
+    window.set_always_on_top(pinned).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -118,6 +156,10 @@ async fn chat(
         let _ = app.emit("bubo-fixes", llm::fixes_event_payload(&request_id, &fixes));
     }
 
+    if let Ok(db) = state.db.lock() {
+        let _ = store::save_fixes(&db, &fixes);
+    }
+
     let fixes_json = if fixes.is_empty() {
         None
     } else {
@@ -147,6 +189,31 @@ fn history(state: State<'_, AppState>) -> Result<Vec<store::StoredMessage>, Stri
 fn clear_history(state: State<'_, AppState>) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     store::clear(&db).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn drill_stats(state: State<'_, AppState>) -> Result<store::DrillStats, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::drill_stats(&db).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn drill_next(
+    state: State<'_, AppState>,
+    include_future: bool,
+) -> Result<Option<store::DrillItem>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::next_drill(&db, include_future).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn drill_review(
+    state: State<'_, AppState>,
+    id: i64,
+    correct: bool,
+) -> Result<Option<store::DrillItem>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::review_drill(&db, id, correct).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -212,14 +279,22 @@ pub fn run() {
             app.manage(AppState {
                 db: Mutex::new(connection),
                 http: reqwest::Client::new(),
+                shortcut: Mutex::new(None),
             });
+
+            let settings = config::load_settings(app.handle()).unwrap_or_default();
 
             if let Some(window) = app.get_webview_window("main") {
                 place_bottom_right(&window);
+                let _ = window.set_always_on_top(settings.pinned);
             }
 
-            let hotkey = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyB);
-            app.global_shortcut().register(hotkey)?;
+            install_hotkey(
+                app.handle(),
+                &app.state::<AppState>().shortcut,
+                &settings.hotkey,
+            )
+            .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error))?;
 
             let show_item = MenuItem::with_id(app, "show", "Show bubo", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
@@ -260,9 +335,13 @@ pub fn run() {
             has_api_key,
             save_api_key,
             set_autostart,
+            set_pinned,
             chat,
             history,
             clear_history,
+            drill_stats,
+            drill_next,
+            drill_review,
             hide_window,
             quit_app
         ])

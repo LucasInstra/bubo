@@ -77,6 +77,16 @@ export function SettingsPanel({
           />
         </label>
 
+        <label className="field">
+          <span>Show/hide hotkey</span>
+          <input
+            value={draft.hotkey}
+            onChange={(event) => patch({ hotkey: event.target.value })}
+            spellCheck={false}
+            placeholder="Ctrl+Alt+B"
+          />
+        </label>
+
         <div className="field">
           <span>My English level</span>
           <div className="levels">
@@ -113,7 +123,8 @@ export function SettingsPanel({
 
         <div className="field note">
           <span>
-            Hotkey <code>{draft.hotkey}</code> shows and hides bubo. ESC hides it too.
+            Combine Ctrl, Alt or Shift with a key, like <code>Ctrl+Alt+B</code>. ESC hides the
+            window.
           </span>
         </div>
 

@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", default)]
 pub struct Settings {
     pub base_url: String,
     pub model: String,
@@ -12,6 +12,7 @@ pub struct Settings {
     pub persona: String,
     pub hotkey: String,
     pub autostart: bool,
+    pub pinned: bool,
 }
 
 impl Default for Settings {
@@ -23,6 +24,7 @@ impl Default for Settings {
             persona: String::new(),
             hotkey: "Ctrl+Alt+B".to_string(),
             autostart: false,
+            pinned: true,
         }
     }
 }

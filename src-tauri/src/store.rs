@@ -1,7 +1,9 @@
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::llm::Fix;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -13,10 +15,45 @@ pub struct StoredMessage {
     pub created_at: i64,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DrillItem {
+    pub id: i64,
+    pub wrong: String,
+    pub right: String,
+    pub note: String,
+    pub streak: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DrillStats {
+    pub total: i64,
+    pub due: i64,
+}
+
 pub fn open(path: PathBuf) -> rusqlite::Result<Connection> {
     let conn = Connection::open(path)?;
     init(&conn)?;
+    backfill_fixes(&conn)?;
     Ok(conn)
+}
+
+/// Older databases stored corrections only inside messages; seed the drill
+/// table from them so history is practiceable right away. Idempotent.
+fn backfill_fixes(conn: &Connection) -> rusqlite::Result<()> {
+    let mut statement = conn.prepare("SELECT fixes FROM messages WHERE fixes IS NOT NULL")?;
+    let raws = statement
+        .query_map([], |row| row.get::<_, String>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+
+    for raw in raws {
+        if let Ok(fixes) = serde_json::from_str::<Vec<Fix>>(&raw) {
+            save_fixes(conn, &fixes)?;
+        }
+    }
+
+    Ok(())
 }
 
 fn init(conn: &Connection) -> rusqlite::Result<()> {
@@ -27,6 +64,16 @@ fn init(conn: &Connection) -> rusqlite::Result<()> {
             content TEXT NOT NULL,
             fixes TEXT,
             created_at INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS fixes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            wrong TEXT NOT NULL,
+            right TEXT NOT NULL,
+            note TEXT NOT NULL DEFAULT '',
+            created_at INTEGER NOT NULL,
+            streak INTEGER NOT NULL DEFAULT 0,
+            due_at INTEGER NOT NULL,
+            UNIQUE(wrong, right)
         );",
     )?;
     Ok(())
@@ -80,6 +127,97 @@ pub fn clear(conn: &Connection) -> rusqlite::Result<()> {
     Ok(())
 }
 
+fn row_to_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<DrillItem> {
+    Ok(DrillItem {
+        id: row.get(0)?,
+        wrong: row.get(1)?,
+        right: row.get(2)?,
+        note: row.get(3)?,
+        streak: row.get(4)?,
+    })
+}
+
+/// Corrections are stored once; the drill later schedules them.
+pub fn save_fixes(conn: &Connection, fixes: &[Fix]) -> rusqlite::Result<()> {
+    let now = now();
+    for fix in fixes {
+        conn.execute(
+            "INSERT OR IGNORE INTO fixes (wrong, right, note, created_at, due_at)
+             VALUES (?1, ?2, ?3, ?4, ?4)",
+            params![fix.wrong, fix.right, fix.note, now],
+        )?;
+    }
+    Ok(())
+}
+
+pub fn drill_stats(conn: &Connection) -> rusqlite::Result<DrillStats> {
+    let now = now();
+    conn.query_row(
+        "SELECT COUNT(*), COALESCE(SUM(CASE WHEN due_at <= ?1 THEN 1 ELSE 0 END), 0) FROM fixes",
+        [now],
+        |row| {
+            Ok(DrillStats {
+                total: row.get(0)?,
+                due: row.get(1)?,
+            })
+        },
+    )
+}
+
+pub fn next_drill(conn: &Connection, include_future: bool) -> rusqlite::Result<Option<DrillItem>> {
+    let now = now();
+    if include_future {
+        conn.query_row(
+            "SELECT id, wrong, right, note, streak FROM fixes ORDER BY due_at ASC, RANDOM() LIMIT 1",
+            [],
+            row_to_item,
+        )
+        .optional()
+    } else {
+        conn.query_row(
+            "SELECT id, wrong, right, note, streak FROM fixes WHERE due_at <= ?1
+             ORDER BY due_at ASC, RANDOM() LIMIT 1",
+            [now],
+            row_to_item,
+        )
+        .optional()
+    }
+}
+
+const INTERVALS_DAYS: [i64; 5] = [1, 3, 7, 21, 45];
+
+pub fn review_drill(conn: &Connection, id: i64, correct: bool) -> rusqlite::Result<Option<DrillItem>> {
+    let item = conn
+        .query_row(
+            "SELECT id, wrong, right, note, streak FROM fixes WHERE id = ?1",
+            [id],
+            row_to_item,
+        )
+        .optional()?;
+
+    let Some(item) = item else {
+        return Ok(None);
+    };
+
+    let streak = if correct {
+        item.streak + 1
+    } else {
+        0
+    };
+    let delay = if correct {
+        INTERVALS_DAYS[streak.saturating_sub(1).min(4) as usize] * 86_400
+    } else {
+        600
+    };
+
+    conn.execute(
+        "UPDATE fixes SET streak = ?1, due_at = ?2 WHERE id = ?3",
+        params![streak, now() + delay, id],
+    )?;
+
+    Ok(Some(DrillItem { streak, ..item }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::{delete, insert, list, StoredMessage};
@@ -122,5 +260,74 @@ mod tests {
         insert(&conn, "user", "hello", None).unwrap();
         super::clear(&conn).unwrap();
         assert!(list(&conn, 10).unwrap().is_empty());
+    }
+
+    #[test]
+    fn corrections_feed_the_drill_once() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        let fix = Fix {
+            wrong: "i go yesterday".to_string(),
+            right: "I went yesterday".to_string(),
+            note: "passado".to_string(),
+        };
+
+        super::save_fixes(&conn, &[fix.clone()]).unwrap();
+        super::save_fixes(&conn, &[fix]).unwrap();
+
+        let stats = super::drill_stats(&conn).unwrap();
+        assert_eq!(stats.total, 1);
+        assert_eq!(stats.due, 1);
+
+        let item = super::next_drill(&conn, false).unwrap().expect("due item");
+        assert_eq!(item.right, "I went yesterday");
+
+        let reviewed = super::review_drill(&conn, item.id, true).unwrap().unwrap();
+        assert_eq!(reviewed.streak, 1);
+        assert_eq!(super::drill_stats(&conn).unwrap().due, 0);
+    }
+
+    #[test]
+    fn backfills_the_drill_from_messages() {
+        let conn = memory_db();
+        insert(
+            &conn,
+            "assistant",
+            "ok",
+            Some(r#"[{"wrong":"i go","right":"I went","note":"passado"}]"#),
+        )
+        .unwrap();
+
+        super::backfill_fixes(&conn).unwrap();
+        super::backfill_fixes(&conn).unwrap();
+
+        assert_eq!(super::drill_stats(&conn).unwrap().total, 1);
+    }
+
+    #[test]
+    fn a_wrong_answer_resets_the_streak_and_reschedules_soon() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        super::save_fixes(
+            &conn,
+            &[Fix {
+                wrong: "she don't".to_string(),
+                right: "she doesn't".to_string(),
+                note: "terceira pessoa".to_string(),
+            }],
+        )
+        .unwrap();
+
+        let item = super::next_drill(&conn, true).unwrap().unwrap();
+        super::review_drill(&conn, item.id, true).unwrap();
+        let reviewed = super::review_drill(&conn, item.id, false).unwrap().unwrap();
+
+        assert_eq!(reviewed.streak, 0);
+        // A miss comes back in ten minutes, so it is scheduled but not due now.
+        assert_eq!(super::drill_stats(&conn).unwrap().due, 0);
+        assert!(super::next_drill(&conn, false).unwrap().is_none());
+        assert!(super::next_drill(&conn, true).unwrap().is_some());
     }
 }

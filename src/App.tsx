@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Composer } from "./components/Composer";
+import { Drill } from "./components/Drill";
 import { Message } from "./components/Message";
 import { Orb } from "./components/Orb";
 import { SettingsPanel } from "./components/SettingsPanel";
@@ -36,6 +37,9 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [status, setStatus] = useState<OrbState>("idle");
   const [energy, setEnergy] = useState(0);
+  const [pinned, setPinned] = useState(true);
+  const [due, setDue] = useState(0);
+  const [showDrill, setShowDrill] = useState(false);
 
   const listRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<OrbState>(status);
@@ -52,9 +56,12 @@ export default function App() {
         ]);
         if (!alive) return;
         setSettings(loadedSettings);
+        setPinned(loadedSettings.pinned);
         setHasKey(loadedKey);
         setMessages(stored.map(fromStored));
         if (!loadedKey) setShowSettings(true);
+        const stats = await ipc.drillStats();
+        if (alive) setDue(stats.due);
       } catch (error) {
         console.error("bubo failed to load", error);
       }
@@ -73,13 +80,14 @@ export default function App() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (showSettings) setShowSettings(false);
+        if (showDrill) setShowDrill(false);
+        else if (showSettings) setShowSettings(false);
         else void ipc.hideWindow();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [showSettings]);
+  }, [showSettings, showDrill]);
 
   const send = useCallback(
     async (text: string) => {
@@ -170,6 +178,7 @@ export default function App() {
       } finally {
         setStatus("idle");
         setEnergy(0);
+        void ipc.drillStats().then((stats) => setDue(stats.due));
       }
     },
     [messages, hasKey],
@@ -186,10 +195,20 @@ export default function App() {
         await ipc.setAutostart(next.autostart);
       }
       setSettings(next);
+      setPinned(next.pinned);
       setShowSettings(false);
     },
     [settings.autostart],
   );
+
+  const togglePin = useCallback(() => {
+    const next = !pinned;
+    setPinned(next);
+    void ipc.setPinned(next);
+    const updated = { ...settings, pinned: next };
+    setSettings(updated);
+    void ipc.saveSettings(updated);
+  }, [pinned, settings]);
 
   const newChat = useCallback(async () => {
     await ipc.clearHistory();
@@ -220,6 +239,38 @@ export default function App() {
             </button>
             <button
               className="ghost icon"
+              title={due > 0 ? `Practice ${due} corrections` : "Practice corrections"}
+              aria-label="Practice"
+              onClick={() => setShowDrill(true)}
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                <circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                <circle cx="12" cy="12" r="2.6" fill="currentColor" />
+              </svg>
+              {due > 0 && <span className="badge">{due > 9 ? "9+" : due}</span>}
+            </button>
+            <button
+              className={`ghost icon ${pinned ? "on" : ""}`}
+              title={pinned ? "Unpin (let other windows cover bubo)" : "Keep bubo on top"}
+              aria-label="Pin window"
+              onClick={togglePin}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M9 3h6l-1 6 3 3v1H7v-1l3-3-1-6z" />
+                <path d="M12 13v8" />
+              </svg>
+            </button>
+            <button
+              className="ghost icon"
               title="Settings"
               aria-label="Settings"
               onClick={() => setShowSettings(true)}
@@ -228,7 +279,7 @@ export default function App() {
             </button>
             <button
               className="ghost icon"
-              title="Hide (Ctrl+Alt+B)"
+              title={`Hide (${settings.hotkey})`}
               aria-label="Hide"
               onClick={() => void ipc.hideWindow()}
             >
@@ -246,6 +297,11 @@ export default function App() {
               speaker would have said.
             </p>
             <div className="suggestions">
+              {due > 0 && (
+                <button className="chip chip-practice" onClick={() => setShowDrill(true)}>
+                  Practice {due} {due === 1 ? "correction" : "corrections"} from our chats
+                </button>
+              )}
               {SUGGESTIONS.map((suggestion) => (
                 <button key={suggestion} className="chip" onClick={() => void send(suggestion)}>
                   {suggestion}
@@ -270,6 +326,15 @@ export default function App() {
             onClose={() => setShowSettings(false)}
             onSave={saveSettings}
             onNewChat={newChat}
+          />
+        )}
+
+        {showDrill && (
+          <Drill
+            onClose={() => {
+              setShowDrill(false);
+              void ipc.drillStats().then((stats) => setDue(stats.due));
+            }}
           />
         )}
       </div>
