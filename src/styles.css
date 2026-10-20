@@ -623,6 +623,53 @@ button {
   cursor: default;
 }
 
+.send.stop {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+}
+
+.send.stop:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.msg-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: -2px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.msg:hover .msg-actions,
+.msg:focus-within .msg-actions {
+  opacity: 1;
+}
+
+.msg-actions button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+
+.msg-actions button:hover {
+  color: var(--text);
+}
+
+.msg-actions button.danger:hover {
+  color: var(--bad);
+}
+
+.drill-context {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
 /* settings */
 
 .settings {

@@ -10,6 +10,7 @@ export interface Fix {
 
 export interface Msg {
   id: string;
+  dbId?: number;
   role: Role;
   content: string;
   fixes: Fix[];
@@ -42,6 +43,7 @@ export interface DrillItem {
   right: string;
   note: string;
   streak: number;
+  context: string | null;
 }
 
 export interface DrillStats {

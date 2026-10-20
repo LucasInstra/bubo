@@ -3,8 +3,16 @@ use crate::log;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
+
+#[derive(Debug, Clone)]
+pub struct Reply {
+    pub text: String,
+    pub cancelled: bool,
+}
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -82,13 +90,21 @@ pub async fn stream_reply(
     api_key: &str,
     body: Value,
     request_id: &str,
-) -> Result<String, String> {
+    cancel: Arc<AtomicBool>,
+) -> Result<Reply, String> {
     let response = post(&client, settings, api_key, &body).await?;
     let mut chunks = response.bytes_stream();
     let mut pending: Vec<u8> = Vec::new();
     let mut full = String::new();
 
     while let Some(chunk) = chunks.next().await {
+        if cancel.load(Ordering::Relaxed) {
+            return Ok(Reply {
+                text: full,
+                cancelled: true,
+            });
+        }
+
         let chunk = chunk.map_err(|error| format!("stream error: {error}"))?;
         pending.extend_from_slice(&chunk);
 
@@ -125,11 +141,21 @@ pub async fn stream_reply(
         }
     }
 
+    if cancel.load(Ordering::Relaxed) {
+        return Ok(Reply {
+            text: full,
+            cancelled: true,
+        });
+    }
+
     if full.trim().is_empty() {
         return Err("the model returned an empty reply".to_string());
     }
 
-    Ok(full)
+    Ok(Reply {
+        text: full,
+        cancelled: false,
+    })
 }
 
 /// Non-streaming call, used for the correction pass.

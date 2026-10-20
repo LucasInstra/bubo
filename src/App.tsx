@@ -34,6 +34,7 @@ function withAlpha(hex: string, alpha: number): string {
 function fromStored(message: StoredMessage): Msg {
   return {
     id: String(message.id),
+    dbId: message.id,
     role: message.role,
     content: message.content,
     fixes: parseStoredFixes(message.fixes),
@@ -55,6 +56,7 @@ export default function App() {
   const stickRef = useRef(true);
   const turnRef = useRef(0);
   const busyRef = useRef(false);
+  const requestRef = useRef<string | null>(null);
   const statusRef = useRef<OrbState>(status);
   statusRef.current = status;
 
@@ -134,6 +136,8 @@ export default function App() {
 
       const turn = turnRef.current + 1;
       turnRef.current = turn;
+      const requestId = crypto.randomUUID();
+      requestRef.current = requestId;
 
       setMessages((current) => [...current, userMessage, botMessage]);
       setStatus("thinking");
@@ -141,7 +145,7 @@ export default function App() {
 
       let acc = "";
       try {
-        const finalText = await ipc.chat(context, {
+        const finalText = await ipc.chat(requestId, context, {
           onDelta: (delta) => {
             acc += delta;
             setStatus("streaming");
@@ -173,6 +177,19 @@ export default function App() {
               ),
             );
           },
+          onSaved: ({ userId, assistantId }) => {
+            setMessages((current) =>
+              current.map((message) => {
+                if (message.id === botMessage.id) {
+                  return { ...message, dbId: assistantId ?? undefined };
+                }
+                if (message.id === userMessage.id) {
+                  return { ...message, dbId: userId ?? undefined };
+                }
+                return message;
+              }),
+            );
+          },
         });
 
         setMessages((current) =>
@@ -189,14 +206,19 @@ export default function App() {
             : problem instanceof Error
               ? problem.message
               : "Something went wrong.";
-        setMessages((current) =>
-          current.map((message) =>
-            message.id === botMessage.id
-              ? { ...message, content: reason, streaming: false, error: true }
-              : message,
-          ),
-        );
+        if (reason === "cancelled") {
+          setMessages((current) => current.filter((message) => message.id !== botMessage.id));
+        } else {
+          setMessages((current) =>
+            current.map((message) =>
+              message.id === botMessage.id
+                ? { ...message, content: reason, streaming: false, error: true }
+                : message,
+            ),
+          );
+        }
       } finally {
+        requestRef.current = null;
         // A newer turn owns the status now; do not reset it under its feet.
         if (turnRef.current === turn) {
           setStatus("idle");
@@ -278,6 +300,22 @@ export default function App() {
     if (statusRef.current !== "idle") return;
     await ipc.clearHistory();
     setMessages([]);
+  }, []);
+
+  const stop = useCallback(() => {
+    if (requestRef.current) void ipc.cancelReply(requestRef.current);
+  }, []);
+
+  const removeMessage = useCallback(async (message: Msg) => {
+    if (message.dbId) {
+      try {
+        await ipc.deleteMessage(message.dbId);
+      } catch (problem) {
+        console.error("could not delete the message", problem);
+        return;
+      }
+    }
+    setMessages((current) => current.filter((item) => item.id !== message.id));
   }, []);
 
   const empty = messages.length === 0;
@@ -436,13 +474,19 @@ export default function App() {
                   key={message.id}
                   message={message}
                   onRetry={message.error ? retry : undefined}
+                  onDelete={removeMessage}
                 />
               ))}
             </div>
           )}
         </div>
 
-        <Composer disabled={status !== "idle"} onSend={send} />
+        <Composer
+          disabled={status !== "idle"}
+          busy={status !== "idle"}
+          onSend={send}
+          onStop={stop}
+        />
 
         {showSettings && (
           <SettingsPanel

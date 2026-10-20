@@ -5,7 +5,9 @@ mod prompt;
 mod store;
 
 use serde_json::json;
-use std::sync::Mutex;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -17,6 +19,7 @@ struct AppState {
     db: Mutex<rusqlite::Connection>,
     http: reqwest::Client,
     shortcut: Mutex<Option<Shortcut>>,
+    cancels: Mutex<HashMap<String, Arc<AtomicBool>>>,
 }
 
 fn install_hotkey(
@@ -110,6 +113,22 @@ fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn cancel_reply(state: State<'_, AppState>, request_id: String) -> Result<(), String> {
+    if let Ok(cancels) = state.cancels.lock() {
+        if let Some(flag) = cancels.get(&request_id) {
+            flag.store(true, Ordering::Relaxed);
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn delete_message(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::delete_message(&db, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 async fn chat(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -144,17 +163,37 @@ async fn chat(
     );
 
     let reply_body = prompt::reply_body(&settings, &messages);
-    let full = match llm::stream_reply(
+    let cancel = Arc::new(AtomicBool::new(false));
+    if let Ok(mut cancels) = state.cancels.lock() {
+        cancels.insert(request_id.clone(), cancel.clone());
+    }
+
+    let outcome = llm::stream_reply(
         app.clone(),
         client.clone(),
         &settings,
         &api_key,
         reply_body,
         &request_id,
+        cancel,
     )
-    .await
-    {
-        Ok(text) => text,
+    .await;
+
+    if let Ok(mut cancels) = state.cancels.lock() {
+        cancels.remove(&request_id);
+    }
+
+    let full = match outcome {
+        Ok(reply) => {
+            if reply.cancelled && reply.text.trim().is_empty() {
+                if let (Ok(db), Some(id)) = (state.db.lock(), user_row) {
+                    let _ = store::delete(&db, id);
+                }
+                log::write(&app, "info", "reply cancelled before any text");
+                return Err("cancelled".to_string());
+            }
+            reply
+        }
         Err(error) => {
             // A failed turn must not leave a dangling user message in history.
             if let (Ok(db), Some(id)) = (state.db.lock(), user_row) {
@@ -165,15 +204,26 @@ async fn chat(
         }
     };
 
+    let text = full.text;
+
     // Persist the reply before the correction pass so a quit during corrections
     // never leaves a user message without an answer.
     let reply_row = state
         .db
         .lock()
         .ok()
-        .and_then(|db| store::insert(&db, "assistant", &full, None).ok());
+        .and_then(|db| store::insert(&db, "assistant", &text, None).ok());
 
+    let _ = app.emit(
+        "bubo-saved",
+        json!({ "requestId": request_id, "userId": user_row, "assistantId": reply_row }),
+    );
     let _ = app.emit("bubo-reply-done", json!({ "requestId": request_id }));
+
+    if full.cancelled {
+        log::write(&app, "info", "reply cancelled, skipping corrections");
+        return Ok(text);
+    }
 
     let corrections_body = prompt::corrections_body(&settings, &messages);
     let mut fixes = match llm::complete(&app, &client, &settings, &api_key, corrections_body).await
@@ -194,7 +244,7 @@ async fn chat(
     }
 
     if let Ok(db) = state.db.lock() {
-        let _ = store::save_fixes(&db, &fixes);
+        let _ = store::save_fixes_for_message(&db, &fixes, user_row);
     }
 
     let fixes_json = if fixes.is_empty() {
@@ -210,10 +260,10 @@ async fn chat(
     log::write(
         &app,
         "info",
-        &format!("reply done chars={} fixes={}", full.len(), fixes.len()),
+        &format!("reply done chars={} fixes={}", text.len(), fixes.len()),
     );
 
-    Ok(full)
+    Ok(text)
 }
 
 #[tauri::command]
@@ -346,6 +396,7 @@ pub fn run() {
                     .build()
                     .map_err(|error| std::io::Error::other(error.to_string()))?,
                 shortcut: Mutex::new(None),
+                cancels: Mutex::new(HashMap::new()),
             });
 
             let settings = config::load_settings(app.handle()).unwrap_or_default();
@@ -414,6 +465,8 @@ pub fn run() {
             save_api_key,
             set_autostart,
             set_pinned,
+            cancel_reply,
+            delete_message,
             chat,
             history,
             clear_history,

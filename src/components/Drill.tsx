@@ -1,25 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isCorrectAnswer } from "../lib/answer";
 import { ipc } from "../lib/ipc";
 import type { DrillItem, DrillStats } from "../lib/types";
 
 type Phase = "loading" | "asking" | "answered" | "none" | "empty" | "error";
-
-const normalize = (value: string) =>
-  value
-    .toLowerCase()
-    .replace(/[’‘]/g, "'")
-    .replace(/[.,!?;:…—–“”«»()[\]{}]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-/** Lenient enough that a full sentence containing the fragment still counts. */
-const isCorrect = (answer: string, target: string) => {
-  const typed = normalize(answer);
-  const expected = normalize(target);
-  if (!typed) return false;
-  if (typed === expected) return true;
-  return expected.length > 3 && typed.includes(expected);
-};
 
 interface DrillProps {
   onClose: () => void;
@@ -82,11 +66,22 @@ export function Drill({ onClose }: DrillProps) {
     void load(false);
   }, [load]);
 
+  useEffect(() => {
+    const chat = document.querySelector<HTMLElement>(".chat");
+    const composer = document.querySelector<HTMLElement>(".composer");
+    chat?.setAttribute("inert", "");
+    composer?.setAttribute("inert", "");
+    return () => {
+      chat?.removeAttribute("inert");
+      composer?.removeAttribute("inert");
+    };
+  }, []);
+
   const submit = async (text: string, reveal: boolean) => {
     if (!item || phase !== "asking" || busy.current) return;
     busy.current = true;
     try {
-      const correct = !reveal && isCorrect(text, item.right);
+      const correct = !reveal && isCorrectAnswer(text, item.right);
       const updated = await ipc.drillReview(item.id, correct);
       lastAnswered.current = item.id;
       setResult({ correct, item: updated ?? item });
@@ -104,7 +99,7 @@ export function Drill({ onClose }: DrillProps) {
   };
 
   return (
-    <div className="settings">
+    <div className="settings" role="dialog" aria-modal="true" aria-label="Practice">
       <div className="settings-head">
         <button className="ghost" onClick={onClose} aria-label="Back">
           ←
@@ -156,6 +151,7 @@ export function Drill({ onClose }: DrillProps) {
           <>
             <div className="drill-card">
               <span className="drill-label">how would you say this?</span>
+              {item.context && <span className="drill-context">you wrote: “{item.context}”</span>}
               <span className="drill-wrong">{item.wrong}</span>
               {item.streak > 0 && <span className="drill-streak">streak {item.streak}</span>}
             </div>

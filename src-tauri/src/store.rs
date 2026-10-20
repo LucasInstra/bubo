@@ -23,6 +23,7 @@ pub struct DrillItem {
     pub right: String,
     pub note: String,
     pub streak: i64,
+    pub context: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -76,6 +77,8 @@ fn init(conn: &Connection) -> rusqlite::Result<()> {
             UNIQUE(wrong, right)
         );",
     )?;
+    // Older databases predate the link between a correction and its message.
+    let _ = conn.execute("ALTER TABLE fixes ADD COLUMN message_id INTEGER", []);
     Ok(())
 }
 
@@ -102,6 +105,12 @@ pub fn insert(
 pub fn delete(conn: &Connection, id: i64) -> rusqlite::Result<()> {
     conn.execute("DELETE FROM messages WHERE id = ?1", [id])?;
     Ok(())
+}
+
+/// Deletes a message together with the corrections that point at it.
+pub fn delete_message(conn: &Connection, id: i64) -> rusqlite::Result<()> {
+    conn.execute("DELETE FROM fixes WHERE message_id = ?1", [id])?;
+    delete(conn, id)
 }
 
 pub fn set_message_fixes(conn: &Connection, id: i64, fixes: Option<&str>) -> rusqlite::Result<()> {
@@ -142,17 +151,26 @@ fn row_to_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<DrillItem> {
         right: row.get(2)?,
         note: row.get(3)?,
         streak: row.get(4)?,
+        context: row.get(5)?,
     })
 }
 
 /// Corrections are stored once; the drill later schedules them.
 pub fn save_fixes(conn: &Connection, fixes: &[Fix]) -> rusqlite::Result<()> {
+    save_fixes_for_message(conn, fixes, None)
+}
+
+pub fn save_fixes_for_message(
+    conn: &Connection,
+    fixes: &[Fix],
+    message_id: Option<i64>,
+) -> rusqlite::Result<()> {
     let now = now();
     for fix in fixes {
         conn.execute(
-            "INSERT OR IGNORE INTO fixes (wrong, right, note, created_at, due_at)
-             VALUES (?1, ?2, ?3, ?4, ?4)",
-            params![fix.wrong, fix.right, fix.note, now],
+            "INSERT OR IGNORE INTO fixes (wrong, right, note, created_at, due_at, message_id)
+             VALUES (?1, ?2, ?3, ?4, ?4, ?5)",
+            params![fix.wrong, fix.right, fix.note, now, message_id],
         )?;
     }
     Ok(())
@@ -174,10 +192,26 @@ pub fn drill_stats(conn: &Connection) -> rusqlite::Result<DrillStats> {
 
 /// Removes cards whose only difference is letter case.
 pub fn purge_case_only(conn: &Connection) -> rusqlite::Result<usize> {
-    conn.execute(
-        "DELETE FROM fixes WHERE lower(trim(wrong)) = lower(trim(right))",
-        [],
-    )
+    let mut statement = conn.prepare("SELECT id, wrong, right FROM fixes")?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+            ))
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    drop(statement);
+
+    let mut removed = 0;
+    for (id, wrong, right) in rows {
+        if wrong.trim().to_lowercase() == right.trim().to_lowercase() {
+            conn.execute("DELETE FROM fixes WHERE id = ?1", [id])?;
+            removed += 1;
+        }
+    }
+    Ok(removed)
 }
 
 /// Moves everything that is due to tomorrow.
@@ -205,18 +239,20 @@ pub fn next_drill(
     let now = now();
     if include_future {
         conn.query_row(
-            "SELECT id, wrong, right, note, streak FROM fixes
-             WHERE (?1 IS NULL OR id != ?1)
-             ORDER BY due_at ASC, RANDOM() LIMIT 1",
+            "SELECT f.id, f.wrong, f.right, f.note, f.streak, m.content
+             FROM fixes f LEFT JOIN messages m ON m.id = f.message_id
+             WHERE (?1 IS NULL OR f.id != ?1)
+             ORDER BY f.due_at ASC, RANDOM() LIMIT 1",
             [exclude_id],
             row_to_item,
         )
         .optional()
     } else {
         conn.query_row(
-            "SELECT id, wrong, right, note, streak FROM fixes
-             WHERE due_at <= ?1 AND (?2 IS NULL OR id != ?2)
-             ORDER BY due_at ASC, RANDOM() LIMIT 1",
+            "SELECT f.id, f.wrong, f.right, f.note, f.streak, m.content
+             FROM fixes f LEFT JOIN messages m ON m.id = f.message_id
+             WHERE f.due_at <= ?1 AND (?2 IS NULL OR f.id != ?2)
+             ORDER BY f.due_at ASC, RANDOM() LIMIT 1",
             params![now, exclude_id],
             row_to_item,
         )
@@ -239,7 +275,9 @@ pub fn review_drill(
 ) -> rusqlite::Result<Option<DrillItem>> {
     let item = conn
         .query_row(
-            "SELECT id, wrong, right, note, streak FROM fixes WHERE id = ?1",
+            "SELECT f.id, f.wrong, f.right, f.note, f.streak, m.content
+             FROM fixes f LEFT JOIN messages m ON m.id = f.message_id
+             WHERE f.id = ?1",
             [id],
             row_to_item,
         )
@@ -469,6 +507,49 @@ mod tests {
         assert!(super::next_drill(&conn, true, Some(item.id))
             .unwrap()
             .is_none());
+    }
+
+    #[test]
+    fn drill_context_links_to_the_message() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        let user_id = insert(&conn, "user", "i go yesterday", None).unwrap();
+        super::save_fixes_for_message(
+            &conn,
+            &[Fix {
+                wrong: "i go yesterday".to_string(),
+                right: "I went yesterday".to_string(),
+                note: String::new(),
+            }],
+            Some(user_id),
+        )
+        .unwrap();
+
+        let item = super::next_drill(&conn, true, None).unwrap().unwrap();
+        assert_eq!(item.context.as_deref(), Some("i go yesterday"));
+    }
+
+    #[test]
+    fn deleting_a_message_removes_its_cards() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        let user_id = insert(&conn, "user", "she don't know", None).unwrap();
+        super::save_fixes_for_message(
+            &conn,
+            &[Fix {
+                wrong: "she don't".to_string(),
+                right: "she doesn't".to_string(),
+                note: String::new(),
+            }],
+            Some(user_id),
+        )
+        .unwrap();
+
+        super::delete_message(&conn, user_id).unwrap();
+        assert_eq!(super::drill_stats(&conn).unwrap().total, 0);
+        assert!(list(&conn, 10).unwrap().is_empty());
     }
 
     #[test]

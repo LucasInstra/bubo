@@ -12,7 +12,8 @@ Um tutor de inglês que vive num popup flutuante no canto da tela. Você convers
 - **Fila de prática**: em settings dá para pular os cards devidos (vão para amanhã) ou resetar todas as correções salvas.
 - **Salvar sempre à mão**: o botão de save fica fixo no rodapé de settings, com aviso de alterações pendentes.
 - Chat com streaming de resposta e bloco de correções por mensagem: trecho errado, versão natural e explicação curta em português.
-- **Prática**: cada correção entra numa fila de revisão espaçada (1, 3, 7, 21, 45 dias). O botão de alvo no header mostra quantas estão devidas e abre o drill.
+- **Controle da conversa**: botão de parar durante o streaming, `try again` quando um envio falha, e copiar/apagar mensagem individual.
+- **Prática**: cada correção entra numa fila de revisão espaçada (1, 3, 7, 21, 45 dias). O botão de alvo no header mostra quantas estão devidas e abre o drill, que exibe também a frase original que gerou a correção.
 - Nível CEFR configurável (A2 → C1) e persona opcional.
 - Histórico local em SQLite.
 
@@ -49,6 +50,7 @@ Tauri v2 (Rust) + React + TypeScript + Vite.
 npm install
 npm run tauri dev      # janela de desenvolvimento com hot reload
 npm run tauri build    # instalador em src-tauri/target/release/bundle
+npm run test:unit      # testes do frontend (vitest)
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 

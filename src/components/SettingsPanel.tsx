@@ -58,6 +58,17 @@ export function SettingsPanel({
     return () => clearTimeout(timer);
   }, [confirmReset]);
 
+  useEffect(() => {
+    const chat = document.querySelector<HTMLElement>(".chat");
+    const composer = document.querySelector<HTMLElement>(".composer");
+    chat?.setAttribute("inert", "");
+    composer?.setAttribute("inert", "");
+    return () => {
+      chat?.removeAttribute("inert");
+      composer?.removeAttribute("inert");
+    };
+  }, []);
+
   const save = async () => {
     setBusy(true);
     setError("");
@@ -103,7 +114,7 @@ export function SettingsPanel({
   };
 
   return (
-    <div className="settings">
+    <div className="settings" role="dialog" aria-modal="true" aria-label="Settings">
       <div className="settings-head">
         <button className="ghost" onClick={onClose} aria-label="Back">
           ←

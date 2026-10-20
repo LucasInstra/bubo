@@ -18,7 +18,12 @@ pub fn write(app: &AppHandle, level: &str, message: &str) {
         .map(|m| m.len() > MAX_LOG_BYTES)
         .unwrap_or(false)
     {
-        let _ = std::fs::remove_file(&path);
+        // Keep the most recent lines instead of losing the crash trail.
+        if let Ok(content) = std::fs::read_to_string(&path) {
+            let recent: Vec<&str> = content.lines().rev().take(500).collect();
+            let kept = recent.into_iter().rev().collect::<Vec<_>>().join("\n");
+            let _ = std::fs::write(&path, format!("{kept}\n"));
+        }
     }
 
     let line = format!("[{}] {level}: {message}\n", stamp());
