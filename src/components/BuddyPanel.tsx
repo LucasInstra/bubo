@@ -53,6 +53,7 @@ const MOUTH_SIZES = [
   ["medium", "M"],
   ["large", "L"],
 ];
+const MOUTH_COLORS = ["auto", "#fcfcff", "#241d33", "#ec4899", "#ef4444", "#f59e0b"];
 
 export function BuddyPanel({
   settings,
@@ -187,6 +188,7 @@ export function BuddyPanel({
                 showMouth={draft.showMouth}
                 mouthStyle={draft.mouthStyle}
                 mouthSize={draft.mouthSize}
+                mouthColor={draft.mouthColor}
                 eyeStyle={draft.eyeStyle}
                 eyeSize={draft.eyeSize}
                 eyeSpacing={draft.eyeSpacing}
@@ -233,6 +235,7 @@ export function BuddyPanel({
                       showMouth={draft.showMouth}
                       mouthStyle={draft.mouthStyle}
                       mouthSize={draft.mouthSize}
+                      mouthColor={draft.mouthColor}
                       eyeStyle={draft.eyeStyle}
                       eyeSize={draft.eyeSize}
                       eyeSpacing={draft.eyeSpacing}
@@ -382,6 +385,36 @@ export function BuddyPanel({
                     {label}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="option-row">
+              <span className="option-label">Color</span>
+              <div className="swatches">
+                {MOUTH_COLORS.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`swatch ${draft.mouthColor === option ? "on" : ""}`}
+                    style={{
+                      background:
+                        option === "auto"
+                          ? `linear-gradient(135deg, ${draft.color} 0 50%, #241d33 50% 100%)`
+                          : option,
+                    }}
+                    onClick={() => patch({ mouthColor: option })}
+                    aria-label={option === "auto" ? "auto mouth color" : `mouth color ${option}`}
+                    title={option === "auto" ? "Auto (body shade)" : option}
+                  />
+                ))}
+                <label className="swatch-custom" title="Custom mouth color">
+                  <input
+                    type="color"
+                    value={draft.mouthColor === "auto" ? "#241d33" : draft.mouthColor}
+                    onChange={(event) => patch({ mouthColor: event.target.value })}
+                    aria-label="Custom mouth color"
+                  />
+                </label>
               </div>
             </div>
           </div>

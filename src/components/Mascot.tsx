@@ -175,6 +175,7 @@ interface MascotProps {
   showMouth?: boolean;
   mouthStyle?: string;
   mouthSize?: string;
+  mouthColor?: string;
   eyeStyle?: string;
   eyeSize?: string;
   eyeSpacing?: string;
@@ -354,6 +355,7 @@ export function Mascot({
   showMouth = true,
   mouthStyle = "line",
   mouthSize = "medium",
+  mouthColor = "auto",
   eyeStyle = "bars",
   eyeSize = "medium",
   eyeSpacing = "normal",
@@ -757,31 +759,33 @@ export function Mascot({
       }
 
       if (showMouth) {
-        const mouthY = radius * 0.41;
-        const mouthColor = shade(color, 0.3, 0.85);
+        const mouthX = gaze.x * radius * 0.14;
+        const mouthY = radius * 0.41 + gaze.y * radius * 0.08;
+        const mouthInk =
+          mouthColor && mouthColor !== "auto" ? mouthColor : shade(color, 0.3, 0.85);
         const mouthScale = mouthSize === "small" ? 0.82 : mouthSize === "large" ? 1.2 : 1;
         const talking =
           current === "streaming" ? 0.25 + Math.abs(Math.sin(time * 14)) * smoothed : 0;
         const open = 1 + talking * 1.1;
 
         context.save();
-        context.translate(0, mouthY);
+        context.translate(mouthX, mouthY);
         context.scale(mouthScale, mouthScale);
 
         if (moodSad && moodBlend > 0.4) {
-          context.strokeStyle = mouthColor;
+          context.strokeStyle = mouthInk;
           context.lineWidth = Math.max(1.3, radius * 0.04);
           context.lineCap = "round";
           context.beginPath();
           context.arc(0, radius * 0.07, radius * 0.13, Math.PI * 1.15, Math.PI * 1.85);
           context.stroke();
         } else if (moodSurprised && moodBlend > 0.4) {
-          context.fillStyle = mouthColor;
+          context.fillStyle = mouthInk;
           context.beginPath();
           context.ellipse(0, 0, radius * 0.08, radius * 0.11, 0, 0, TAU);
           context.fill();
         } else if (mouthStyle === "smile") {
-          context.strokeStyle = mouthColor;
+          context.strokeStyle = mouthInk;
           context.lineWidth = Math.max(1.2, radius * 0.04);
           context.lineCap = "round";
           context.scale(1, 1 + talking * 0.45);
@@ -789,7 +793,7 @@ export function Mascot({
           context.arc(0, -radius * 0.02, radius * 0.15, Math.PI * 0.18, Math.PI * 0.82);
           context.stroke();
         } else if (mouthStyle === "cat") {
-          context.strokeStyle = mouthColor;
+          context.strokeStyle = mouthInk;
           context.lineWidth = Math.max(1.1, radius * 0.035);
           context.lineCap = "round";
           context.scale(1, 1 + talking * 0.35);
@@ -807,17 +811,17 @@ export function Mascot({
         } else if (mouthStyle === "grin") {
           const width = radius * 0.26;
           const height = radius * 0.09 * open;
-          context.fillStyle = mouthColor;
+          context.fillStyle = mouthInk;
           context.beginPath();
           context.roundRect(-width / 2, -height / 2, width, height, height / 2);
           context.fill();
         } else if (mouthStyle === "open") {
-          context.fillStyle = mouthColor;
+          context.fillStyle = mouthInk;
           context.beginPath();
           context.ellipse(0, 0, radius * 0.085, radius * 0.1 * open, 0, 0, TAU);
           context.fill();
         } else if (mouthStyle === "flat") {
-          context.strokeStyle = mouthColor;
+          context.strokeStyle = mouthInk;
           context.lineWidth = Math.max(1.1, radius * 0.035);
           context.lineCap = "round";
           context.beginPath();
@@ -827,7 +831,7 @@ export function Mascot({
         } else {
           const width = radius * 0.22;
           const height = radius * 0.06 * open;
-          context.fillStyle = mouthColor;
+          context.fillStyle = mouthInk;
           context.beginPath();
           context.roundRect(-width / 2, -height / 2, width, height, height / 2);
           context.fill();
@@ -885,7 +889,7 @@ export function Mascot({
       hit.removeEventListener("pointerdown", onPointerDown);
       hit.removeEventListener("pointercancel", onPointerUp);
     };
-  }, [size, canvasSize, shape, color, boopable, showMouth, mouthStyle, mouthSize, eyeStyle, eyeSize, eyeSpacing, eyeTilt, eyeColor, animate]);
+  }, [size, canvasSize, shape, color, boopable, showMouth, mouthStyle, mouthSize, mouthColor, eyeStyle, eyeSize, eyeSpacing, eyeTilt, eyeColor, animate]);
 
   return (
     <div

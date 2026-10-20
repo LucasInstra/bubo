@@ -36,6 +36,7 @@ export interface Settings {
   showMouth: boolean;
   mouthStyle: string;
   mouthSize: string;
+  mouthColor: string;
   showStatus: boolean;
   accentFromMascot: boolean;
   textSize: string;
@@ -84,6 +85,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showMouth: true,
   mouthStyle: "line",
   mouthSize: "medium",
+  mouthColor: "auto",
   showStatus: true,
   accentFromMascot: true,
   textSize: "normal",
