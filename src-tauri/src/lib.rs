@@ -63,11 +63,17 @@ async fn chat(
     let api_key = config::load_api_key()?
         .ok_or("No API key yet. Open settings and paste your Groq key.")?;
 
-    if let Some(last) = messages.iter().rev().find(|message| message.role == "user") {
-        if let Ok(db) = state.db.lock() {
-            let _ = store::insert(&db, "user", &last.content, None);
-        }
-    }
+    let user_row = messages
+        .iter()
+        .rev()
+        .find(|message| message.role == "user")
+        .and_then(|last| {
+            state
+                .db
+                .lock()
+                .ok()
+                .and_then(|db| store::insert(&db, "user", &last.content, None).ok())
+        });
 
     log::write(
         &app,
@@ -88,6 +94,10 @@ async fn chat(
     {
         Ok(text) => text,
         Err(error) => {
+            // A failed turn must not leave a dangling user message in history.
+            if let (Ok(db), Some(id)) = (state.db.lock(), user_row) {
+                let _ = store::delete(&db, id);
+            }
             log::write(&app, "error", &format!("reply failed: {error}"));
             return Err(error);
         }

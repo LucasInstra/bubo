@@ -15,6 +15,11 @@ pub struct StoredMessage {
 
 pub fn open(path: PathBuf) -> rusqlite::Result<Connection> {
     let conn = Connection::open(path)?;
+    init(&conn)?;
+    Ok(conn)
+}
+
+fn init(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,7 +29,7 @@ pub fn open(path: PathBuf) -> rusqlite::Result<Connection> {
             created_at INTEGER NOT NULL
         );",
     )?;
-    Ok(conn)
+    Ok(())
 }
 
 fn now() -> i64 {
@@ -39,11 +44,16 @@ pub fn insert(
     role: &str,
     content: &str,
     fixes: Option<&str>,
-) -> rusqlite::Result<()> {
+) -> rusqlite::Result<i64> {
     conn.execute(
         "INSERT INTO messages (role, content, fixes, created_at) VALUES (?1, ?2, ?3, ?4)",
         params![role, content, fixes, now()],
     )?;
+    Ok(conn.last_insert_rowid())
+}
+
+pub fn delete(conn: &Connection, id: i64) -> rusqlite::Result<()> {
+    conn.execute("DELETE FROM messages WHERE id = ?1", [id])?;
     Ok(())
 }
 
@@ -68,4 +78,49 @@ pub fn list(conn: &Connection, limit: i64) -> rusqlite::Result<Vec<StoredMessage
 pub fn clear(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute("DELETE FROM messages", [])?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{delete, insert, list, StoredMessage};
+
+    fn memory_db() -> rusqlite::Connection {
+        let conn = rusqlite::Connection::open_in_memory().expect("memory db");
+        super::init(&conn).expect("schema");
+        conn
+    }
+
+    #[test]
+    fn stores_and_reads_a_turn_in_order() {
+        let conn = memory_db();
+        let user_id = insert(&conn, "user", "i go yesterday", None).unwrap();
+        insert(&conn, "assistant", "You went yesterday.", Some(r#"[{"wrong":"i go","right":"I went","note":"passado"}]"#)).unwrap();
+
+        let messages: Vec<StoredMessage> = list(&conn, 10).unwrap();
+        assert_eq!(messages.len(), 2);
+        assert_eq!(messages[0].role, "user");
+        assert_eq!(messages[1].role, "assistant");
+        assert!(messages[1].fixes.is_some());
+        assert!(user_id > 0);
+    }
+
+    #[test]
+    fn deleting_a_failed_user_message_keeps_history_clean() {
+        let conn = memory_db();
+        insert(&conn, "user", "hello", None).unwrap();
+        let orphan = insert(&conn, "user", "failed request", None).unwrap();
+        delete(&conn, orphan).unwrap();
+
+        let messages = list(&conn, 10).unwrap();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].content, "hello");
+    }
+
+    #[test]
+    fn clear_empties_the_table() {
+        let conn = memory_db();
+        insert(&conn, "user", "hello", None).unwrap();
+        super::clear(&conn).unwrap();
+        assert!(list(&conn, 10).unwrap().is_empty());
+    }
 }

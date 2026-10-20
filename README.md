@@ -11,6 +11,17 @@ Um tutor de inglês que vive num popup flutuante no canto da tela. Você convers
 - Nível CEFR configurável (A2 → C1) e persona opcional.
 - Histórico local em SQLite.
 
+## Como a conversa funciona
+
+Duas chamadas por mensagem:
+
+1. **Resposta** — streaming SSE do provedor; os deltas chegam ao WebView por evento (`bubo-delta`).
+2. **Correções** — chamada separada, sem streaming, que devolve JSON estrito (`[{"wrong","right","note"}]`). O cartão aparece quando ela termina (`bubo-fixes`).
+
+Separar as duas evita depender de o modelo respeitar marcadores no meio do texto — ele não respeita.
+
+Se a resposta falha, a mensagem do usuário é removida do histórico (nada de turno órfão). Erros e tempos ficam em `%APPDATA%\com.lucas.bubo\bubo.log`.
+
 ## Stack
 
 Tauri v2 (Rust) + React + TypeScript + Vite.
@@ -25,6 +36,7 @@ Tauri v2 (Rust) + React + TypeScript + Vite.
 npm install
 npm run tauri dev      # janela de desenvolvimento com hot reload
 npm run tauri build    # instalador em src-tauri/target/release/bundle
+cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
 Pré-requisitos: Node 20+, Rust (stable-msvc) e Visual Studio Build Tools com workload C++.
