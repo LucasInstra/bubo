@@ -20,6 +20,7 @@ struct AppState {
     http: reqwest::Client,
     shortcut: Mutex<Option<Shortcut>>,
     cancels: Mutex<HashMap<String, Arc<AtomicBool>>>,
+    compact_origin: Mutex<Option<(i32, i32)>>,
 }
 
 fn install_hotkey(
@@ -89,7 +90,31 @@ fn set_pinned(window: tauri::Window, pinned: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn set_compact(window: tauri::Window, compact: bool) -> Result<(), String> {
+fn set_compact(
+    window: tauri::Window,
+    state: State<'_, AppState>,
+    compact: bool,
+) -> Result<(), String> {
+    let origin = window.outer_position().ok().map(|position| (position.x, position.y));
+
+    if compact {
+        if let (Some(position), Ok(mut slot)) = (origin, state.compact_origin.lock()) {
+            if slot.is_none() {
+                *slot = Some(position);
+            }
+        }
+    }
+
+    let restore = if compact {
+        None
+    } else {
+        state
+            .compact_origin
+            .lock()
+            .ok()
+            .and_then(|mut slot| slot.take())
+    };
+
     let (width, height) = if compact {
         (400.0, 280.0)
     } else {
@@ -99,22 +124,25 @@ fn set_compact(window: tauri::Window, compact: bool) -> Result<(), String> {
         .set_size(tauri::LogicalSize::new(width, height))
         .map_err(|error| error.to_string())?;
 
-    // Keep the smaller window inside the current monitor instead of letting
-    // it grow past the edge when it was parked near the bottom.
+    // Keep the window inside the current monitor and give the compact card a
+    // small lift so it does not sit exactly where the tall window started.
     if let Ok(Some(monitor)) = window.current_monitor() {
         let area = monitor.work_area();
         let scale = window.scale_factor().unwrap_or(1.0);
         let target_width = (width * scale).round() as i32;
         let target_height = (height * scale).round() as i32;
-        if let Ok(position) = window.outer_position() {
+        if let Some((mut x, mut y)) = restore.or(origin) {
             let max_x = area.position.x + area.size.width as i32 - target_width;
             let max_y = area.position.y + area.size.height as i32 - target_height;
-            let x = position.x.min(max_x).max(area.position.x);
-            let y = position.y.min(max_y).max(area.position.y);
-            if x != position.x || y != position.y {
-                let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
+            x = x.min(max_x).max(area.position.x);
+            y = y.min(max_y).max(area.position.y);
+            if compact {
+                y = (y - 14).max(area.position.y);
             }
+            let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
         }
+    } else if let Some((x, y)) = restore {
+        let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
     }
 
     Ok(())
@@ -482,6 +510,7 @@ pub fn run() {
                     .map_err(|error| std::io::Error::other(error.to_string()))?,
                 shortcut: Mutex::new(None),
                 cancels: Mutex::new(HashMap::new()),
+                compact_origin: Mutex::new(None),
             });
 
             let settings = config::load_settings(app.handle()).unwrap_or_default();

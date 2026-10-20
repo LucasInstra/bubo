@@ -481,8 +481,8 @@ export function Mascot({
       window.addEventListener("pointermove", onPointerMove);
       window.addEventListener("pointerup", onPointerUp);
       window.addEventListener("blur", onPointerUp);
-      canvas.addEventListener("pointerdown", onPointerDown);
-      canvas.addEventListener("pointercancel", onPointerUp);
+      hit.addEventListener("pointerdown", onPointerDown);
+      hit.addEventListener("pointercancel", onPointerUp);
       if (boopable) hit.style.cursor = "grab";
     }
     const draw = (now: number) => {
@@ -822,8 +822,8 @@ export function Mascot({
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("blur", onPointerUp);
-      canvas.removeEventListener("pointerdown", onPointerDown);
-      canvas.removeEventListener("pointercancel", onPointerUp);
+      hit.removeEventListener("pointerdown", onPointerDown);
+      hit.removeEventListener("pointercancel", onPointerUp);
     };
   }, [size, canvasSize, shape, color, boopable, showMouth, eyeStyle, eyeSize, eyeSpacing, eyeTilt, eyeColor, animate]);
 
