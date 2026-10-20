@@ -19,6 +19,8 @@ pub struct Settings {    pub base_url: String,
     pub show_status: bool,
     pub accent_from_mascot: bool,
     pub text_size: String,
+    pub eye_style: String,
+    pub eye_size: String,
 }
 
 impl Default for Settings {
@@ -38,6 +40,8 @@ impl Default for Settings {
             show_status: true,
             accent_from_mascot: true,
             text_size: "normal".to_string(),
+            eye_style: "bars".to_string(),
+            eye_size: "medium".to_string(),
         }
     }
 }

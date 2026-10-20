@@ -32,6 +32,8 @@ export interface Settings {
   showStatus: boolean;
   accentFromMascot: boolean;
   textSize: string;
+  eyeStyle: string;
+  eyeSize: string;
 }
 
 export interface DrillItem {
@@ -70,4 +72,6 @@ export const DEFAULT_SETTINGS: Settings = {
   showStatus: true,
   accentFromMascot: true,
   textSize: "normal",
+  eyeStyle: "bars",
+  eyeSize: "medium",
 };

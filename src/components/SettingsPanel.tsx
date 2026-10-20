@@ -115,6 +115,8 @@ export function SettingsPanel({
                 shape={draft.shape}
                 color={draft.color}
                 showMouth={draft.showMouth}
+                eyeStyle={draft.eyeStyle}
+                eyeSize={draft.eyeSize}
                 boopable
               />
             </div>
@@ -148,11 +150,57 @@ export function SettingsPanel({
                     title={SHAPE_LABELS[option]}
                     onClick={() => patch({ shape: option })}
                   >
-                    <Mascot state="idle" size={24} shape={option} color={draft.color} />
+                    <Mascot
+                      state="idle"
+                      size={24}
+                      shape={option}
+                      color={draft.color}
+                      eyeStyle={draft.eyeStyle}
+                      eyeSize={draft.eyeSize}
+                    />
                   </button>
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="field">
+          <span>Eyes</span>
+          <div className="levels">
+            {[
+              ["bars", "Bars"],
+              ["dots", "Dots"],
+              ["arcs", "Arcs"],
+              ["sleepy", "Sleepy"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                className={`chip ${draft.eyeStyle === value ? "chip-on" : ""}`}
+                onClick={() => patch({ eyeStyle: value })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="field">
+          <span>Eye size</span>
+          <div className="levels">
+            {[
+              ["small", "S"],
+              ["medium", "M"],
+              ["large", "L"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                className={`chip ${draft.eyeSize === value ? "chip-on" : ""}`}
+                onClick={() => patch({ eyeSize: value })}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 

@@ -28,8 +28,10 @@ export const MASCOT_COLORS = [
   "#3b82f6",
   "#8b5cf6",
   "#ec4899",
-  "#71717a",
 ] as const;
+
+export const EYE_STYLES = ["bars", "dots", "arcs", "sleepy"] as const;
+export const EYE_SIZES = ["small", "medium", "large"] as const;
 
 export const SHAPE_LABELS: Record<MascotShape, string> = {
   round: "round",
@@ -66,6 +68,8 @@ interface MascotProps {
   size?: number;
   boopable?: boolean;
   showMouth?: boolean;
+  eyeStyle?: string;
+  eyeSize?: string;
 }
 
 function superellipse(path: Path2D, radius: number, power: number) {
@@ -235,6 +239,8 @@ export function Mascot({
   size = 128,
   boopable = false,
   showMouth = true,
+  eyeStyle = "bars",
+  eyeSize = "medium",
 }: MascotProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<OrbState>(state);
@@ -384,11 +390,18 @@ export function Mascot({
       context.fillRect(-radius * 1.4, -radius * 1.4, radius * 2.8, radius * 2.8);
       context.restore();
 
-      // eyes: one solid capsule each, no pupil; happy turns them into arcs
-      const eyeWidth = radius * 0.225;
-      const eyeHeight = radius * 0.52 * (1 + wonder * 0.1);
+      // eyes: one solid shape each, no pupil; style and size are configurable
+      const sizeScale = eyeSize === "small" ? 0.82 : eyeSize === "large" ? 1.22 : 1;
+      let eyeWidth = radius * 0.225 * sizeScale;
+      let eyeHeight = radius * 0.52 * sizeScale * (1 + wonder * 0.1);
+      if (eyeStyle === "dots") eyeHeight = eyeWidth;
+      if (eyeStyle === "sleepy") {
+        eyeWidth = radius * 0.34 * sizeScale;
+        eyeHeight = radius * 0.13 * sizeScale;
+      }
       const eyeOffset = radius * 0.285;
       const eyeY = radius * 0.05 + gaze.y * radius * 0.03;
+      const drawArcs = happy > 0.55 || eyeStyle === "arcs";
 
       for (const side of [-1, 1]) {
         const eyeX = side * eyeOffset + gaze.x * radius * 0.05;
@@ -398,9 +411,9 @@ export function Mascot({
         context.translate(eyeX, eyeY);
         context.rotate(side * -0.16);
 
-        if (happy > 0.55) {
+        if (drawArcs) {
           context.strokeStyle = "rgba(252,252,255,0.97)";
-          context.lineWidth = eyeWidth * 0.75;
+          context.lineWidth = Math.max(1.4, eyeWidth * 0.72);
           context.lineCap = "round";
           context.beginPath();
           context.arc(0, eyeHeight * 0.2, eyeWidth * 0.9, Math.PI * 1.14, Math.PI * 1.86);
@@ -470,7 +483,7 @@ export function Mascot({
       window.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerdown", onPointerDown);
     };
-  }, [size, shape, color, boopable, showMouth]);
+  }, [size, shape, color, boopable, showMouth, eyeStyle, eyeSize]);
 
   return (
     <canvas

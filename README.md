@@ -7,7 +7,7 @@ Um tutor de inglês que vive num popup flutuante no canto da tela. Você convers
 - Janela sem bordas no canto inferior direito, sempre no topo por padrão, com botão de pin para liberar.
 - Atalho global configurável (padrão `Ctrl+Alt+B`), `Esc` esconde, ícone na bandeja com menu.
 - Orbe animado com rosto: olhos que piscam e seguem o mouse, boca que mexe enquanto ele escreve, respiração e brilho que mudam por estado (ocioso lilás, pensando âmbar, escrevendo verde). No chat ele fica ao lado do campo de digitação; na tela vazia aparece grande.
-- **Mascote configurável**: 12 formas (redondo, oval, quadrado, pílula, triângulo, hexágono, nuvem, gota, blob, ovo, losango, estrela), 10 cores + cor customizada, boca opcional. Ele flutua sobre o topo do chat, sem faixa de layout, com o status embaixo; clicar nele dá um pulinho, piscadinha e olhos de feliz.
+- **Mascote configurável**: 12 formas (redondo, oval, quadrado, pílula, triângulo, hexágono, nuvem, gota, blob, ovo, losango, estrela), 9 cores + cor customizada, 4 estilos de olho (barras, pontos, arcos, sonolento) em 3 tamanhos e boca opcional. Ele flutua sobre o topo do chat, sem faixa de layout; clicar nele dá um pulinho, piscadinha e olhos de feliz.
 - **Mais ajustes de aparência**: usar a cor do mascote no app inteiro e tamanho da mensagem (pequeno/normal/grande).
 - **Fila de prática**: em settings dá para pular os cards devidos (vão para amanhã) ou resetar todas as correções salvas.
 - **Salvar sempre à mão**: o botão de save fica fixo no rodapé de settings, com aviso de alterações pendentes.

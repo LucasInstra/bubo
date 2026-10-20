@@ -335,6 +335,8 @@ export default function App() {
               shape={settings.shape}
               color={settings.color}
               showMouth={settings.showMouth}
+              eyeStyle={settings.eyeStyle}
+              eyeSize={settings.eyeSize}
               boopable
             />
             {settings.showStatus && <span className="status-pill">{STATUS_LABEL[status]}</span>}
