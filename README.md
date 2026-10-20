@@ -1,70 +1,156 @@
 # bubo
 
-Um tutor de inglês que vive num popup flutuante no canto da tela. Você conversa em inglês, ele responde no seu nível e, discretamente, mostra o que um nativo teria dito.
+A tiny English tutor that lives in a floating window on your desktop. You chat in English, bubo answers at your level and quietly shows what a native speaker would have said — then turns those corrections into a spaced-repetition practice deck.
 
-## O que ele faz
+![bubo chat](docs/screenshots/chat.svg)
 
-- Janela sem bordas no canto inferior direito, sempre no topo por padrão, com botão de pin para liberar.
-- Atalho global configurável (padrão `Ctrl+Alt+B`), `Esc` esconde, ícone na bandeja com menu.
-- Orbe animado com rosto: olhos que piscam e seguem o mouse, boca que mexe enquanto ele escreve, respiração e brilho que mudam por estado (ocioso lilás, pensando âmbar, escrevendo verde). No chat ele fica ao lado do campo de digitação; na tela vazia aparece grande.
-- **Mascote configurável**: 12 formas (redondo, oval, quadrado, pílula, triângulo, hexágono, nuvem, gota, blob, ovo, losango, estrela), 9 cores + cor customizada, 4 estilos de olho (barras, pontos, arcos, sonolento) em 3 tamanhos e boca opcional. Ele flutua sobre o topo do chat, sem faixa de layout; clicar nele dá um pulinho, piscadinha e olhos de feliz.
-- **Mais ajustes de aparência**: usar a cor do mascote no app inteiro e tamanho da mensagem (pequeno/normal/grande).
-- **Fila de prática**: em settings dá para pular os cards devidos (vão para amanhã) ou resetar todas as correções salvas.
-- **Salvar sempre à mão**: o botão de save fica fixo no rodapé de settings, com aviso de alterações pendentes.
-- Chat com streaming de resposta e bloco de correções por mensagem: trecho errado, versão natural e explicação curta em português.
-- **Controle da conversa**: botão de parar durante o streaming, `try again` quando um envio falha, e copiar/apagar mensagem individual.
-- **Prática**: cada correção entra numa fila de revisão espaçada (1, 3, 7, 21, 45 dias). O botão de alvo no header mostra quantas estão devidas e abre o drill, que exibe também a frase original que gerou a correção.
-- Nível CEFR configurável (A2 → C1) e persona opcional.
-- Histórico local em SQLite.
+<p>
+  <img alt="Tauri" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
+  <img alt="React" src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white">
+  <img alt="Rust" src="https://img.shields.io/badge/Rust-stable-000000?logo=rust&logoColor=white">
+  <img alt="Windows" src="https://img.shields.io/badge/platform-Windows-0078D6?logo=windows&logoColor=white">
+</p>
 
-## Como a conversa funciona
+## Why another language app
 
-Duas chamadas por mensagem:
+Because the useful part of learning a language is the five minutes between real tasks — and opening a browser tab for that never happens. bubo is a small always-on-top popup with a mascot, one hotkey away, that keeps the conversation going and remembers what you got wrong.
 
-1. **Resposta** — streaming SSE do provedor; os deltas chegam ao WebView por evento (`bubo-delta`).
-2. **Correções** — chamada separada, sem streaming, que devolve JSON estrito (`[{"wrong","right","note"}]`). O cartão aparece quando ela termina (`bubo-fixes`).
+## Features
 
-Separar as duas evita depender de o modelo respeitar marcadores no meio do texto — ele não respeita.
+- **Always there, never in the way** — frameless popup, global hotkey, tray icon, pin/unpin, hides on `Esc`.
+- **A mascot with a face** — 12 shapes, 9 colors plus a custom picker, 4 eye styles, optional mouth. It blinks, follows your pointer, thinks, talks while writing and hops when you click it.
+- **Conversation first** — replies stream token by token; a separate pass returns corrections as strict JSON, so the card never depends on the model following inline formatting.
+- **Corrections that stick** — every fix is stored, linked to the message that produced it, and scheduled with a 1 / 3 / 7 / 21 / 45 day ladder. A miss comes back in ten minutes.
+- **Practice mode** — rewrite the wrong sentence, get instant feedback, see the original context. Skip the due cards or reset the deck from settings.
+- **Local by default** — API key in the Windows Credential Manager, history in SQLite, no telemetry, no account.
+- **Recoverable** — stop a reply mid-stream, retry a failed turn, copy or delete a message.
 
-Se a resposta falha, a mensagem do usuário é removida do histórico (nada de turno órfão). Erros e tempos ficam em `%APPDATA%\com.lucas.bubo\bubo.log`.
+## Screenshots
 
-## Prática
+| Chat and corrections | Practice |
+| --- | --- |
+| ![Chat](docs/screenshots/chat.svg) | ![Practice](docs/screenshots/practice.svg) |
 
-As correções são gravadas em duas tabelas: `messages` (o chat) e `fixes` (o que revisar). A tabela de prática é idempotente por `(wrong, right)` e é preenchida também a partir do histórico antigo na primeira abertura.
+| Empty state | Settings |
+| --- | --- |
+| ![Empty state](docs/screenshots/empty.svg) | ![Settings](docs/screenshots/settings.svg) |
 
-No drill, você reescreve o trecho errado; acertar sobe o intervalo (1 → 3 → 7 → 21 → 45 dias), errar volta para 10 minutos. "Show answer" conta como erro de propósito.
+> The images above are placeholders. Drop real PNGs into `docs/screenshots/` and update the paths when the UI is final.
 
-Se nada estiver devido mas houver cards salvos, o drill continua com "practice ahead" em vez de encerrar a sessão, e nunca repete o card que você acabou de responder.
+## Install
 
-## Stack
+### Windows installer
 
-Tauri v2 (Rust) + React + TypeScript + Vite.
+1. Download the latest `bubo_x.y.z_x64-setup.exe` from [Releases](https://github.com/LucasInstra/bubo/releases).
+2. Run it. It installs per user in `%LOCALAPPDATA%\bubo`.
+3. Launch **bubo** from the Start menu.
 
-- A chave da API fica no Windows Credential Manager (serviço `bubo`), nunca em arquivo.
-- O processo Rust é o único que fala com o provedor; a chave não chega ao WebView.
-- Comandos IPC: `chat`, `history`, `clear_history`, `drill_stats`, `drill_next`, `drill_review`, `drill_skip_due`, `drill_reset`, `get_settings`, `save_settings`, `save_api_key`, `has_api_key`, `set_autostart`, `set_pinned`, `hide_window`, `quit_app`.
+### From source
 
-## Desenvolvimento
+Requirements: Node 20+, Rust stable (MSVC toolchain) and Visual Studio Build Tools with the C++ workload.
+
+```powershell
+git clone https://github.com/LucasInstra/bubo.git
+cd bubo
+npm install
+npm run tauri build     # installer in src-tauri/target/release/bundle
+```
+
+## First run
+
+1. Settings opens automatically. Paste a Groq API key from [console.groq.com/keys](https://console.groq.com/keys). It is stored in the Windows Credential Manager.
+2. Pick your CEFR level. `B1` is a good default.
+3. Press `Ctrl+Alt+B` (or use the tray icon) to show bubo, and say hello.
+
+The default model is `openai/gpt-oss-120b`. Any OpenAI-compatible base URL works if you prefer another provider.
+
+## Keyboard
+
+| Shortcut | Action |
+| --- | --- |
+| `Enter` | Send |
+| `Shift+Enter` | New line |
+| `Esc` | Close settings/practice, otherwise hide the window |
+| `Ctrl+Alt+B` | Show/hide bubo (configurable in settings) |
+
+## Customize
+
+- Mascot: shape, color (including picker), eyes, size, mouth, status label.
+- App: accent color follows the mascot, message text size, always-on-top, start with Windows.
+- Learning: level, ignore capitalization for informal chat, persona.
+- Connection: API key, model, base URL.
+
+## How it works
+
+```
+┌──────────────┐   stream    ┌──────────────┐
+│  React UI    │◀────────────│              │
+│  (WebView)   │   deltas    │  Rust core   │──▶ provider (OpenAI-compatible)
+│              │────────────▶│              │
+└──────────────┘   invoke    └──────┬───────┘
+                                    │
+                          SQLite (messages, fixes)
+```
+
+1. **Reply pass** — streamed SSE from the provider, forwarded to the UI as `bubo-delta` events.
+2. **Correction pass** — a second, non-streamed call that returns `[{wrong, right, note}]` and is stored on the message row.
+3. **Practice queue** — each fix is deduplicated and scheduled; the drill reads the next due card and updates its interval.
+4. **Persistence** — the reply is saved before corrections run, so quitting mid-flight never leaves an orphan turn.
+
+## Data and privacy
+
+| What | Where |
+| --- | --- |
+| API key | Windows Credential Manager (`bubo` / `llm-api-key`) |
+| History and fixes | `%APPDATA%\com.lucas.bubo\bubo.db` |
+| Settings | `%APPDATA%\com.lucas.bubo\settings.json` |
+| Diagnostics | `%APPDATA%\com.lucas.bubo\bubo.log` (rotated, 1 MB cap) |
+
+Only the text you send is forwarded to your provider. There is no analytics and no third-party service besides the model endpoint you configure.
+
+## Development
 
 ```powershell
 npm install
-npm run tauri dev      # janela de desenvolvimento com hot reload
-npm run tauri build    # instalador em src-tauri/target/release/bundle
-npm run test:unit      # testes do frontend (vitest)
+npm run tauri dev       # hot-reload window
+npm run test:unit       # frontend tests (Vitest)
 cargo test --manifest-path src-tauri/Cargo.toml
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+npm run tauri build     # release installer
 ```
 
-Pré-requisitos: Node 20+, Rust (stable-msvc) e Visual Studio Build Tools com workload C++.
+### Project structure
 
-## Configuração
+```
+src/                      React UI
+  components/Mascot.tsx   canvas mascot (face, gaze, states)
+  components/Drill.tsx    practice flow
+  components/Settings.tsx sectioned settings
+  lib/ipc.ts              typed bridge to Rust
+src-tauri/src/
+  lib.rs                  window, tray, hotkey, commands
+  llm.rs                  streaming, retries, JSON parsing
+  prompt.rs               tutor and correction prompts
+  store.rs                SQLite: messages, fixes, scheduling
+  config.rs               settings + credential storage
+  log.rs                  rotating diagnostics
+```
 
-Na primeira execução a tela de settings abre sozinha:
+## Troubleshooting
 
-- **API key**: Groq (`https://console.groq.com`), salva no Credential Manager.
-- **Model**: padrão `openai/gpt-oss-120b`; qualquer modelo de chat disponível na conta funciona.
-- **Base URL**: `https://api.groq.com/openai/v1` (qualquer endpoint compatível com OpenAI serve).
-- **Level**: ajusta vocabulário e tamanho das frases.
-- **Ignore capitalization**: ligado por padrão; não marca `i` minúsculo nem dia da semana sem maiúscula, para não incomodar em conversa informal.
-- **Hotkey**: qualquer combinação no formato `Ctrl+Alt+B`; é re-registrada ao salvar.
+- **`401`/`invalid api key`** — paste the key again in Settings → Connection. Keys start with `gsk_`.
+- **Hotkey does nothing** — another app may own the combination. Pick a different one in Settings → Behavior; the app keeps working if registration fails and logs it.
+- **Strange answer or empty reply** — check `%APPDATA%\com.lucas.bubo\bubo.log` for the request and error lines.
+- **Practice looks empty** — corrections only appear after a message with a real mistake. The target icon shows how many cards are due.
 
-Arquivos de dados: `%APPDATA%\com.lucas.bubo\` (settings e `bubo.db`).
+## Roadmap
+
+- Session history and a browsable archive.
+- Progress view: accuracy, streak, most frequent mistakes.
+- Per-message "practice this" on the correction card.
+- Tighter Content Security Policy for the webview.
+- Voice practice (speak and listen) — later, deliberately.
+
+## License
+
+No license yet. Ask before redistributing.
