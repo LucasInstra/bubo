@@ -110,7 +110,9 @@ export function Orb({ state, energy = 0, size = 128 }: OrbProps) {
       const faceY = center + bob;
       const faceRadiusX = radius * 0.62;
       const faceRadiusY = radius * 0.47;
-      const showFace = size >= 44;
+      const tiny = size < 30;
+      const compact = size < 46;
+      const showFace = !tiny;
 
       // the dotted shell, with a window open where the face sits
       const cosTilt = Math.cos(tilt);
@@ -119,31 +121,49 @@ export function Orb({ state, energy = 0, size = 128 }: OrbProps) {
       const sinSpin = Math.sin(spin);
       const jitter = current === "streaming" ? smoothed * 2.6 : 0;
 
-      for (const dot of dots) {
-        const x = dot.x * cosSpin - dot.z * sinSpin;
-        const z0 = dot.x * sinSpin + dot.z * cosSpin;
-        const y = dot.y * cosTilt - z0 * sinTilt;
-        const z = dot.y * sinTilt + z0 * cosTilt;
+      if (!compact) {
+        for (const dot of dots) {
+          const x = dot.x * cosSpin - dot.z * sinSpin;
+          const z0 = dot.x * sinSpin + dot.z * cosSpin;
+          const y = dot.y * cosTilt - z0 * sinTilt;
+          const z = dot.y * sinTilt + z0 * cosTilt;
 
-        const depth = (z + 1) / 2;
-        const perspective = 1 + z * 0.18;
-        const px = center + x * radius * perspective + (Math.random() - 0.5) * jitter;
-        const py = center + y * radius * perspective + (Math.random() - 0.5) * jitter;
+          const depth = (z + 1) / 2;
+          const perspective = 1 + z * 0.18;
+          const px = center + x * radius * perspective + (Math.random() - 0.5) * jitter;
+          const py = center + y * radius * perspective + (Math.random() - 0.5) * jitter;
 
-        if (showFace && z > -0.2) {
-          const nx = (px - faceX) / faceRadiusX;
-          const ny = (py - faceY) / faceRadiusY;
-          if (nx * nx + ny * ny < 1) continue;
+          if (showFace && z > -0.2) {
+            const nx = (px - faceX) / faceRadiusX;
+            const ny = (py - faceY) / faceRadiusY;
+            if (nx * nx + ny * ny < 1) continue;
+          }
+
+          const dotSize = (0.85 + depth * 2.1) * (1 + smoothed * 0.3);
+          context.globalAlpha = 0.1 + depth * 0.85;
+          context.fillStyle = palette.dot;
+          context.beginPath();
+          context.arc(px, py, dotSize, 0, TAU);
+          context.fill();
         }
-
-        const dotSize = (0.85 + depth * 2.1) * (1 + smoothed * 0.3);
-        context.globalAlpha = 0.1 + depth * 0.85;
-        context.fillStyle = palette.dot;
+        context.globalAlpha = 1;
+      } else {
+        const disc = context.createRadialGradient(
+          center,
+          center,
+          radius * 0.1,
+          center,
+          center,
+          radius * 1.05,
+        );
+        disc.addColorStop(0, "rgba(214,208,255,0.32)");
+        disc.addColorStop(0.65, palette.glow.replace(/0\.\d+\)$/, "0.16)"));
+        disc.addColorStop(1, "rgba(0,0,0,0)");
+        context.fillStyle = disc;
         context.beginPath();
-        context.arc(px, py, dotSize, 0, TAU);
+        context.arc(center, center, radius * 1.05, 0, TAU);
         context.fill();
       }
-      context.globalAlpha = 1;
 
       // gaze: follow the pointer, otherwise wander and blink
       const seesPointer = time - gaze.seen < 2.5;
@@ -182,9 +202,9 @@ export function Orb({ state, energy = 0, size = 128 }: OrbProps) {
       const eyeOpen = Math.max(0.06, openness * squint);
 
       if (showFace) {
-        const eyeRadius = radius * 0.145 * (1 + wonder * 0.16);
-        const eyeOffsetX = radius * 0.26;
-        const eyeY = faceY - radius * 0.03;
+        const eyeRadius = radius * (compact ? 0.2 : 0.145) * (1 + wonder * 0.16);
+        const eyeOffsetX = radius * (compact ? 0.31 : 0.26);
+        const eyeY = faceY - radius * (compact ? 0.02 : 0.03);
         const pupilX = gaze.x * eyeRadius * 0.34;
         const pupilY = gaze.y * eyeRadius * 0.3;
 
@@ -213,40 +233,54 @@ export function Orb({ state, energy = 0, size = 128 }: OrbProps) {
           context.restore();
         }
 
-        const mouthY = faceY + radius * 0.3;
-        const talking = current === "streaming" ? 0.3 + Math.abs(Math.sin(time * 13)) * smoothed : 0;
+        if (!compact) {
+          const mouthY = faceY + radius * 0.3;
+          const talking =
+            current === "streaming" ? 0.3 + Math.abs(Math.sin(time * 13)) * smoothed : 0;
 
-        if (talking > 0.05) {
-          context.fillStyle = "rgba(22,18,34,0.9)";
-          context.beginPath();
-          context.ellipse(
-            faceX,
-            mouthY,
-            radius * 0.13,
-            radius * (0.02 + talking * 0.1),
-            0,
-            0,
-            TAU,
-          );
-          context.fill();
-        } else {
-          context.strokeStyle = "rgba(238,236,255,0.55)";
-          context.lineWidth = Math.max(1.1, radius * 0.03);
-          context.lineCap = "round";
-          context.beginPath();
-          context.arc(
-            faceX,
-            mouthY - radius * 0.06,
-            radius * 0.17,
-            Math.PI * (current === "thinking" ? 0.32 : 0.18),
-            Math.PI * (current === "thinking" ? 0.68 : 0.82),
-          );
-          context.stroke();
+          if (talking > 0.05) {
+            context.fillStyle = "rgba(22,18,34,0.9)";
+            context.beginPath();
+            context.ellipse(
+              faceX,
+              mouthY,
+              radius * 0.13,
+              radius * (0.02 + talking * 0.1),
+              0,
+              0,
+              TAU,
+            );
+            context.fill();
+          } else {
+            context.strokeStyle = "rgba(238,236,255,0.55)";
+            context.lineWidth = Math.max(1.1, radius * 0.03);
+            context.lineCap = "round";
+            context.beginPath();
+            context.arc(
+              faceX,
+              mouthY - radius * 0.06,
+              radius * 0.17,
+              Math.PI * (current === "thinking" ? 0.32 : 0.18),
+              Math.PI * (current === "thinking" ? 0.68 : 0.82),
+            );
+            context.stroke();
+          }
         }
       } else {
-        context.fillStyle = "rgba(247,245,255,0.9)";
+        const bead = context.createRadialGradient(
+          center,
+          center,
+          0,
+          center,
+          center,
+          radius * 0.8,
+        );
+        bead.addColorStop(0, "rgba(247,245,255,0.85)");
+        bead.addColorStop(0.45, palette.glow);
+        bead.addColorStop(1, "rgba(0,0,0,0)");
+        context.fillStyle = bead;
         context.beginPath();
-        context.arc(center, center - radius * 0.04, radius * 0.16, 0, TAU);
+        context.arc(center, center, radius * 0.8, 0, TAU);
         context.fill();
       }
 

@@ -1,11 +1,15 @@
 import { useRef, useState } from "react";
+import { Orb } from "./Orb";
+import type { OrbState } from "../lib/types";
 
 interface ComposerProps {
   disabled: boolean;
+  state: OrbState;
+  energy: number;
   onSend: (text: string) => void;
 }
 
-export function Composer({ disabled, onSend }: ComposerProps) {
+export function Composer({ disabled, state, energy, onSend }: ComposerProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -26,39 +30,44 @@ export function Composer({ disabled, onSend }: ComposerProps) {
 
   return (
     <div className="composer">
-      <textarea
-        ref={textareaRef}
-        rows={1}
-        value={value}
-        placeholder={disabled ? "bubo is writing..." : "Write in English... (Enter to send)"}
-        onChange={(event) => {
-          setValue(event.target.value);
-          resize();
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" && !event.shiftKey) {
-            event.preventDefault();
-            submit();
-          }
-        }}
-      />
-      <button
-        className="send"
-        onClick={submit}
-        disabled={disabled || value.trim().length === 0}
-        title="Send"
-        aria-label="Send"
-      >
-        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-          <path
-            d="M4 12l15-7-4.5 7L19 19z"
-            fill="currentColor"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
+      <div className="composer-inner">
+        <div className="composer-orb">
+          <Orb state={state} energy={energy} size={40} />
+        </div>
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          value={value}
+          placeholder={disabled ? "bubo is writing..." : "Write in English... (Enter to send)"}
+          onChange={(event) => {
+            setValue(event.target.value);
+            resize();
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              submit();
+            }
+          }}
+        />
+        <button
+          className="send"
+          onClick={submit}
+          disabled={disabled || value.trim().length === 0}
+          title="Send"
+          aria-label="Send"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path
+              d="M4 12l15-7-4.5 7L19 19z"
+              fill="currentColor"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }

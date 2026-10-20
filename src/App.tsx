@@ -317,7 +317,12 @@ export default function App() {
           </div>
         )}
 
-        <Composer disabled={status !== "idle"} onSend={(text) => void send(text)} />
+        <Composer
+          disabled={status !== "idle"}
+          state={status}
+          energy={energy}
+          onSend={(text) => void send(text)}
+        />
 
         {showSettings && (
           <SettingsPanel

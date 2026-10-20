@@ -154,6 +154,9 @@ button {
 
 .messages {
   flex: 1;
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
   overflow-y: auto;
   padding: 14px 14px 6px;
   display: flex;
@@ -486,11 +489,23 @@ button {
 
 .composer {
   display: flex;
-  align-items: flex-end;
-  gap: 8px;
+  justify-content: center;
   padding: 10px 12px 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.16));
+}
+
+.composer-inner {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  width: 100%;
+  max-width: 820px;
+}
+
+.composer-orb {
+  flex: none;
+  padding-bottom: 1px;
 }
 
 .composer textarea {
