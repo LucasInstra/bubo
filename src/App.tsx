@@ -365,9 +365,9 @@ export default function App() {
     >
       <div className="panel">
         <header className="head" data-tauri-drag-region>
-          {settings.compact && (
+          <div className="brand" data-tauri-drag-region>
             <button
-              className="compact-face"
+              className="brand-face"
               type="button"
               title="Customize buddy"
               aria-label="Customize buddy"
@@ -377,25 +377,22 @@ export default function App() {
               }}
             >
               <Mascot
-                state={status}
-                mood={mood}
-                size={30}
-                shape={settings.shape}
+                state="idle"
+                size={28}
+                shape="round"
                 color={settings.color}
-                showMouth={settings.showMouth}
-                eyeStyle={settings.eyeStyle}
-                eyeSize={settings.eyeSize}
-                eyeSpacing={settings.eyeSpacing}
-                eyeTilt={settings.eyeTilt}
+                showMouth={false}
+                eyeStyle="bars"
+                eyeSize="medium"
+                eyeSpacing="normal"
+                eyeTilt="soft"
                 eyeColor={settings.eyeColor}
               />
             </button>
-          )}
-          <div className="brand" data-tauri-drag-region>
-            <strong>bubo</strong>
-            {settings.compact && (
+            <div className="brand-copy">
+              <strong>bubo</strong>
               <span className="brand-sub">{mood === "idle" ? "English buddy" : mood}</span>
-            )}
+            </div>
           </div>
           <div className="head-actions">
             {!settings.compact && (
@@ -436,30 +433,9 @@ export default function App() {
                   </svg>
                   {due > 0 && <span className="badge">{due > 9 ? "9+" : due}</span>}
                 </button>
+                <span className="head-sep" aria-hidden="true" />
               </>
             )}
-            <button
-              className="ghost icon"
-              title="Customize buddy"
-              aria-label="Customize buddy"
-              onClick={() => {
-                setShowSettings(false);
-                setShowBuddy(true);
-              }}
-            >
-              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-                <circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-                <circle cx="9.2" cy="10.4" r="1.1" fill="currentColor" />
-                <circle cx="14.8" cy="10.4" r="1.1" fill="currentColor" />
-                <path
-                  d="M9 14c.9 1.1 1.9 1.6 3 1.6s2.1-.5 3-1.6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
             <button
               className={`ghost icon ${pinned ? "on" : ""}`}
               title={pinned ? "Unpin (let other windows cover bubo)" : "Keep bubo on top"}
@@ -552,7 +528,7 @@ export default function App() {
               <Mascot
                 state={status}
                 mood={mood}
-                size={64}
+                size={74}
                 energy={energy}
                 shape={settings.shape}
                 color={settings.color}

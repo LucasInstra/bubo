@@ -377,6 +377,7 @@ export function Mascot({
     context.scale(dpr, dpr);
 
     const gaze = { x: 0, y: 0, tx: 0, ty: 0, seen: -10 };
+    const radius = size * 0.3;
     const start = performance.now();
     let frame = 0;
     let smoothed = 0;
@@ -385,12 +386,38 @@ export function Mascot({
     let nextWander = 0;
     let wonder = 0;
     let moodBlend = 0;
+    let hoverSeen = -10;
+    let nextLook = 6 + Math.random() * 6;
+    let lookPhase = -1;
+    let lookUntil = 0;
+    let nextHop = 8 + Math.random() * 10;
+    let hopAt = -1;
     let lastState = stateRef.current;
     let lastTime = 0;
     let happyUntil = -1;
     let winkUntil = -1;
     // eased values keep state changes visible instead of snapping
     const eased = { squint: 1, tiltAmp: 0.02, breatheAmp: 0.026 };
+
+    // underdamped springs: value plus velocity, integrated twice per frame
+    const headX = { value: 0, velocity: 0 };
+    const headY = { value: 0, velocity: 0 };
+    const headRot = { value: 0, velocity: 0 };
+    const dragX = { value: 0, velocity: 0, target: 0 };
+    const dragY = { value: 0, velocity: 0, target: 0 };
+    const drag = { active: false, startX: 0, startY: 0, moved: 0 };
+
+    const spring = (
+      state: { value: number; velocity: number },
+      target: number,
+      stiffness: number,
+      damping: number,
+      dt: number,
+    ) => {
+      const force = (target - state.value) * stiffness - state.velocity * damping;
+      state.velocity += force * dt;
+      state.value += state.velocity * dt;
+    };
 
     const onPointerMove = (event: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -399,19 +426,55 @@ export function Mascot({
       gaze.tx = Math.max(-1, Math.min(1, (event.clientX - (rect.left + halfWidth)) / halfWidth));
       gaze.ty = Math.max(-1, Math.min(1, (event.clientY - (rect.top + halfHeight)) / halfHeight));
       gaze.seen = (performance.now() - start) / 1000;
+      const distance = Math.hypot(
+        event.clientX - (rect.left + halfWidth),
+        event.clientY - (rect.top + halfHeight),
+      );
+      if (distance < rect.width * 0.85) hoverSeen = gaze.seen;
+
+      if (!drag.active) return;
+      const dx = event.clientX - drag.startX;
+      const dy = event.clientY - drag.startY;
+      drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
+      dragX.target = Math.max(-radius * 0.55, Math.min(radius * 0.55, dx));
+      dragY.target = Math.max(-radius * 0.55, Math.min(radius * 0.55, dy));
     };
 
-    const onPointerDown = () => {
+    const onPointerDown = (event: PointerEvent) => {
       if (!boopable) return;
-      const now2 = (performance.now() - start) / 1000;
-      boopRef.current = 1;
-      happyUntil = now2 + 1.2;
-      winkUntil = now2 + 0.32;
+      drag.active = true;
+      drag.startX = event.clientX;
+      drag.startY = event.clientY;
+      drag.moved = 0;
+      try {
+        canvas.setPointerCapture(event.pointerId);
+      } catch {
+        // the pointer can already be gone on very fast clicks
+      }
+      canvas.style.cursor = "grabbing";
+    };
+
+    const onPointerUp = () => {
+      if (!drag.active) return;
+      drag.active = false;
+      dragX.target = 0;
+      dragY.target = 0;
+      canvas.style.cursor = boopable ? "grab" : "default";
+      if (drag.moved < 4) {
+        const now2 = (performance.now() - start) / 1000;
+        boopRef.current = 1;
+        happyUntil = now2 + 1.2;
+        winkUntil = now2 + 0.32;
+      }
     };
 
     if (animate) {
       window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
+      window.addEventListener("blur", onPointerUp);
       canvas.addEventListener("pointerdown", onPointerDown);
+      canvas.addEventListener("pointercancel", onPointerUp);
+      if (boopable) canvas.style.cursor = "grab";
     }
     const draw = (now: number) => {
       const time = (now - start) / 1000;
@@ -420,7 +483,6 @@ export function Mascot({
 
       const current = stateRef.current;
       const center = size / 2;
-      const radius = size * 0.3;
 
       if (current !== lastState) {
         wonder = 1;
@@ -460,19 +522,65 @@ export function Mascot({
       const winking = winkUntil > time;
 
       const seesPointer = time - gaze.seen < 2.5;
-      if (!seesPointer && time > nextWander) {
-        gaze.tx = (Math.random() - 0.5) * 0.9;
-        gaze.ty = (Math.random() - 0.5) * 0.4 + 0.08;
-        nextWander = time + 1.4 + Math.random() * 2.4;
+
+      // idle look-around routine: a few deliberate targets, then a long rest
+      if (!seesPointer && current !== "thinking") {
+        if (lookPhase < 0 && time > nextLook) {
+          lookPhase = 0;
+          lookUntil = time;
+        }
+        if (lookPhase >= 0 && time > lookUntil) {
+          const targets: Array<[number, number]> = [
+            [-0.85, -0.32],
+            [0.85, -0.22],
+            [0.18, 0.24],
+            [-0.22, 0.04],
+          ];
+          const [tx, ty] = targets[lookPhase];
+          gaze.tx = tx;
+          gaze.ty = ty;
+          lookPhase += 1;
+          lookUntil = time + 0.65 + Math.random() * 0.5;
+          if (lookPhase >= targets.length) {
+            lookPhase = -1;
+            nextLook = time + 7 + Math.random() * 8;
+          }
+        }
+      }
+
+      // short saccades keep the eyes alive between routines
+      if (!seesPointer && lookPhase < 0 && time > nextWander) {
+        gaze.tx = (Math.random() - 0.5) * 1.5;
+        gaze.ty = (Math.random() - 0.5) * 0.8 + 0.08;
+        nextWander = time + 0.9 + Math.random() * 2.0;
       }
       if (current === "thinking") {
         // slow orbit, like the avatar waiting for an answer
-        gaze.tx = Math.cos(time * 1.35) * 0.8;
-        gaze.ty = Math.sin(time * 1.35) * 0.35 + 0.06;
+        gaze.tx = Math.cos(time * 1.35) * 0.85;
+        gaze.ty = Math.sin(time * 1.35) * 0.4 + 0.06;
       }
-      const ease = current === "thinking" ? 0.18 : 0.08;
+      const ease = current === "thinking" ? 0.18 : 0.1;
       gaze.x += (gaze.tx - gaze.x) * ease * (delta * 60);
       gaze.y += (gaze.ty - gaze.y) * ease * (delta * 60);
+
+      // two spring substeps keep the head soft and slightly overshooting
+      const halfStep = delta / 2;
+      for (let step = 0; step < 2; step += 1) {
+        spring(headX, gaze.x * radius * 0.095, 95, 13, halfStep);
+        spring(headY, gaze.y * radius * 0.06, 90, 14, halfStep);
+        spring(headRot, gaze.x * 0.085, 80, 12, halfStep);
+        spring(dragX, dragX.target, 150, 9, halfStep);
+        spring(dragY, dragY.target, 150, 9, halfStep);
+      }
+
+      if (current === "idle" && time > nextHop) {
+        hopAt = time;
+        nextHop = time + 10 + Math.random() * 12;
+      }
+      if (hopAt >= 0 && time - hopAt >= 0.5) hopAt = -1;
+      const hop =
+        hopAt >= 0 ? Math.sin(((time - hopAt) / 0.5) * Math.PI) * radius * 0.06 : 0;
+      const hovering = time - hoverSeen < 0.35;
 
       if (blinkStart < 0 && time >= nextBlink) blinkStart = time;
 
@@ -497,24 +605,32 @@ export function Mascot({
       eyeOpen *= 1 - 0.18 * (moodSad ? moodBlend : 0);
       eyeOpen *= 1 + 0.08 * (moodSurprised ? moodBlend : 0);
 
-      // the whole head drifts and leans with the gaze, so following the
-      // pointer feels like turning towards it instead of only moving eyes
-      const headX = gaze.x * radius * 0.075;
-      const headY =
-        gaze.y * radius * 0.05 +
-        moodBob * moodBlend +
-        (moodSad ? radius * 0.05 * moodBlend : moodSurprised ? -radius * 0.035 * moodBlend : 0);
-      const headTilt = gaze.x * 0.07;
+      // the head leans with the gaze and the drag, while the body stretches
+      // like jelly and springs back with a little overshoot
+      const pullX = Math.max(-1, Math.min(1, dragX.value / (radius * 0.55)));
+      const pullY = Math.max(-1, Math.min(1, dragY.value / (radius * 0.55)));
+      const jellyX = 1 + Math.abs(pullX) * 0.12 - Math.abs(pullY) * 0.04;
+      const jellyY = 1 + Math.abs(pullY) * 0.12 - Math.abs(pullX) * 0.04;
+      const moodDrop = moodSad
+        ? radius * 0.05 * moodBlend
+        : moodSurprised
+          ? -radius * 0.035 * moodBlend
+          : 0;
 
       context.clearRect(0, 0, size, size);
       context.save();
-      context.translate(center + sway + headX, center + boop + headY);
-      context.rotate(tilt + headTilt);
+      context.translate(
+        center + sway + headX.value + dragX.value,
+        center + boop + headY.value + dragY.value + moodBob * moodBlend + moodDrop + hop,
+      );
+      context.rotate(tilt + headRot.value + pullX * 0.05);
       context.scale(1 / breathe, breathe);
+      context.scale(jellyX, jellyY);
+      context.transform(1, pullY * 0.09, pullX * 0.09, 1, 0, 0);
 
       // soft aura
       const aura = context.createRadialGradient(0, 0, radius * 0.4, 0, 0, radius * 1.9);
-      aura.addColorStop(0, `${color}2e`);
+      aura.addColorStop(0, `${color}${hovering ? "3a" : "2e"}`);
       aura.addColorStop(0.6, `${color}10`);
       aura.addColorStop(1, "rgba(0,0,0,0)");
       context.fillStyle = aura;
@@ -539,7 +655,8 @@ export function Mascot({
 
       // eyes: one flat shape each, no pupil; style, size, spacing, tilt and
       // color are configurable, and every solid shape folds when it blinks
-      const sizeScale = eyeSize === "small" ? 0.82 : eyeSize === "large" ? 1.22 : 1;
+      const sizeScale =
+        (eyeSize === "small" ? 0.82 : eyeSize === "large" ? 1.22 : 1) * (hovering ? 1.035 : 1);
       const spacingScale = eyeSpacing === "close" ? 0.235 : eyeSpacing === "wide" ? 0.35 : 0.285;
       const tiltAngle = eyeTilt === "straight" ? 0 : eyeTilt === "sharp" ? 0.14 : -0.16;
       const ink =
@@ -556,14 +673,14 @@ export function Mascot({
       const baseHalf = arcLike ? base.width * 0.82 : base.width / 2;
       const minGap = eyeSpacing === "close" ? 0.04 : eyeSpacing === "wide" ? 0.24 : 0.13;
       const eyeOffset = Math.max(radius * spacingScale, baseHalf + radius * minGap);
-      const eyeY = radius * 0.05 + gaze.y * radius * 0.03;
+      const eyeY = radius * 0.05 + gaze.y * radius * 0.045;
 
       for (const side of [-1, 1]) {
         const style = eyeStyle === "wink" ? (side === -1 ? "arcs" : "bars") : eyeStyle;
         const eye = eyeShape(style, radius, sizeScale);
         const eyeWidth = eye.width;
         const eyeHeight = eye.height * (style === "bars" ? 1 + wonder * 0.1 : 1);
-        const eyeX = side * eyeOffset + gaze.x * radius * 0.05;
+        const eyeX = side * eyeOffset + gaze.x * radius * 0.085;
         const closed = winking && side === -1;
         const cheerful =
           happy > 0.55 && (style === "bars" || style === "dots" || style === "sleepy");
@@ -691,18 +808,22 @@ export function Mascot({
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("blur", onPointerUp);
       canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("pointercancel", onPointerUp);
     };
   }, [size, shape, color, boopable, showMouth, eyeStyle, eyeSize, eyeSpacing, eyeTilt, eyeColor, animate]);
 
   return (
     <canvas
       ref={canvasRef}
+      title={boopable ? "Drag me, or click for a boop" : undefined}
       style={{
         width: size,
         height: size,
         display: "block",
-        cursor: boopable ? "pointer" : "default",
+        cursor: boopable ? "grab" : "default",
       }}
       aria-hidden="true"
     />
