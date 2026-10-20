@@ -1,6 +1,6 @@
 use crate::config::Settings;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatMsg {
@@ -18,7 +18,7 @@ fn level_hint(level: &str) -> &'static str {
     }
 }
 
-pub fn system_prompt(settings: &Settings) -> String {
+pub fn reply_system(settings: &Settings) -> String {
     let persona = if settings.persona.trim().is_empty() {
         "Your tone is warm, curious and a little playful. You are a friendly owl.".to_string()
     } else {
@@ -34,30 +34,18 @@ pub fn system_prompt(settings: &Settings) -> String {
 {level_hint}
 
 How you answer:
-1. Write the main reply in English, conversational and natural for their level. One to three short paragraphs. No headings, no bullet lists unless the learner asks for a list.
-2. React to what they said, then end with exactly one short question to keep the conversation going.
-3. If the learner's last message has real English mistakes (grammar, word choice, or unnatural phrasing), append this block at the very end of your message:
-
-<<<FIXES>>>
-- "what the learner wrote" → "what a native speaker would say" — short explanation in Brazilian Portuguese
-- ...one line per mistake, at most 4 lines
-<<<END>>>
-
-Rules for the block:
-- Include it only when there is a real mistake. No mistakes means no block at all.
-- Quote small fragments, not whole paragraphs.
-- The explanation is in Brazilian Portuguese, at most 12 words, no period at the end.
-- Never mention or explain the block format, never write anything after <<<END>>>.
-- Do not correct your own reply."#,
+1. Write your reply in English, conversational and natural for their level. One to three short paragraphs. No headings and no bullet lists unless the learner asks for one.
+2. React to what they said, then end with exactly one short question that keeps the conversation going.
+3. Never correct them, never list mistakes and never mention corrections. A separate step handles that, so just keep the conversation flowing."#,
         level = settings.level,
         persona = persona,
         level_hint = level_hint(&settings.level),
     )
 }
 
-pub fn body(settings: &Settings, messages: &[ChatMsg]) -> serde_json::Value {
+pub fn reply_body(settings: &Settings, messages: &[ChatMsg]) -> Value {
     let mut out = Vec::with_capacity(messages.len() + 1);
-    out.push(json!({ "role": "system", "content": system_prompt(settings) }));
+    out.push(json!({ "role": "system", "content": reply_system(settings) }));
     for message in messages {
         out.push(json!({ "role": message.role, "content": message.content }));
     }
@@ -66,12 +54,58 @@ pub fn body(settings: &Settings, messages: &[ChatMsg]) -> serde_json::Value {
         "model": settings.model,
         "stream": true,
         "temperature": 0.7,
-        "max_tokens": 600,
+        "max_tokens": 500,
         "messages": out,
     });
 
     // Groq's gpt-oss models default to a long reasoning pass; a tutor answer
     // does not need it and the popup should feel immediate.
+    if settings.model.contains("gpt-oss") {
+        body["reasoning_effort"] = json!("low");
+    }
+
+    body
+}
+
+fn corrections_system(settings: &Settings) -> String {
+    format!(
+        r#"You are an English correction engine for a Brazilian learner at CEFR level {level}.
+Look ONLY at the last message written by the learner (role "user") in the conversation.
+
+Reply with a JSON array and nothing else. One object per real mistake, at most 4:
+[{{"wrong": "exact fragment the learner wrote", "right": "how a native speaker would say it", "note": "explicação curta em português, no máximo 12 palavras"}}]
+
+Rules:
+- Include grammar, word choice, missing words, and phrasing a native would not use.
+- Keep "wrong" and "right" as short fragments, never whole paragraphs.
+- The "note" is always in Brazilian Portuguese, no final period.
+- Correct the learner's message only, never your own replies.
+- If there is nothing to fix, reply exactly [].
+- No markdown, no code fences, no comments, no text outside the JSON array."#,
+        level = settings.level,
+    )
+}
+
+pub fn corrections_body(settings: &Settings, messages: &[ChatMsg]) -> Value {
+    let mut out = vec![json!({ "role": "system", "content": corrections_system(settings) })];
+
+    let start = messages.len().saturating_sub(4);
+    for message in &messages[start..] {
+        out.push(json!({ "role": message.role, "content": message.content }));
+    }
+    out.push(json!({
+        "role": "user",
+        "content": "Return only the JSON array of corrections for my last message. If it is already correct, return []."
+    }));
+
+    let mut body = json!({
+        "model": settings.model,
+        "stream": false,
+        "temperature": 0.1,
+        "max_tokens": 400,
+        "messages": out,
+    });
+
     if settings.model.contains("gpt-oss") {
         body["reasoning_effort"] = json!("low");
     }

@@ -1,12 +1,14 @@
 mod config;
 mod llm;
+mod log;
 mod prompt;
 mod store;
 
 use std::sync::Mutex;
+use serde_json::json;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
@@ -60,7 +62,6 @@ async fn chat(
     let settings = config::load_settings(&app)?;
     let api_key = config::load_api_key()?
         .ok_or("No API key yet. Open settings and paste your Groq key.")?;
-    let body = prompt::body(&settings, &messages);
 
     if let Some(last) = messages.iter().rev().find(|message| message.role == "user") {
         if let Ok(db) = state.db.lock() {
@@ -68,11 +69,60 @@ async fn chat(
         }
     }
 
-    let full = llm::stream(app.clone(), client, &settings, &api_key, body, &request_id).await?;
+    log::write(
+        &app,
+        "info",
+        &format!("reply start model={} messages={}", settings.model, messages.len()),
+    );
+
+    let reply_body = prompt::reply_body(&settings, &messages);
+    let full = match llm::stream_reply(
+        app.clone(),
+        client.clone(),
+        &settings,
+        &api_key,
+        reply_body,
+        &request_id,
+    )
+    .await
+    {
+        Ok(text) => text,
+        Err(error) => {
+            log::write(&app, "error", &format!("reply failed: {error}"));
+            return Err(error);
+        }
+    };
+
+    let _ = app.emit("bubo-reply-done", json!({ "requestId": request_id }));
+
+    let corrections_body = prompt::corrections_body(&settings, &messages);
+    let fixes = match llm::complete(&app, &client, &settings, &api_key, corrections_body).await {
+        Ok(raw) => llm::parse_fixes(&raw),
+        Err(error) => {
+            log::write(&app, "warn", &format!("corrections failed: {error}"));
+            Vec::new()
+        }
+    };
+
+    if !fixes.is_empty() {
+        let _ = app.emit("bubo-fixes", llm::fixes_event_payload(&request_id, &fixes));
+    }
+
+    let fixes_json = if fixes.is_empty() {
+        None
+    } else {
+        serde_json::to_string(&fixes).ok()
+    };
 
     if let Ok(db) = state.db.lock() {
-        let _ = store::insert(&db, "assistant", &full, None);
+        let _ = store::insert(&db, "assistant", &full, fixes_json.as_deref());
     }
+
+    log::write(
+        &app,
+        "info",
+        &format!("reply done chars={} fixes={}", full.len(), fixes.len()),
+    );
 
     Ok(full)
 }

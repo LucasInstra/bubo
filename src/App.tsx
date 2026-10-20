@@ -3,6 +3,7 @@ import { Composer } from "./components/Composer";
 import { Message } from "./components/Message";
 import { Orb } from "./components/Orb";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { parseStoredFixes } from "./lib/format";
 import { ipc } from "./lib/ipc";
 import type { Msg, OrbState, Settings, StoredMessage } from "./lib/types";
 import { DEFAULT_SETTINGS } from "./lib/types";
@@ -24,7 +25,7 @@ function fromStored(message: StoredMessage): Msg {
     id: String(message.id),
     role: message.role,
     content: message.content,
-    fixes: [],
+    fixes: parseStoredFixes(message.fixes),
   };
 }
 
@@ -114,20 +115,41 @@ export default function App() {
 
       let acc = "";
       try {
-        await ipc.chat(context, (delta) => {
-          acc += delta;
-          setStatus("streaming");
-          setEnergy(Math.min(1, 0.15 + acc.length / 400));
-          setMessages((current) =>
-            current.map((message) =>
-              message.id === botMessage.id ? { ...message, content: acc } : message,
-            ),
-          );
+        const finalText = await ipc.chat(context, {
+          onDelta: (delta) => {
+            acc += delta;
+            setStatus("streaming");
+            setEnergy(Math.min(1, 0.15 + acc.length / 400));
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === botMessage.id ? { ...message, content: acc } : message,
+              ),
+            );
+          },
+          onDone: () => {
+            setStatus("idle");
+            setEnergy(0);
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === botMessage.id
+                  ? { ...message, content: acc, streaming: false }
+                  : message,
+              ),
+            );
+          },
+          onFixes: (fixes) => {
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === botMessage.id ? { ...message, fixes } : message,
+              ),
+            );
+          },
         });
+
         setMessages((current) =>
           current.map((message) =>
             message.id === botMessage.id
-              ? { ...message, content: acc, streaming: false }
+              ? { ...message, content: finalText, streaming: false }
               : message,
           ),
         );

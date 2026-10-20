@@ -1,9 +1,10 @@
-import { splitContent } from "../lib/parse";
+import { stripLegacyFixes } from "../lib/format";
 import type { Msg } from "../lib/types";
 
 export function Message({ message }: { message: Msg }) {
-  const { body, fixes } = splitContent(message.content);
+  const body = stripLegacyFixes(message.content);
   const isUser = message.role === "user";
+  const fixes = message.fixes ?? [];
 
   return (
     <div className={`msg ${isUser ? "msg-user" : "msg-bot"}`}>

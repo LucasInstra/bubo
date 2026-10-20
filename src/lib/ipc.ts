@@ -1,10 +1,25 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { Msg, Settings, StoredMessage } from "./types";
+import type { Fix, Msg, Settings, StoredMessage } from "./types";
 
 interface DeltaEvent {
   requestId: string;
   delta: string;
+}
+
+interface DoneEvent {
+  requestId: string;
+}
+
+interface FixesEvent {
+  requestId: string;
+  fixes: Fix[];
+}
+
+export interface ChatHandlers {
+  onDelta: (delta: string) => void;
+  onDone: () => void;
+  onFixes: (fixes: Fix[]) => void;
 }
 
 export const ipc = {
@@ -20,21 +35,29 @@ export const ipc = {
 
   async chat(
     messages: Array<Pick<Msg, "role" | "content">>,
-    onDelta: (delta: string) => void,
+    handlers: ChatHandlers,
   ): Promise<string> {
     const requestId = crypto.randomUUID();
-    const unlisten = await listen<DeltaEvent>("bubo-delta", (event) => {
-      if (event.payload.requestId === requestId) {
-        onDelta(event.payload.delta);
-      }
-    });
+
+    const unlisteners = await Promise.all([
+      listen<DeltaEvent>("bubo-delta", (event) => {
+        if (event.payload.requestId === requestId) handlers.onDelta(event.payload.delta);
+      }),
+      listen<DoneEvent>("bubo-reply-done", (event) => {
+        if (event.payload.requestId === requestId) handlers.onDone();
+      }),
+      listen<FixesEvent>("bubo-fixes", (event) => {
+        if (event.payload.requestId === requestId) handlers.onFixes(event.payload.fixes);
+      }),
+    ]);
+
     try {
       return await invoke<string>("chat", {
         requestId,
         messages: messages.map(({ role, content }) => ({ role, content })),
       });
     } finally {
-      unlisten();
+      unlisteners.forEach((unlisten) => unlisten());
     }
   },
 };
