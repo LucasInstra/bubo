@@ -91,7 +91,7 @@ fn set_pinned(window: tauri::Window, pinned: bool) -> Result<(), String> {
 #[tauri::command]
 fn set_compact(window: tauri::Window, compact: bool) -> Result<(), String> {
     let (width, height) = if compact {
-        (360.0, 480.0)
+        (400.0, 280.0)
     } else {
         (420.0, 640.0)
     };

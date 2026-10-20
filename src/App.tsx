@@ -387,21 +387,23 @@ export default function App() {
               setShowBuddy(true);
             }}
           >
-            <span className="brand-face">
-              <Mascot
-                state={status}
-                mood={mood}
-                size={settings.compact ? 42 : 28}
-                shape={settings.shape}
-                color={settings.color}
-                showMouth={settings.showMouth}
-                eyeStyle={settings.eyeStyle}
-                eyeSize={settings.eyeSize}
-                eyeSpacing={settings.eyeSpacing}
-                eyeTilt={settings.eyeTilt}
-                eyeColor={settings.eyeColor}
-              />
-            </span>
+            {settings.compact && (
+              <span className="brand-face">
+                <Mascot
+                  state={status}
+                  mood={mood}
+                  size={42}
+                  shape={settings.shape}
+                  color={settings.color}
+                  showMouth={settings.showMouth}
+                  eyeStyle={settings.eyeStyle}
+                  eyeSize={settings.eyeSize}
+                  eyeSpacing={settings.eyeSpacing}
+                  eyeTilt={settings.eyeTilt}
+                  eyeColor={settings.eyeColor}
+                />
+              </span>
+            )}
             <span className="brand-copy">
               <strong>bubo</strong>
               <span className="brand-sub">{mood === "idle" ? "English buddy" : mood}</span>
