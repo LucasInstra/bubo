@@ -164,6 +164,14 @@ pub fn drill_stats(conn: &Connection) -> rusqlite::Result<DrillStats> {
     )
 }
 
+/// Removes cards whose only difference is letter case.
+pub fn purge_case_only(conn: &Connection) -> rusqlite::Result<usize> {
+    conn.execute(
+        "DELETE FROM fixes WHERE lower(trim(wrong)) = lower(trim(right))",
+        [],
+    )
+}
+
 pub fn next_drill(conn: &Connection, include_future: bool) -> rusqlite::Result<Option<DrillItem>> {
     let now = now();
     if include_future {
@@ -286,6 +294,32 @@ mod tests {
         let reviewed = super::review_drill(&conn, item.id, true).unwrap().unwrap();
         assert_eq!(reviewed.streak, 1);
         assert_eq!(super::drill_stats(&conn).unwrap().due, 0);
+    }
+
+    #[test]
+    fn purge_removes_case_only_cards() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        super::save_fixes(
+            &conn,
+            &[
+                Fix {
+                    wrong: "i went out on friday".to_string(),
+                    right: "I went out on Friday".to_string(),
+                    note: String::new(),
+                },
+                Fix {
+                    wrong: "was very good".to_string(),
+                    right: "it was very good".to_string(),
+                    note: String::new(),
+                },
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(super::purge_case_only(&conn).unwrap(), 1);
+        assert_eq!(super::drill_stats(&conn).unwrap().total, 1);
     }
 
     #[test]

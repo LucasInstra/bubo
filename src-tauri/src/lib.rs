@@ -57,7 +57,15 @@ fn save_settings(
         let _ = window.set_always_on_top(settings.pinned);
     }
 
-    config::save_settings_file(&app, &settings)
+    config::save_settings_file(&app, &settings)?;
+
+    if settings.ignore_capitalization {
+        if let Ok(db) = state.db.lock() {
+            let _ = store::purge_case_only(&db);
+        }
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -144,13 +152,17 @@ async fn chat(
     let _ = app.emit("bubo-reply-done", json!({ "requestId": request_id }));
 
     let corrections_body = prompt::corrections_body(&settings, &messages);
-    let fixes = match llm::complete(&app, &client, &settings, &api_key, corrections_body).await {
+    let mut fixes = match llm::complete(&app, &client, &settings, &api_key, corrections_body).await {
         Ok(raw) => llm::parse_fixes(&raw),
         Err(error) => {
             log::write(&app, "warn", &format!("corrections failed: {error}"));
             Vec::new()
         }
     };
+
+    if settings.ignore_capitalization {
+        fixes.retain(|fix| !llm::only_case_differs(&fix.wrong, &fix.right));
+    }
 
     if !fixes.is_empty() {
         let _ = app.emit("bubo-fixes", llm::fixes_event_payload(&request_id, &fixes));
@@ -283,6 +295,12 @@ pub fn run() {
             });
 
             let settings = config::load_settings(app.handle()).unwrap_or_default();
+
+            if settings.ignore_capitalization {
+                if let Ok(db) = app.state::<AppState>().db.lock() {
+                    let _ = store::purge_case_only(&db);
+                }
+            }
 
             if let Some(window) = app.get_webview_window("main") {
                 place_bottom_right(&window);

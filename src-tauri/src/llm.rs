@@ -190,6 +190,12 @@ pub fn fixes_event_payload(request_id: &str, fixes: &[Fix]) -> Value {
     json!({ "requestId": request_id, "fixes": fixes })
 }
 
+/// True when the only difference is letter case, which informal chat usually
+/// does not want flagged.
+pub fn only_case_differs(wrong: &str, right: &str) -> bool {
+    wrong.trim().to_lowercase() == right.trim().to_lowercase()
+}
+
 #[cfg(test)]
 mod tests {
     use super::parse_fixes;
@@ -221,8 +227,15 @@ mod tests {
     }
 
     #[test]
-    fn caps_the_list_at_four() {
-        let raw = (0..8)
+    fn detects_case_only_corrections() {
+        use super::only_case_differs;
+        assert!(only_case_differs("i went out on friday", "I went out on Friday"));
+        assert!(!only_case_differs("was very good", "It was very good"));
+        assert!(!only_case_differs("i go", "I went"));
+    }
+
+    #[test]
+    fn caps_the_list_at_four() {        let raw = (0..8)
             .map(|index| format!(r#"{{"wrong":"w{index}","right":"r{index}","note":""}}"#))
             .collect::<Vec<_>>()
             .join(",");

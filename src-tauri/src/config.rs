@@ -5,14 +5,14 @@ use tauri::{AppHandle, Manager};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
-pub struct Settings {
-    pub base_url: String,
+pub struct Settings {    pub base_url: String,
     pub model: String,
     pub level: String,
     pub persona: String,
     pub hotkey: String,
     pub autostart: bool,
     pub pinned: bool,
+    pub ignore_capitalization: bool,
 }
 
 impl Default for Settings {
@@ -25,6 +25,7 @@ impl Default for Settings {
             hotkey: "Ctrl+Alt+B".to_string(),
             autostart: false,
             pinned: true,
+            ignore_capitalization: true,
         }
     }
 }

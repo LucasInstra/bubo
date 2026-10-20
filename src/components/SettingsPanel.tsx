@@ -113,6 +113,15 @@ export function SettingsPanel({
         </label>
 
         <label className="field row">
+          <span>Ignore capitalization</span>
+          <input
+            type="checkbox"
+            checked={draft.ignoreCapitalization}
+            onChange={(event) => patch({ ignoreCapitalization: event.target.checked })}
+          />
+        </label>
+
+        <label className="field row">
           <span>Start with Windows</span>
           <input
             type="checkbox"

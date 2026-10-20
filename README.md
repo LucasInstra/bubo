@@ -56,5 +56,7 @@ Na primeira execução a tela de settings abre sozinha:
 - **Model**: padrão `openai/gpt-oss-120b`; qualquer modelo de chat disponível na conta funciona.
 - **Base URL**: `https://api.groq.com/openai/v1` (qualquer endpoint compatível com OpenAI serve).
 - **Level**: ajusta vocabulário e tamanho das frases.
+- **Ignore capitalization**: ligado por padrão; não marca `i` minúsculo nem dia da semana sem maiúscula, para não incomodar em conversa informal.
+- **Hotkey**: qualquer combinação no formato `Ctrl+Alt+B`; é re-registrada ao salvar.
 
 Arquivos de dados: `%APPDATA%\com.lucas.bubo\` (settings e `bubo.db`).

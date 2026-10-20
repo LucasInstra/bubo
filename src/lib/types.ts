@@ -25,6 +25,7 @@ export interface Settings {
   hotkey: string;
   autostart: boolean;
   pinned: boolean;
+  ignoreCapitalization: boolean;
 }
 
 export interface DrillItem {
@@ -56,4 +57,5 @@ export const DEFAULT_SETTINGS: Settings = {
   hotkey: "Ctrl+Alt+B",
   autostart: false,
   pinned: true,
+  ignoreCapitalization: true,
 };

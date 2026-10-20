@@ -68,6 +68,12 @@ pub fn reply_body(settings: &Settings, messages: &[ChatMsg]) -> Value {
 }
 
 fn corrections_system(settings: &Settings) -> String {
+    let case_rule = if settings.ignore_capitalization {
+        "- Ignore capitalization completely. A lowercase \"i\", \"friday\" or a missing capital letter is NOT a mistake."
+    } else {
+        "- Capitalization matters: flag a lowercase \"i\" or a lowercase day of the week."
+    };
+
     format!(
         r#"You are an English correction engine for a Brazilian learner at CEFR level {level}.
 Look ONLY at the last message written by the learner (role "user") in the conversation.
@@ -77,12 +83,14 @@ Reply with a JSON array and nothing else. One object per real mistake, at most 4
 
 Rules:
 - Include grammar, word choice, missing words, and phrasing a native would not use.
+{case_rule}
 - Keep "wrong" and "right" as short fragments, never whole paragraphs.
 - The "note" is always in Brazilian Portuguese, no final period.
 - Correct the learner's message only, never your own replies.
 - If there is nothing to fix, reply exactly [].
 - No markdown, no code fences, no comments, no text outside the JSON array."#,
         level = settings.level,
+        case_rule = case_rule,
     )
 }
 
