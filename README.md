@@ -1,6 +1,6 @@
 # bubo
 
-A tiny English tutor that lives in a floating window on your desktop. You chat in English, bubo answers at your level and quietly shows what a native speaker would have said — then turns those corrections into a spaced-repetition practice deck.
+A tiny English tutor that lives in a floating window on your desktop. You chat in English, bubo answers at your level and quietly shows what a native speaker would have said, then turns those corrections into a spaced-repetition practice deck.
 
 ![bubo chat](docs/screenshots/chat.svg)
 
@@ -13,17 +13,17 @@ A tiny English tutor that lives in a floating window on your desktop. You chat i
 
 ## Why another language app
 
-Because the useful part of learning a language is the five minutes between real tasks — and opening a browser tab for that never happens. bubo is a small always-on-top popup with a mascot, one hotkey away, that keeps the conversation going and remembers what you got wrong.
+Because the useful part of learning a language is the five minutes between real tasks, and opening a browser tab for that never happens. bubo is a small always-on-top popup with a mascot, one hotkey away, that keeps the conversation going and remembers what you got wrong.
 
 ## Features
 
-- **Always there, never in the way** — frameless popup, global hotkey, tray icon, pin/unpin, hides on `Esc`.
-- **A mascot with a face** — 12 shapes, 9 colors plus a custom picker, 4 eye styles, optional mouth. It blinks, follows your pointer, thinks, talks while writing and hops when you click it.
-- **Conversation first** — replies stream token by token; a separate pass returns corrections as strict JSON, so the card never depends on the model following inline formatting.
-- **Corrections that stick** — every fix is stored, linked to the message that produced it, and scheduled with a 1 / 3 / 7 / 21 / 45 day ladder. A miss comes back in ten minutes.
-- **Practice mode** — rewrite the wrong sentence, get instant feedback, see the original context. Skip the due cards or reset the deck from settings.
-- **Local by default** — API key in the Windows Credential Manager, history in SQLite, no telemetry, no account.
-- **Recoverable** — stop a reply mid-stream, retry a failed turn, copy or delete a message.
+- **Always there, never in the way**: frameless popup, global hotkey, tray icon, pin/unpin, hides on `Esc`.
+- **A mascot with a face**: 12 shapes, 9 colors plus a custom picker, 4 eye styles, optional mouth. It blinks, follows your pointer, thinks, talks while writing and hops when you click it.
+- **Conversation first**: replies stream token by token; a separate pass returns corrections as strict JSON, so the card never depends on the model following inline formatting.
+- **Corrections that stick**: every fix is stored, linked to the message that produced it, and scheduled with a 1 / 3 / 7 / 21 / 45 day ladder. A miss comes back in ten minutes.
+- **Practice mode**: rewrite the wrong sentence, get instant feedback, see the original context. Skip the due cards or reset the deck from settings.
+- **Local by default**: API key in the Windows Credential Manager, history in SQLite, no telemetry, no account.
+- **Recoverable**: stop a reply mid-stream, retry a failed turn, copy or delete a message.
 
 ## Screenshots
 
@@ -92,10 +92,10 @@ The default model is `openai/gpt-oss-120b`. Any OpenAI-compatible base URL works
                           SQLite (messages, fixes)
 ```
 
-1. **Reply pass** — streamed SSE from the provider, forwarded to the UI as `bubo-delta` events.
-2. **Correction pass** — a second, non-streamed call that returns `[{wrong, right, note}]` and is stored on the message row.
-3. **Practice queue** — each fix is deduplicated and scheduled; the drill reads the next due card and updates its interval.
-4. **Persistence** — the reply is saved before corrections run, so quitting mid-flight never leaves an orphan turn.
+1. **Reply pass**: streamed SSE from the provider, forwarded to the UI as `bubo-delta` events.
+2. **Correction pass**: a second, non-streamed call that returns `[{wrong, right, note}]` and is stored on the message row.
+3. **Practice queue**: each fix is deduplicated and scheduled; the drill reads the next due card and updates its interval.
+4. **Persistence**: the reply is saved before corrections run, so quitting mid-flight never leaves an orphan turn.
 
 ## Data and privacy
 
@@ -138,10 +138,10 @@ src-tauri/src/
 
 ## Troubleshooting
 
-- **`401`/`invalid api key`** — paste the key again in Settings → Connection. Keys start with `gsk_`.
-- **Hotkey does nothing** — another app may own the combination. Pick a different one in Settings → Behavior; the app keeps working if registration fails and logs it.
-- **Strange answer or empty reply** — check `%APPDATA%\com.lucas.bubo\bubo.log` for the request and error lines.
-- **Practice looks empty** — corrections only appear after a message with a real mistake. The target icon shows how many cards are due.
+- **`401`/`invalid api key`**: paste the key again in Settings → Connection. Keys start with `gsk_`.
+- **Hotkey does nothing**: another app may own the combination. Pick a different one in Settings → Behavior; the app keeps working if registration fails and logs it.
+- **Strange answer or empty reply**: check `%APPDATA%\com.lucas.bubo\bubo.log` for the request and error lines.
+- **Practice looks empty**: corrections only appear after a message with a real mistake. The target icon shows how many cards are due.
 
 ## Roadmap
 
@@ -149,7 +149,7 @@ src-tauri/src/
 - Progress view: accuracy, streak, most frequent mistakes.
 - Per-message "practice this" on the correction card.
 - Tighter Content Security Policy for the webview.
-- Voice practice (speak and listen) — later, deliberately.
+- Voice practice (speak and listen), later, deliberately.
 
 ## License
 

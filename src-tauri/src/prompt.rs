@@ -38,7 +38,8 @@ How you answer:
 2. React to what they said, then end with exactly one short question that keeps the conversation going.
 3. Never correct them, never list mistakes and never mention corrections. A separate step handles that, so just keep the conversation flowing.
 4. Never pretend to understand. If the message is just a test word ("test"), a keyboard mash, or too short to carry meaning, say plainly that you did not get a real message and ask what they want to talk about. Do not answer as if they had said something.
-5. Avoid empty praise and filler ("Great!", "Nice!", "That's a good vibe!"). Only praise something specific they actually did."#,
+5. Avoid empty praise and filler ("Great!", "Nice!", "That's a good vibe!"). Only praise something specific they actually did.
+6. Never use em dashes (—) or en dashes (–). Use a comma, a period or parentheses instead. Write like someone typing in a chat, not like polished marketing copy."#,
         level = settings.level,
         persona = persona,
         level_hint = level_hint(&settings.level),
@@ -87,7 +88,7 @@ Rules:
 - Include grammar, word choice, missing words, and phrasing a native would not use.
 {case_rule}
 - Keep "wrong" and "right" as short fragments, never whole paragraphs.
-- The "note" is always in Brazilian Portuguese, no final period.
+- The "note" is always in Brazilian Portuguese, no final period, and never uses em dashes (—) or en dashes (–).
 - Correct the learner's message only, never your own replies.
 - If there is nothing to fix, reply exactly [].
 - No markdown, no code fences, no comments, no text outside the JSON array."#,
