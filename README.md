@@ -7,6 +7,7 @@ Um tutor de inglês que vive num popup flutuante no canto da tela. Você convers
 - Janela sem bordas no canto inferior direito, sempre no topo por padrão, com botão de pin para liberar.
 - Atalho global configurável (padrão `Ctrl+Alt+B`), `Esc` esconde, ícone na bandeja com menu.
 - Orbe animado com rosto: olhos que piscam e seguem o mouse, boca que mexe enquanto ele escreve, respiração e brilho que mudam por estado (ocioso lilás, pensando âmbar, escrevendo verde). No chat ele fica ao lado do campo de digitação; na tela vazia aparece grande.
+- **Mascote configurável**: 7 formas (blob, redondo, quadrado, triângulo, hexágono, nuvem, gota) e 10 cores em settings; clicar nele dá um pulinho.
 - Chat com streaming de resposta e bloco de correções por mensagem: trecho errado, versão natural e explicação curta em português.
 - **Prática**: cada correção entra numa fila de revisão espaçada (1, 3, 7, 21, 45 dias). O botão de alvo no header mostra quantas estão devidas e abre o drill.
 - Nível CEFR configurável (A2 → C1) e persona opcional.

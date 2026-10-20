@@ -13,6 +13,8 @@ pub struct Settings {    pub base_url: String,
     pub autostart: bool,
     pub pinned: bool,
     pub ignore_capitalization: bool,
+    pub shape: String,
+    pub color: String,
 }
 
 impl Default for Settings {
@@ -26,6 +28,8 @@ impl Default for Settings {
             autostart: false,
             pinned: true,
             ignore_capitalization: true,
+            shape: "blob".to_string(),
+            color: "#8b7dff".to_string(),
         }
     }
 }

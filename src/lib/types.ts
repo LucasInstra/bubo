@@ -26,6 +26,8 @@ export interface Settings {
   autostart: boolean;
   pinned: boolean;
   ignoreCapitalization: boolean;
+  shape: string;
+  color: string;
 }
 
 export interface DrillItem {
@@ -58,4 +60,6 @@ export const DEFAULT_SETTINGS: Settings = {
   autostart: false,
   pinned: true,
   ignoreCapitalization: true,
+  shape: "blob",
+  color: "#8b7dff",
 };

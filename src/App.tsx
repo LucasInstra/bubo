@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Composer } from "./components/Composer";
 import { Drill } from "./components/Drill";
+import { Mascot } from "./components/Mascot";
 import { Message } from "./components/Message";
-import { Orb } from "./components/Orb";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { parseStoredFixes } from "./lib/format";
 import { ipc } from "./lib/ipc";
@@ -222,7 +222,14 @@ export default function App() {
       <div className="panel">
         <header className="head" data-tauri-drag-region>
           <div className="brand" data-tauri-drag-region>
-            <Orb state={status} size={26} energy={energy} />
+            <Mascot
+              state={status}
+              size={34}
+              energy={energy}
+              shape={settings.shape}
+              color={settings.color}
+              boopable
+            />
             <div className="brand-text" data-tauri-drag-region>
               <strong>bubo</strong>
               <span>{STATUS_LABEL[status]}</span>
@@ -290,7 +297,14 @@ export default function App() {
 
         {empty && !showSettings ? (
           <div className="hero">
-            <Orb state={status} size={120} energy={energy} />
+            <Mascot
+              state={status}
+              size={118}
+              energy={energy}
+              shape={settings.shape}
+              color={settings.color}
+              boopable
+            />
             <h1>Hey, I'm bubo.</h1>
             <p>
               Talk to me in English. I keep the conversation going and quietly show what a native
@@ -321,6 +335,8 @@ export default function App() {
           disabled={status !== "idle"}
           state={status}
           energy={energy}
+          shape={settings.shape}
+          color={settings.color}
           onSend={(text) => void send(text)}
         />
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { MASCOT_COLORS, MASCOT_SHAPES, Mascot, SHAPE_LABELS } from "./Mascot";
 import type { Settings } from "../lib/types";
 
 interface SettingsPanelProps {
@@ -99,6 +100,48 @@ export function SettingsPanel({
                 {level}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="field">
+          <span>Your buddy</span>
+          <div className="look">
+            <div className="look-preview">
+              <Mascot
+                state="idle"
+                size={78}
+                shape={draft.shape}
+                color={draft.color}
+                boopable
+              />
+            </div>
+            <div className="look-controls">
+              <div className="swatches">
+                {MASCOT_COLORS.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`swatch ${draft.color === option ? "on" : ""}`}
+                    style={{ background: option }}
+                    onClick={() => patch({ color: option })}
+                    aria-label={`color ${option}`}
+                  />
+                ))}
+              </div>
+              <div className="shapes">
+                {MASCOT_SHAPES.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`shape ${draft.shape === option ? "on" : ""}`}
+                    title={SHAPE_LABELS[option]}
+                    onClick={() => patch({ shape: option })}
+                  >
+                    <Mascot state="idle" size={24} shape={option} color={draft.color} />
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
