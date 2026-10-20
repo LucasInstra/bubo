@@ -2,9 +2,10 @@ import { useEffect, useRef } from "react";
 import type { OrbState } from "../lib/types";
 
 export const MASCOT_SHAPES = [
-  "blob",
   "round",
-  "squircle",
+  "oval",
+  "square",
+  "pill",
   "triangle",
   "hexagon",
   "cloud",
@@ -14,22 +15,23 @@ export const MASCOT_SHAPES = [
 export type MascotShape = (typeof MASCOT_SHAPES)[number];
 
 export const MASCOT_COLORS = [
-  "#8b7dff",
-  "#3b82f6",
-  "#06b6d4",
-  "#22c55e",
-  "#eab308",
-  "#f97316",
-  "#ef4444",
-  "#ec4899",
   "#a9714b",
+  "#ef4444",
+  "#f97316",
+  "#f59e0b",
+  "#22c55e",
+  "#14b8a6",
+  "#3b82f6",
+  "#8b5cf6",
+  "#ec4899",
   "#71717a",
 ] as const;
 
 export const SHAPE_LABELS: Record<MascotShape, string> = {
-  blob: "blob",
   round: "round",
-  squircle: "square",
+  oval: "oval",
+  square: "square",
+  pill: "pill",
   triangle: "triangle",
   hexagon: "hexagon",
   cloud: "cloud",
@@ -45,29 +47,7 @@ interface MascotProps {
   energy?: number;
   size?: number;
   boopable?: boolean;
-}
-
-function superellipse(
-  path: Path2D,
-  radius: number,
-  power: number,
-  wobble: number,
-  phase: number,
-) {
-  const steps = 72;
-  for (let index = 0; index <= steps; index += 1) {
-    const angle = (index / steps) * TAU;
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    const grow = 1 + Math.sin(angle * 3 + phase) * wobble;
-    const x =
-      radius * Math.sign(cos) * Math.abs(cos) ** (2 / power) * grow;
-    const y =
-      radius * Math.sign(sin) * Math.abs(sin) ** (2 / power) * grow;
-    if (index === 0) path.moveTo(x, y);
-    else path.lineTo(x, y);
-  }
-  path.closePath();
+  showMouth?: boolean;
 }
 
 function roundedPolygon(path: Path2D, points: number[][], corner: number) {
@@ -93,27 +73,31 @@ function roundedPolygon(path: Path2D, points: number[][], corner: number) {
   path.closePath();
 }
 
-function bodyPath(shape: string, radius: number, time: number): Path2D {
+function bodyPath(shape: string, radius: number): Path2D {
   const path = new Path2D();
 
   switch (shape) {
-    case "round":
-      path.arc(0, 0, radius * 0.96, 0, TAU);
+    case "oval":
+      path.ellipse(0, 0, radius * 1.12, radius * 0.72, 0, 0, TAU);
       break;
 
-    case "squircle":
-      superellipse(path, radius * 0.94, 5, 0, 0);
+    case "square":
+      path.roundRect(-radius * 0.86, -radius * 0.86, radius * 1.72, radius * 1.72, radius * 0.3);
+      break;
+
+    case "pill":
+      path.roundRect(-radius * 1.12, -radius * 0.58, radius * 2.24, radius * 1.16, radius * 0.58);
       break;
 
     case "triangle":
       roundedPolygon(
         path,
         [
-          [0, -radius * 1.02],
-          [radius * 0.95, radius * 0.66],
-          [-radius * 0.95, radius * 0.66],
+          [0, -radius * 0.98],
+          [radius * 0.92, radius * 0.62],
+          [-radius * 0.92, radius * 0.62],
         ],
-        radius * 0.2,
+        radius * 0.24,
       );
       break;
 
@@ -122,19 +106,19 @@ function bodyPath(shape: string, radius: number, time: number): Path2D {
         path,
         Array.from({ length: 6 }, (_, index) => {
           const angle = -Math.PI / 2 + (index * Math.PI) / 3;
-          return [Math.cos(angle) * radius * 0.95, Math.sin(angle) * radius * 0.95];
+          return [Math.cos(angle) * radius * 0.92, Math.sin(angle) * radius * 0.92];
         }),
-        radius * 0.16,
+        radius * 0.2,
       );
       break;
 
     case "cloud":
-      path.arc(-radius * 0.36, radius * 0.14, radius * 0.46, 0, TAU);
-      path.moveTo(radius * 0.82, radius * 0.06);
-      path.arc(radius * 0.34, radius * 0.08, radius * 0.52, 0, TAU);
-      path.moveTo(radius * 0.58, -radius * 0.18);
-      path.arc(0, -radius * 0.3, radius * 0.54, 0, TAU);
-      path.roundRect(-radius * 0.72, radius * 0.08, radius * 1.44, radius * 0.5, radius * 0.2);
+      path.arc(-radius * 0.38, radius * 0.1, radius * 0.5, 0, TAU);
+      path.moveTo(radius * 0.84, radius * 0.02);
+      path.arc(radius * 0.36, radius * 0.04, radius * 0.54, 0, TAU);
+      path.moveTo(radius * 0.56, -radius * 0.24);
+      path.arc(0, -radius * 0.34, radius * 0.52, 0, TAU);
+      path.roundRect(-radius * 0.74, radius * 0.04, radius * 1.48, radius * 0.52, radius * 0.22);
       break;
 
     case "drop":
@@ -166,9 +150,9 @@ function bodyPath(shape: string, radius: number, time: number): Path2D {
       path.closePath();
       break;
 
-    case "blob":
+    case "round":
     default:
-      superellipse(path, radius * 0.97, 3.1, 0.035, time * 0.8);
+      path.arc(0, 0, radius * 0.95, 0, TAU);
       break;
   }
 
@@ -176,17 +160,17 @@ function bodyPath(shape: string, radius: number, time: number): Path2D {
 }
 
 /**
- * bubo's body: a dotless creature with big eyes, a small mouth and a lot of
- * small idle motion. Eyes follow the pointer, blink on their own rhythm and
- * squint while it thinks.
+ * bubo's body: a flat colored shape with two simple capsule eyes. No pupils,
+ * no sclera rings, just a solid highlight that blinks and drifts.
  */
 export function Mascot({
   state,
   color = "#8b7dff",
-  shape = "blob",
+  shape = "round",
   energy = 0,
   size = 128,
   boopable = false,
+  showMouth = true,
 }: MascotProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<OrbState>(state);
@@ -210,7 +194,7 @@ export function Mascot({
     const start = performance.now();
     let frame = 0;
     let smoothed = 0;
-    let nextBlink = 1.6;
+    let nextBlink = 1.8;
     let blinkStart = -1;
     let nextWander = 0;
     let wonder = 0;
@@ -240,7 +224,7 @@ export function Mascot({
 
       const current = stateRef.current;
       const center = size / 2;
-      const radius = size * 0.31;
+      const radius = size * 0.3;
 
       if (current !== lastState) {
         wonder = 1;
@@ -250,17 +234,17 @@ export function Mascot({
       smoothed = smoothed * 0.9 + energyRef.current * 0.1;
       boopRef.current *= 0.9;
 
-      const boop = Math.sin(boopRef.current * Math.PI) * radius * 0.16;
+      const boop = Math.sin(boopRef.current * Math.PI) * radius * 0.18;
       const squish = Math.sin(time * (current === "thinking" ? 3.2 : 1.7));
-      const breathe = 1 + squish * 0.018 + smoothed * 0.02;
+      const breathe = 1 + squish * 0.016 + smoothed * 0.02;
       const tilt =
         current === "thinking" ? Math.sin(time * 1.8) * 0.05 : Math.sin(time * 0.7) * 0.015;
 
       const seesPointer = time - gaze.seen < 2.5;
       if (!seesPointer && time > nextWander) {
         gaze.tx = (Math.random() - 0.5) * 0.9;
-        gaze.ty = (Math.random() - 0.5) * 0.45 + 0.08;
-        nextWander = time + 1.3 + Math.random() * 2.2;
+        gaze.ty = (Math.random() - 0.5) * 0.4 + 0.08;
+        nextWander = time + 1.4 + Math.random() * 2.4;
       }
       if (current === "thinking") {
         gaze.tx = Math.max(-1, Math.min(1, gaze.tx + (Math.random() - 0.5) * 0.3));
@@ -280,12 +264,12 @@ export function Mascot({
         else {
           blinkStart = -1;
           openness = 1;
-          nextBlink = time + (current === "streaming" ? 4 : 1.7) + Math.random() * 3.2;
+          nextBlink = time + (current === "streaming" ? 4.2 : 1.8) + Math.random() * 3.4;
         }
       }
 
-      const squint = current === "thinking" ? 0.6 : 1;
-      const eyeOpen = Math.max(0.05, openness * squint);
+      const squint = current === "thinking" ? 0.62 : 1;
+      const eyeOpen = Math.max(0.08, openness * squint);
 
       context.clearRect(0, 0, size, size);
       context.save();
@@ -295,8 +279,8 @@ export function Mascot({
 
       // soft aura
       const aura = context.createRadialGradient(0, 0, radius * 0.4, 0, 0, radius * 1.9);
-      aura.addColorStop(0, `${color}30`);
-      aura.addColorStop(0.6, `${color}12`);
+      aura.addColorStop(0, `${color}2e`);
+      aura.addColorStop(0.6, `${color}10`);
       aura.addColorStop(1, "rgba(0,0,0,0)");
       context.fillStyle = aura;
       context.beginPath();
@@ -304,83 +288,76 @@ export function Mascot({
       context.fill();
 
       // body
-      const body = bodyPath(shape, radius, time);
+      const body = bodyPath(shape, radius);
       context.fillStyle = color;
       context.fill(body);
 
       context.save();
       context.clip(body);
       const sheen = context.createLinearGradient(0, -radius, 0, radius * 1.1);
-      sheen.addColorStop(0, "rgba(255,255,255,0.28)");
-      sheen.addColorStop(0.42, "rgba(255,255,255,0.04)");
-      sheen.addColorStop(1, "rgba(0,0,0,0.2)");
+      sheen.addColorStop(0, "rgba(255,255,255,0.24)");
+      sheen.addColorStop(0.45, "rgba(255,255,255,0.03)");
+      sheen.addColorStop(1, "rgba(0,0,0,0.18)");
       context.fillStyle = sheen;
-      context.fillRect(-radius * 1.2, -radius * 1.3, radius * 2.4, radius * 2.6);
+      context.fillRect(-radius * 1.4, -radius * 1.4, radius * 2.8, radius * 2.8);
       context.restore();
 
-      // eyes
-      const eyeRadius = radius * 0.235 * (1 + wonder * 0.12);
-      const eyeOffset = radius * 0.33;
-      const eyeY = -radius * 0.12 + gaze.y * radius * 0.03;
-      const pupilX = gaze.x * eyeRadius * 0.42;
-      const pupilY = gaze.y * eyeRadius * 0.36;
+      // eyes: a single solid highlight each, tilted inward like the reference
+      const eyeWidth = radius * 0.14;
+      const eyeHeight = radius * 0.32 * (1 + wonder * 0.1);
+      const eyeOffset = radius * 0.27;
+      const eyeY = radius * 0.04 + gaze.y * radius * 0.03;
 
       for (const side of [-1, 1]) {
         const eyeX = side * eyeOffset + gaze.x * radius * 0.05;
 
         context.save();
         context.translate(eyeX, eyeY);
+        context.rotate(side * -0.16);
         context.scale(1, eyeOpen);
 
-        context.fillStyle = "rgba(252,252,255,0.98)";
+        context.fillStyle = "rgba(252,252,255,0.97)";
         context.beginPath();
-        context.ellipse(0, 0, eyeRadius, eyeRadius * 1.02, 0, 0, TAU);
-        context.fill();
-
-        context.fillStyle = "#171426";
-        context.beginPath();
-        context.arc(pupilX, pupilY, eyeRadius * 0.5, 0, TAU);
-        context.fill();
-
-        context.fillStyle = "rgba(255,255,255,0.95)";
-        context.beginPath();
-        context.arc(
-          pupilX + eyeRadius * 0.16,
-          pupilY - eyeRadius * 0.2,
-          eyeRadius * 0.14,
-          0,
-          TAU,
-        );
+        context.roundRect(-eyeWidth / 2, -eyeHeight / 2, eyeWidth, eyeHeight, eyeWidth / 2);
         context.fill();
 
         context.restore();
       }
 
-      // mouth
-      const mouthY = radius * 0.3;
-      const talking =
-        current === "streaming" ? 0.25 + Math.abs(Math.sin(time * 14)) * smoothed : 0;
+      if (showMouth) {
+        const mouthY = radius * 0.36;
+        const talking =
+          current === "streaming" ? 0.25 + Math.abs(Math.sin(time * 14)) * smoothed : 0;
 
-      if (talking > 0.05) {
-        context.fillStyle = "rgba(20,16,32,0.85)";
-        context.beginPath();
-        context.ellipse(0, mouthY, radius * 0.11, radius * (0.02 + talking * 0.1), 0, 0, TAU);
-        context.fill();
-      } else if (current === "thinking") {
-        context.strokeStyle = "rgba(20,16,32,0.45)";
-        context.lineWidth = Math.max(1.2, radius * 0.035);
-        context.lineCap = "round";
-        context.beginPath();
-        context.moveTo(-radius * 0.09, mouthY);
-        context.lineTo(radius * 0.09, mouthY);
-        context.stroke();
-      } else {
-        context.strokeStyle = "rgba(20,16,32,0.5)";
-        context.lineWidth = Math.max(1.2, radius * 0.035);
-        context.lineCap = "round";
-        context.beginPath();
-        context.arc(0, mouthY - radius * 0.07, radius * 0.15, Math.PI * 0.2, Math.PI * 0.8);
-        context.stroke();
+        if (talking > 0.05) {
+          context.fillStyle = "rgba(20,16,32,0.8)";
+          context.beginPath();
+          context.ellipse(
+            0,
+            mouthY,
+            radius * 0.1,
+            radius * (0.02 + talking * 0.09),
+            0,
+            0,
+            TAU,
+          );
+          context.fill();
+        } else if (current === "thinking") {
+          context.strokeStyle = "rgba(20,16,32,0.4)";
+          context.lineWidth = Math.max(1.1, radius * 0.03);
+          context.lineCap = "round";
+          context.beginPath();
+          context.moveTo(-radius * 0.08, mouthY);
+          context.lineTo(radius * 0.08, mouthY);
+          context.stroke();
+        } else {
+          context.strokeStyle = "rgba(20,16,32,0.45)";
+          context.lineWidth = Math.max(1.1, radius * 0.03);
+          context.lineCap = "round";
+          context.beginPath();
+          context.arc(0, mouthY - radius * 0.07, radius * 0.14, Math.PI * 0.2, Math.PI * 0.8);
+          context.stroke();
+        }
       }
 
       // thinking dots, a small nod to the codex loader
@@ -391,7 +368,7 @@ export function Mascot({
           context.beginPath();
           context.arc(
             (index - 1) * radius * 0.24,
-            -radius * 1.26,
+            -radius * 1.24,
             radius * 0.07 * (0.7 + pulse * 0.5),
             0,
             TAU,
@@ -411,12 +388,17 @@ export function Mascot({
       window.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerdown", onPointerDown);
     };
-  }, [size, shape, color, boopable]);
+  }, [size, shape, color, boopable, showMouth]);
 
   return (
     <canvas
       ref={canvasRef}
-      style={{ width: size, height: size, display: "block", cursor: boopable ? "pointer" : "default" }}
+      style={{
+        width: size,
+        height: size,
+        display: "block",
+        cursor: boopable ? "pointer" : "default",
+      }}
       aria-hidden="true"
     />
   );

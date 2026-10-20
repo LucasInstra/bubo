@@ -15,6 +15,10 @@ pub struct Settings {    pub base_url: String,
     pub ignore_capitalization: bool,
     pub shape: String,
     pub color: String,
+    pub show_mouth: bool,
+    pub show_status: bool,
+    pub accent_from_mascot: bool,
+    pub text_size: String,
 }
 
 impl Default for Settings {
@@ -28,8 +32,12 @@ impl Default for Settings {
             autostart: false,
             pinned: true,
             ignore_capitalization: true,
-            shape: "blob".to_string(),
+            shape: "round".to_string(),
             color: "#8b7dff".to_string(),
+            show_mouth: true,
+            show_status: true,
+            accent_from_mascot: true,
+            text_size: "normal".to_string(),
         }
     }
 }

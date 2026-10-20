@@ -37,6 +37,18 @@ button {
   padding: 8px;
 }
 
+.app.size-small {
+  --msg-size: 12.5px;
+}
+
+.app.size-normal {
+  --msg-size: 13.5px;
+}
+
+.app.size-large {
+  --msg-size: 15px;
+}
+
 .panel {
   position: relative;
   height: 100%;
@@ -67,11 +79,29 @@ button {
 /* header */
 
 .head {
+  position: relative;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 10px 8px 12px;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 80px;
+  padding: 8px 10px 6px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.mascot-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.status-pill {
+  padding: 1px 9px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--muted);
+  font-size: 9.5px;
+  letter-spacing: 0.4px;
 }
 
 .brand {
@@ -99,6 +129,9 @@ button {
 }
 
 .head-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
   display: flex;
   gap: 2px;
 }
@@ -200,7 +233,7 @@ button {
 .bubble {
   white-space: pre-wrap;
   line-height: 1.55;
-  font-size: 13.5px;
+  font-size: var(--msg-size, 13.5px);
   user-select: text;
   overflow-wrap: anywhere;
 }
@@ -498,14 +531,9 @@ button {
 .composer-inner {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   max-width: 820px;
-}
-
-.composer-mascot {
-  flex: none;
-  padding-bottom: 2px;
 }
 
 .composer textarea {

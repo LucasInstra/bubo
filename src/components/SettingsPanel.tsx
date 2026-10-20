@@ -112,6 +112,7 @@ export function SettingsPanel({
                 size={78}
                 shape={draft.shape}
                 color={draft.color}
+                showMouth={draft.showMouth}
                 boopable
               />
             </div>
@@ -142,6 +143,52 @@ export function SettingsPanel({
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+
+        <label className="field row">
+          <span>Mouth</span>
+          <input
+            type="checkbox"
+            checked={draft.showMouth}
+            onChange={(event) => patch({ showMouth: event.target.checked })}
+          />
+        </label>
+
+        <label className="field row">
+          <span>Status label under the mascot</span>
+          <input
+            type="checkbox"
+            checked={draft.showStatus}
+            onChange={(event) => patch({ showStatus: event.target.checked })}
+          />
+        </label>
+
+        <label className="field row">
+          <span>Use the mascot color across the app</span>
+          <input
+            type="checkbox"
+            checked={draft.accentFromMascot}
+            onChange={(event) => patch({ accentFromMascot: event.target.checked })}
+          />
+        </label>
+
+        <div className="field">
+          <span>Message size</span>
+          <div className="levels">
+            {[
+              ["small", "Small"],
+              ["normal", "Normal"],
+              ["large", "Large"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                className={`chip ${draft.textSize === value ? "chip-on" : ""}`}
+                onClick={() => patch({ textSize: value })}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 

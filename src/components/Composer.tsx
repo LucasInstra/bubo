@@ -1,17 +1,11 @@
 import { useRef, useState } from "react";
-import { Mascot } from "./Mascot";
-import type { OrbState } from "../lib/types";
 
 interface ComposerProps {
   disabled: boolean;
-  state: OrbState;
-  energy: number;
-  shape: string;
-  color: string;
   onSend: (text: string) => void;
 }
 
-export function Composer({ disabled, state, energy, shape, color, onSend }: ComposerProps) {
+export function Composer({ disabled, onSend }: ComposerProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -33,9 +27,6 @@ export function Composer({ disabled, state, energy, shape, color, onSend }: Comp
   return (
     <div className="composer">
       <div className="composer-inner">
-        <div className="composer-mascot">
-          <Mascot state={state} energy={energy} size={46} shape={shape} color={color} boopable />
-        </div>
         <textarea
           ref={textareaRef}
           rows={1}

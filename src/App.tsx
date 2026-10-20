@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { Composer } from "./components/Composer";
 import { Drill } from "./components/Drill";
 import { Mascot } from "./components/Mascot";
@@ -16,10 +17,19 @@ const SUGGESTIONS = [
 ];
 
 const STATUS_LABEL: Record<OrbState, string> = {
-  idle: "ready",
+  idle: "here with you",
   thinking: "thinking",
   streaming: "writing",
 };
+
+function withAlpha(hex: string, alpha: number): string {
+  const value = hex.replace("#", "");
+  if (value.length !== 6) return hex;
+  const red = Number.parseInt(value.slice(0, 2), 16);
+  const green = Number.parseInt(value.slice(2, 4), 16);
+  const blue = Number.parseInt(value.slice(4, 6), 16);
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
 
 function fromStored(message: StoredMessage): Msg {
   return {
@@ -216,24 +226,31 @@ export default function App() {
   }, []);
 
   const empty = messages.length === 0;
+  const accent = settings.accentFromMascot ? settings.color : "#8b7dff";
+  const accentVars = {
+    "--accent": accent,
+    "--accent-soft": withAlpha(accent, 0.16),
+  } as CSSProperties;
 
   return (
-    <div className="app">
+    <div className={`app size-${settings.textSize}`} style={accentVars}>
       <div className="panel">
         <header className="head" data-tauri-drag-region>
-          <div className="brand" data-tauri-drag-region>
+          <div className="mascot-stage">
             <Mascot
               state={status}
-              size={34}
+              size={54}
               energy={energy}
               shape={settings.shape}
               color={settings.color}
+              showMouth={settings.showMouth}
               boopable
             />
-            <div className="brand-text" data-tauri-drag-region>
-              <strong>bubo</strong>
-              <span>{STATUS_LABEL[status]}</span>
-            </div>
+            {settings.showStatus && (
+              <span className="status-pill" data-tauri-drag-region>
+                {STATUS_LABEL[status]}
+              </span>
+            )}
           </div>
           <div className="head-actions">
             <button
@@ -297,14 +314,6 @@ export default function App() {
 
         {empty && !showSettings ? (
           <div className="hero">
-            <Mascot
-              state={status}
-              size={118}
-              energy={energy}
-              shape={settings.shape}
-              color={settings.color}
-              boopable
-            />
             <h1>Hey, I'm bubo.</h1>
             <p>
               Talk to me in English. I keep the conversation going and quietly show what a native
@@ -331,14 +340,7 @@ export default function App() {
           </div>
         )}
 
-        <Composer
-          disabled={status !== "idle"}
-          state={status}
-          energy={energy}
-          shape={settings.shape}
-          color={settings.color}
-          onSend={(text) => void send(text)}
-        />
+        <Composer disabled={status !== "idle"} onSend={(text) => void send(text)} />
 
         {showSettings && (
           <SettingsPanel

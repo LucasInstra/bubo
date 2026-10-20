@@ -28,6 +28,10 @@ export interface Settings {
   ignoreCapitalization: boolean;
   shape: string;
   color: string;
+  showMouth: boolean;
+  showStatus: boolean;
+  accentFromMascot: boolean;
+  textSize: string;
 }
 
 export interface DrillItem {
@@ -60,6 +64,10 @@ export const DEFAULT_SETTINGS: Settings = {
   autostart: false,
   pinned: true,
   ignoreCapitalization: true,
-  shape: "blob",
+  shape: "round",
   color: "#8b7dff",
+  showMouth: true,
+  showStatus: true,
+  accentFromMascot: true,
+  textSize: "normal",
 };
