@@ -34,6 +34,8 @@ export interface Settings {
   shape: string;
   color: string;
   showMouth: boolean;
+  mouthStyle: string;
+  mouthSize: string;
   showStatus: boolean;
   accentFromMascot: boolean;
   textSize: string;
@@ -80,6 +82,8 @@ export const DEFAULT_SETTINGS: Settings = {
   shape: "round",
   color: "#8b7dff",
   showMouth: true,
+  mouthStyle: "line",
+  mouthSize: "medium",
   showStatus: true,
   accentFromMascot: true,
   textSize: "normal",

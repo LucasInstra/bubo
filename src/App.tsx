@@ -396,6 +396,8 @@ export default function App() {
                   shape={settings.shape}
                   color={settings.color}
                   showMouth={settings.showMouth}
+                  mouthStyle={settings.mouthStyle}
+                  mouthSize={settings.mouthSize}
                   eyeStyle={settings.eyeStyle}
                   eyeSize={settings.eyeSize}
                   eyeSpacing={settings.eyeSpacing}
@@ -579,6 +581,8 @@ export default function App() {
                 shape={settings.shape}
                 color={settings.color}
                 showMouth={settings.showMouth}
+                mouthStyle={settings.mouthStyle}
+                mouthSize={settings.mouthSize}
                 eyeStyle={settings.eyeStyle}
                 eyeSize={settings.eyeSize}
                 eyeSpacing={settings.eyeSpacing}
