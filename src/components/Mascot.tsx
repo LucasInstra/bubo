@@ -140,6 +140,30 @@ function heartPath(context: CanvasRenderingContext2D, width: number, height: num
   context.closePath();
 }
 
+/** Width and height of a single eye, in canvas units. */
+function eyeShape(style: string, radius: number, scale: number) {
+  switch (style) {
+    case "dots": {
+      const width = radius * 0.3 * scale;
+      return { width, height: width };
+    }
+    case "sleepy":
+      return { width: radius * 0.34 * scale, height: radius * 0.13 * scale };
+    case "sparkle":
+      return { width: radius * 0.46 * scale, height: radius * 0.58 * scale };
+    case "heart":
+      return { width: radius * 0.48 * scale, height: radius * 0.46 * scale };
+    case "ring": {
+      const width = radius * 0.4 * scale;
+      return { width, height: width };
+    }
+    case "angry":
+      return { width: radius * 0.24 * scale, height: radius * 0.46 * scale };
+    default:
+      return { width: radius * 0.225 * scale, height: radius * 0.52 * scale };
+  }
+}
+
 interface MascotProps {
   state: OrbState;
   color?: string;
@@ -454,10 +478,16 @@ export function Mascot({
       const squint = eased.squint;
       const eyeOpen = Math.max(0.08, openness * squint);
 
+      // the whole head drifts and leans with the gaze, so following the
+      // pointer feels like turning towards it instead of only moving eyes
+      const headX = gaze.x * radius * 0.075;
+      const headY = gaze.y * radius * 0.05;
+      const headTilt = gaze.x * 0.07;
+
       context.clearRect(0, 0, size, size);
       context.save();
-      context.translate(center + sway, center + boop);
-      context.rotate(tilt);
+      context.translate(center + sway + headX, center + boop + headY);
+      context.rotate(tilt + headTilt);
       context.scale(1 / breathe, breathe);
 
       // soft aura
@@ -496,40 +526,26 @@ export function Mascot({
             ? "#241d33"
             : "#fcfcff"
           : eyeColor;
-      const eyeOffset = radius * spacingScale;
+
+      // Wide shapes used to sit on the same fixed offset as bars, which made
+      // sparkle, heart and ring almost touch. Reserve a real gap instead.
+      const base = eyeShape(eyeStyle, radius, sizeScale);
+      const arcLike = eyeStyle === "arcs" || eyeStyle === "wink";
+      const baseHalf = arcLike ? base.width * 0.82 : base.width / 2;
+      const minGap = eyeSpacing === "close" ? 0.04 : eyeSpacing === "wide" ? 0.24 : 0.13;
+      const eyeOffset = Math.max(radius * spacingScale, baseHalf + radius * minGap);
       const eyeY = radius * 0.05 + gaze.y * radius * 0.03;
 
       for (const side of [-1, 1]) {
         const style = eyeStyle === "wink" ? (side === -1 ? "arcs" : "bars") : eyeStyle;
+        const eye = eyeShape(style, radius, sizeScale);
+        const eyeWidth = eye.width;
+        const eyeHeight = eye.height * (style === "bars" ? 1 + wonder * 0.1 : 1);
         const eyeX = side * eyeOffset + gaze.x * radius * 0.05;
         const closed = winking && side === -1;
         const cheerful =
           happy > 0.55 && (style === "bars" || style === "dots" || style === "sleepy");
         const drawArc = closed || cheerful || style === "arcs";
-
-        let eyeWidth = radius * 0.225 * sizeScale;
-        let eyeHeight = radius * 0.52 * sizeScale * (1 + wonder * 0.1);
-        if (style === "dots") eyeWidth = eyeHeight = radius * 0.3 * sizeScale;
-        if (style === "sleepy") {
-          eyeWidth = radius * 0.34 * sizeScale;
-          eyeHeight = radius * 0.13 * sizeScale;
-        }
-        if (style === "sparkle") {
-          eyeWidth = radius * 0.46 * sizeScale;
-          eyeHeight = radius * 0.58 * sizeScale;
-        }
-        if (style === "heart") {
-          eyeWidth = radius * 0.48 * sizeScale;
-          eyeHeight = radius * 0.46 * sizeScale;
-        }
-        if (style === "ring") {
-          eyeWidth = radius * 0.4 * sizeScale;
-          eyeHeight = eyeWidth;
-        }
-        if (style === "angry") {
-          eyeWidth = radius * 0.24 * sizeScale;
-          eyeHeight = radius * 0.46 * sizeScale;
-        }
 
         context.save();
         context.translate(eyeX, eyeY);

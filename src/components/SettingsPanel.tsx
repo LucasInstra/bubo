@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ipc } from "../lib/ipc";
 import { PERSONALITIES, personality } from "../lib/personalities";
+import { matchProvider, PROVIDERS, type ProviderPreset } from "../lib/providers";
 import type { DrillStats, Settings } from "../lib/types";
 import {
   EYE_COLORS,
@@ -14,6 +15,8 @@ import {
 interface SettingsPanelProps {
   settings: Settings;
   hasKey: boolean;
+  pinned: boolean;
+  onTogglePin: () => void;
   onClose: () => void;
   onSave: (next: Settings, apiKey: string) => Promise<void>;
   onNewChat: () => Promise<void>;
@@ -52,6 +55,8 @@ const TILT_LABELS = [
 export function SettingsPanel({
   settings,
   hasKey,
+  pinned,
+  onTogglePin,
   onClose,
   onSave,
   onNewChat,
@@ -65,9 +70,46 @@ export function SettingsPanel({
   const [queue, setQueue] = useState<DrillStats>({ total: 0, due: 0 });
   const [confirmReset, setConfirmReset] = useState(false);
   const [notice, setNotice] = useState("");
+  const [tab, setTab] = useState<"buddy" | "app">("buddy");
+  const [providerId, setProviderId] = useState(() => matchProvider(settings.baseUrl).id);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState("");
+  const [testOk, setTestOk] = useState(false);
 
   const patch = (part: Partial<Settings>) => setDraft((current) => ({ ...current, ...part }));
+  const provider = PROVIDERS.find((preset) => preset.id === providerId) ?? matchProvider(draft.baseUrl);
   const dirty = apiKey.length > 0 || JSON.stringify(draft) !== JSON.stringify(settings);
+
+  const chooseProvider = (preset: ProviderPreset) => {
+    setProviderId(preset.id);
+    setTestResult("");
+    if (preset.id === "custom") {
+      patch({ baseUrl: "" });
+      return;
+    }
+    patch({ baseUrl: preset.baseUrl, model: preset.models[0] ?? draft.model });
+  };
+
+  const updateBaseUrl = (value: string) => {
+    setProviderId(matchProvider(value).id);
+    setTestResult("");
+    patch({ baseUrl: value });
+  };
+
+  const test = async () => {
+    setTesting(true);
+    setTestResult("");
+    try {
+      const message = await ipc.testConnection(draft, apiKey);
+      setTestOk(true);
+      setTestResult(message);
+    } catch (problem) {
+      setTestOk(false);
+      setTestResult(typeof problem === "string" ? problem : "Could not connect.");
+    } finally {
+      setTesting(false);
+    }
+  };
 
   const refreshQueue = useCallback(async () => {
     try {
@@ -149,10 +191,55 @@ export function SettingsPanel({
           ←
         </button>
         <span>settings</span>
+        <button
+          type="button"
+          className={`ghost icon settings-pin ${pinned ? "on" : ""}`}
+          title={pinned ? "Unpin (let other windows cover bubo)" : "Keep bubo on top"}
+          aria-label="Pin window"
+          aria-pressed={pinned}
+          onClick={onTogglePin}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="15"
+            height="15"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M9 3h6l-1 6 3 3v1H7v-1l3-3-1-6z" />
+            <path d="M12 13v8" />
+          </svg>
+        </button>
       </div>
 
-      <div className="settings-body">
-        <div className="section-title">Look</div>
+      <div className="settings-tabs" role="tablist" aria-label="Settings sections">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "buddy"}
+          className={tab === "buddy" ? "on" : ""}
+          onClick={() => setTab("buddy")}
+        >
+          Buddy
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "app"}
+          className={tab === "app" ? "on" : ""}
+          onClick={() => setTab("app")}
+        >
+          App
+        </button>
+      </div>
+
+      <div className="settings-body" key={tab}>
+        {tab === "buddy" ? (
+          <>
+            <div className="section-title">Look</div>
 
         <div className="field">
           <span>Personality</span>
@@ -168,14 +255,8 @@ export function SettingsPanel({
                 <Mascot
                   state="idle"
                   size={44}
-                  shape={draft.shape}
-                  color={draft.color}
-                  eyeStyle={draft.eyeStyle}
-                  eyeSize={draft.eyeSize}
-                  eyeSpacing={draft.eyeSpacing}
-                  eyeTilt={draft.eyeTilt}
-                  eyeColor={draft.eyeColor}
-                  showMouth={draft.showMouth}
+                  {...preset.preview}
+                  eyeColor="auto"
                   animate={false}
                 />
                 <span className="persona-label">{preset.label}</span>
@@ -184,8 +265,8 @@ export function SettingsPanel({
             ))}
           </div>
           <p className="hint">
-            {personality(draft.personality).vibe}. Only the tone changes, the mascot stays as you
-            customized it.
+            {personality(draft.personality).vibe}. Previews are illustrative: picking a voice
+            changes only the tone, the mascot stays as you customized it.
           </p>
         </div>
 
@@ -376,23 +457,10 @@ export function SettingsPanel({
             onChange={(event) => patch({ accentFromMascot: event.target.checked })}
           />
         </label>
-
-        <div className="field">
-          <span>Message size</span>
-          <div className="levels">
-            {TEXT_SIZES.map(([value, label]) => (
-              <button
-                key={value}
-                className={`chip ${draft.textSize === value ? "chip-on" : ""}`}
-                onClick={() => patch({ textSize: value })}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="section-title">Learning</div>
+          </>
+        ) : (
+          <>
+            <div className="section-title">Learning</div>
 
         <div className="field">
           <span>My English level</span>
@@ -426,39 +494,83 @@ export function SettingsPanel({
             placeholder="e.g. talk about music, mention movies"
             onChange={(event) => patch({ persona: event.target.value })}
           />
-          <span className="hint">Added on top of the personality you picked in Look.</span>
+          <span className="hint">Added on top of the voice you picked in Buddy, under Personality.</span>
         </label>
 
         <div className="section-title">Connection</div>
 
+        <div className="field">
+          <span>Provider</span>
+          <div className="levels wrap">
+            {PROVIDERS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                className={`chip ${provider.id === preset.id ? "chip-on" : ""}`}
+                onClick={() => chooseProvider(preset)}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <label className="field">
-          <span>Groq API key {hasKey && <em className="ok">saved</em>}</span>
+          <span>Base URL</span>
           <input
-            type="password"
-            value={apiKey}
-            placeholder={hasKey ? "•••••••• (keep current)" : "gsk_..."}
-            onChange={(event) => setApiKey(event.target.value)}
+            value={draft.baseUrl}
+            onChange={(event) => updateBaseUrl(event.target.value)}
             spellCheck={false}
+            placeholder="https://api.example.com/v1"
           />
         </label>
 
         <label className="field">
           <span>Model</span>
           <input
+            list="bubo-models"
             value={draft.model}
             onChange={(event) => patch({ model: event.target.value })}
             spellCheck={false}
+            placeholder="model id"
           />
+          {provider.models.length > 0 && (
+            <datalist id="bubo-models">
+              {provider.models.map((model) => (
+                <option key={model} value={model} />
+              ))}
+            </datalist>
+          )}
+          <span className="hint">
+            Type any model id, or pick a suggestion from {provider.label}.
+          </span>
         </label>
 
         <label className="field">
-          <span>Base URL</span>
+          <span>API key {hasKey && <em className="ok">saved</em>}</span>
           <input
-            value={draft.baseUrl}
-            onChange={(event) => patch({ baseUrl: event.target.value })}
+            type="password"
+            value={apiKey}
+            placeholder={hasKey ? "•••••••• (keep current)" : provider.keyHint}
+            onChange={(event) => {
+              setApiKey(event.target.value);
+              setTestResult("");
+            }}
             spellCheck={false}
           />
+          <span className="hint">
+            Stored in the Windows Credential Manager. {provider.keySite}.
+          </span>
         </label>
+
+        <div className="row-buttons">
+          <button className="ghost" type="button" onClick={() => void test()} disabled={testing}>
+            {testing ? "testing..." : "Test connection"}
+          </button>
+          {testResult && (
+            <span className={`hint ${testOk ? "test-ok" : "test-err"}`}>{testResult}</span>
+          )}
+        </div>
 
         <div className="section-title">Behavior</div>
 
@@ -510,6 +622,21 @@ export function SettingsPanel({
 
         <div className="section-title">Chat</div>
 
+        <div className="field">
+          <span>Message size</span>
+          <div className="levels">
+            {TEXT_SIZES.map(([value, label]) => (
+              <button
+                key={value}
+                className={`chip ${draft.textSize === value ? "chip-on" : ""}`}
+                onClick={() => patch({ textSize: value })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <button
           className="ghost danger"
           onClick={async () => {
@@ -519,6 +646,8 @@ export function SettingsPanel({
         >
           Start a new chat
         </button>
+          </>
+        )}
       </div>
 
       <div className="settings-footer">

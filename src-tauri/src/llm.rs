@@ -34,24 +34,27 @@ fn short_error(raw: &str) -> String {
     raw.chars().take(240).collect()
 }
 
-/// Models love an em dash. Replace it with a comma so replies read like a
-/// person typing, even when the prompt rule is ignored.
+/// Models love an em dash. Dash-like characters are normalized so replies read
+/// like a person typing, even when the prompt rule is ignored. True dashes
+/// become commas; hyphens stay hyphens.
 pub fn tidy(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut chars = text.chars().peekable();
 
     while let Some(character) = chars.next() {
-        if character == '—' || character == '–' {
-            while out.ends_with(' ') {
-                out.pop();
+        match character {
+            '\u{2010}' | '\u{2011}' | '\u{2012}' | '\u{2212}' => out.push('-'),
+            '\u{2013}' | '\u{2014}' | '\u{2015}' => {
+                while out.ends_with(' ') {
+                    out.pop();
+                }
+                out.push(',');
+                out.push(' ');
+                while matches!(chars.peek(), Some(' ')) {
+                    chars.next();
+                }
             }
-            out.push(',');
-            out.push(' ');
-            while matches!(chars.peek(), Some(' ')) {
-                chars.next();
-            }
-        } else {
-            out.push(character);
+            _ => out.push(character),
         }
     }
 
@@ -305,6 +308,8 @@ mod tests {
         assert_eq!(tidy("a — b"), "a, b");
         assert_eq!(tidy("a – b"), "a, b");
         assert_eq!(tidy("message—what now"), "message, what now");
+        assert_eq!(tidy("pulse\u{2011}analytics"), "pulse-analytics");
+        assert_eq!(tidy("2020\u{2013}2021"), "2020, 2021");
         assert_eq!(tidy("no dash here"), "no dash here");
     }
 

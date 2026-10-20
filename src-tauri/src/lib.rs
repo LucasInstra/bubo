@@ -103,6 +103,59 @@ fn save_api_key(key: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn test_connection(
+    settings: config::Settings,
+    api_key: Option<String>,
+) -> Result<String, String> {
+    let base = settings.base_url.trim().trim_end_matches('/');
+    if base.is_empty() {
+        return Err("Add a base URL first.".to_string());
+    }
+
+    let key = api_key
+        .map(|key| key.trim().to_string())
+        .filter(|key| !key.is_empty())
+        .or_else(|| config::load_api_key().ok().flatten());
+
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(12))
+        .build()
+        .map_err(|error| error.to_string())?;
+
+    let mut request = client.get(format!("{base}/models"));
+    if let Some(key) = key {
+        request = request.bearer_auth(key);
+    }
+
+    let response = request
+        .send()
+        .await
+        .map_err(|error| format!("Could not reach the endpoint: {error}"))?;
+
+    let status = response.status();
+    let body = response.text().await.unwrap_or_default();
+
+    if !status.is_success() {
+        let detail: String = body.chars().take(200).collect();
+        return Err(format!("{status}: {detail}"));
+    }
+
+    let count = serde_json::from_str::<serde_json::Value>(&body)
+        .ok()
+        .and_then(|value| {
+            value
+                .get("data")
+                .and_then(|data| data.as_array())
+                .map(|data| data.len())
+        });
+
+    Ok(match count {
+        Some(count) => format!("Connected, {count} model(s) available"),
+        None => "Connected".to_string(),
+    })
+}
+
+#[tauri::command]
 fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
     let autolaunch = app.autolaunch();
     if enabled {
@@ -463,6 +516,7 @@ pub fn run() {
             save_settings,
             has_api_key,
             save_api_key,
+            test_connection,
             set_autostart,
             set_pinned,
             cancel_reply,

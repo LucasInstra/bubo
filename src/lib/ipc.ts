@@ -34,6 +34,8 @@ export const ipc = {
   saveSettings: (settings: Settings) => invoke<void>("save_settings", { settings }),
   hasApiKey: () => invoke<boolean>("has_api_key"),
   saveApiKey: (key: string) => invoke<void>("save_api_key", { key }),
+  testConnection: (settings: Settings, apiKey: string) =>
+    invoke<string>("test_connection", { settings, apiKey: apiKey || null }),
   setAutostart: (enabled: boolean) => invoke<void>("set_autostart", { enabled }),
   setPinned: (pinned: boolean) => invoke<void>("set_pinned", { pinned }),
   history: () => invoke<StoredMessage[]>("history"),

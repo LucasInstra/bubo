@@ -1,4 +1,11 @@
 import { describe, expect, it } from "vitest";
+import {
+  EYE_SIZES,
+  EYE_SPACINGS,
+  EYE_STYLES,
+  EYE_TILTS,
+  MASCOT_SHAPES,
+} from "../components/Mascot";
 import { PERSONALITIES, personality } from "./personalities";
 
 describe("personalities", () => {
@@ -17,10 +24,19 @@ describe("personalities", () => {
     expect(personality("").id).toBe(PERSONALITIES[0].id);
   });
 
-  it("does not carry any look, so eyes stay independent", () => {
+  it("only uses real options in each preview", () => {
+    for (const preset of PERSONALITIES) {
+      expect(MASCOT_SHAPES).toContain(preset.preview.shape);
+      expect(EYE_STYLES).toContain(preset.preview.eyeStyle);
+      expect(EYE_SIZES).toContain(preset.preview.eyeSize);
+      expect(EYE_SPACINGS).toContain(preset.preview.eyeSpacing);
+      expect(EYE_TILTS).toContain(preset.preview.eyeTilt);
+    }
+  });
+
+  it("keeps the preview out of the saved shape", () => {
     for (const preset of PERSONALITIES) {
       expect(preset).not.toHaveProperty("look");
-      expect(preset).not.toHaveProperty("eyeStyle");
       expect(preset).not.toHaveProperty("color");
     }
   });

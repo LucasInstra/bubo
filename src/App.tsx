@@ -495,6 +495,8 @@ export default function App() {
           <SettingsPanel
             settings={settings}
             hasKey={hasKey}
+            pinned={pinned}
+            onTogglePin={togglePin}
             onClose={() => setShowSettings(false)}
             onSave={saveSettings}
             onNewChat={newChat}
