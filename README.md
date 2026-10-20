@@ -4,10 +4,11 @@ Um tutor de inglês que vive num popup flutuante no canto da tela. Você convers
 
 ## O que ele faz
 
-- Janela sempre no topo, sem bordas, no canto inferior direito.
-- Atalho global `Ctrl+Alt+B` mostra/esconde, `Esc` esconde, ícone na bandeja com menu.
+- Janela sem bordas no canto inferior direito, sempre no topo por padrão, com botão de pin para liberar.
+- Atalho global configurável (padrão `Ctrl+Alt+B`), `Esc` esconde, ícone na bandeja com menu.
 - Orbe animado que muda de cor e movimento conforme o estado: ocioso (lilás), pensando (âmbar) e escrevendo (verde).
 - Chat com streaming de resposta e bloco de correções por mensagem: trecho errado, versão natural e explicação curta em português.
+- **Prática**: cada correção entra numa fila de revisão espaçada (1, 3, 7, 21, 45 dias). O botão de alvo no header mostra quantas estão devidas e abre o drill.
 - Nível CEFR configurável (A2 → C1) e persona opcional.
 - Histórico local em SQLite.
 
@@ -22,13 +23,19 @@ Separar as duas evita depender de o modelo respeitar marcadores no meio do texto
 
 Se a resposta falha, a mensagem do usuário é removida do histórico (nada de turno órfão). Erros e tempos ficam em `%APPDATA%\com.lucas.bubo\bubo.log`.
 
+## Prática
+
+As correções são gravadas em duas tabelas: `messages` (o chat) e `fixes` (o que revisar). A tabela de prática é idempotente por `(wrong, right)` e é preenchida também a partir do histórico antigo na primeira abertura.
+
+No drill, você reescreve o trecho errado; acertar sobe o intervalo (1 → 3 → 7 → 21 → 45 dias), errar volta para 10 minutos. "Show answer" conta como erro de propósito.
+
 ## Stack
 
 Tauri v2 (Rust) + React + TypeScript + Vite.
 
 - A chave da API fica no Windows Credential Manager (serviço `bubo`), nunca em arquivo.
 - O processo Rust é o único que fala com o provedor; a chave não chega ao WebView.
-- Comandos IPC: `chat`, `history`, `clear_history`, `get_settings`, `save_settings`, `save_api_key`, `has_api_key`, `set_autostart`, `hide_window`, `quit_app`.
+- Comandos IPC: `chat`, `history`, `clear_history`, `drill_stats`, `drill_next`, `drill_review`, `get_settings`, `save_settings`, `save_api_key`, `has_api_key`, `set_autostart`, `set_pinned`, `hide_window`, `quit_app`.
 
 ## Desenvolvimento
 
