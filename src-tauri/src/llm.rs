@@ -189,3 +189,44 @@ pub fn parse_fixes(raw: &str) -> Vec<Fix> {
 pub fn fixes_event_payload(request_id: &str, fixes: &[Fix]) -> Value {
     json!({ "requestId": request_id, "fixes": fixes })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::parse_fixes;
+
+    #[test]
+    fn parses_a_clean_array() {
+        let raw = r#"[{"wrong":"i go","right":"I went","note":"passado"},{"wrong":"was very good","right":"it was very good","note":"sujeito"}]"#;
+        let fixes = parse_fixes(raw);
+        assert_eq!(fixes.len(), 2);
+        assert_eq!(fixes[0].wrong, "i go");
+        assert_eq!(fixes[1].right, "it was very good");
+    }
+
+    #[test]
+    fn tolerates_code_fences_and_chatter() {
+        let raw = "Here you go:\n```json\n[{\"wrong\":\"a did\",\"right\":\"I did\",\"note\":\"sujeito\"}]\n```";
+        assert_eq!(parse_fixes(raw).len(), 1);
+    }
+
+    #[test]
+    fn empty_array_means_no_mistakes() {
+        assert!(parse_fixes("[]").is_empty());
+    }
+
+    #[test]
+    fn garbage_is_ignored() {
+        assert!(parse_fixes("no json here").is_empty());
+        assert!(parse_fixes("[{\"wrong\":\"\"}]").is_empty());
+    }
+
+    #[test]
+    fn caps_the_list_at_four() {
+        let raw = (0..8)
+            .map(|index| format!(r#"{{"wrong":"w{index}","right":"r{index}","note":""}}"#))
+            .collect::<Vec<_>>()
+            .join(",");
+        assert_eq!(parse_fixes(&format!("[{raw}]")).len(), 4);
+    }
+}
+
