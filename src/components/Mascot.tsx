@@ -614,12 +614,15 @@ export function Mascot({
       eyeOpen *= 1 - 0.18 * (moodSad ? moodBlend : 0);
       eyeOpen *= 1 + 0.08 * (moodSurprised ? moodBlend : 0);
 
-      // the head leans with the gaze and the drag, while the body stretches
-      // like jelly and springs back with a little overshoot
-      const pullX = Math.max(-1, Math.min(1, dragX.value / (radius * 0.55)));
-      const pullY = Math.max(-1, Math.min(1, dragY.value / (radius * 0.55)));
-      const jellyX = 1 + Math.abs(pullX) * 0.12 - Math.abs(pullY) * 0.04;
-      const jellyY = 1 + Math.abs(pullY) * 0.12 - Math.abs(pullX) * 0.04;
+      // directional pull: the trailing edge lags behind while the leading edge
+      // stretches towards the pointer, so it reads as being pulled instead of
+      // simply moving. The spring adds the wobble on release.
+      const dragDistance = Math.hypot(dragX.value, dragY.value);
+      const pull = Math.min(1, dragDistance / (radius * 0.55));
+      const pullAngle = Math.atan2(dragY.value, dragX.value);
+      const stretch = 1 + pull * 0.28;
+      const squash = 1 - pull * 0.08;
+      const lean = (dragX.value / (radius * 0.55)) * 0.05;
       const moodDrop = moodSad
         ? radius * 0.05 * moodBlend
         : moodSurprised
@@ -630,12 +633,12 @@ export function Mascot({
 
       context.save();
       context.translate(
-        center + sway + headX.value + dragX.value,
-        center + boop + headY.value + dragY.value + moodBob * moodBlend + moodDrop + hop,
+        center + sway + headX.value + dragX.value * 0.55,
+        center + boop + headY.value + dragY.value * 0.55 + moodBob * moodBlend + moodDrop + hop,
       );
-      context.rotate(tilt + headRot.value + pullX * 0.05);
+      context.rotate(tilt + headRot.value + lean);
 
-      // soft aura follows the body, outside the jelly scale so it never clips
+      // soft aura follows the body, outside the stretch so it never clips
       const auraRadius = radius * 1.9;
       const aura = context.createRadialGradient(0, 0, radius * 0.4, 0, 0, auraRadius);
       aura.addColorStop(0, `${color}${hovering ? "3a" : "2e"}`);
@@ -647,8 +650,14 @@ export function Mascot({
       context.fill();
 
       context.scale(1 / breathe, breathe);
-      context.scale(jellyX, jellyY);
-      context.transform(1, pullY * 0.09, pullX * 0.09, 1, 0, 0);
+
+      if (pull > 0.01) {
+        context.rotate(pullAngle);
+        context.translate(-radius * 0.82, 0);
+        context.scale(stretch, squash);
+        context.translate(radius * 0.82, 0);
+        context.rotate(-pullAngle);
+      }
 
       // body
       const body = bodyPath(shape, radius);
