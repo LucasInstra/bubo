@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Composer } from "./components/Composer";
+import { BuddyPanel } from "./components/BuddyPanel";
 import { Drill } from "./components/Drill";
 import { Mascot } from "./components/Mascot";
 import { Message } from "./components/Message";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { parseStoredFixes } from "./lib/format";
 import { ipc } from "./lib/ipc";
-import type { Msg, OrbState, Settings, StoredMessage } from "./lib/types";
+import type { Mood, Msg, OrbState, Settings, StoredMessage } from "./lib/types";
 import { DEFAULT_SETTINGS } from "./lib/types";
 
 const SUGGESTIONS = [
@@ -46,6 +47,8 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [hasKey, setHasKey] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showBuddy, setShowBuddy] = useState(false);
+  const [mood, setMood] = useState<Mood>("idle");
   const [status, setStatus] = useState<OrbState>("idle");
   const [energy, setEnergy] = useState(0);
   const [pinned, setPinned] = useState(true);
@@ -57,8 +60,15 @@ export default function App() {
   const turnRef = useRef(0);
   const busyRef = useRef(false);
   const requestRef = useRef<string | null>(null);
+  const moodTimer = useRef<number | null>(null);
   const statusRef = useRef<OrbState>(status);
   statusRef.current = status;
+
+  const react = useCallback((next: Mood, ms = 1500) => {
+    setMood(next);
+    if (moodTimer.current) window.clearTimeout(moodTimer.current);
+    moodTimer.current = window.setTimeout(() => setMood("idle"), ms);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -74,6 +84,7 @@ export default function App() {
         setPinned(loadedSettings.pinned);
         setHasKey(loadedKey);
         setMessages(stored.map(fromStored));
+        void ipc.setCompact(loadedSettings.compact);
         if (!loadedKey) setShowSettings(true);
         const stats = await ipc.drillStats();
         if (alive) setDue(stats.due);
@@ -102,13 +113,21 @@ export default function App() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         if (showDrill) setShowDrill(false);
+        else if (showBuddy) setShowBuddy(false);
         else if (showSettings) setShowSettings(false);
         else void ipc.hideWindow();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [showSettings, showDrill]);
+  }, [showSettings, showBuddy, showDrill]);
+
+  useEffect(
+    () => () => {
+      if (moodTimer.current) window.clearTimeout(moodTimer.current);
+    },
+    [],
+  );
 
   const runTurn = useCallback(
     async (text: string, base: Msg[] = messages) => {
@@ -162,6 +181,7 @@ export default function App() {
             busyRef.current = false;
             setStatus("idle");
             setEnergy(0);
+            react("happy", 1200);
             setMessages((current) =>
               current.map((message) =>
                 message.id === botMessage.id
@@ -209,6 +229,7 @@ export default function App() {
         if (reason === "cancelled") {
           setMessages((current) => current.filter((message) => message.id !== botMessage.id));
         } else {
+          react("sad", 1600);
           setMessages((current) =>
             current.map((message) =>
               message.id === botMessage.id
@@ -228,13 +249,14 @@ export default function App() {
         void ipc.drillStats().then((stats) => setDue(stats.due)).catch(console.error);
       }
     },
-    [messages],
+    [messages, react],
   );
 
   const send = useCallback(
     (text: string): boolean => {
       if (!text.trim() || busyRef.current || statusRef.current !== "idle") return false;
       if (!hasKey) {
+        setShowBuddy(false);
         setShowSettings(true);
         return false;
       }
@@ -283,9 +305,20 @@ export default function App() {
       setSettings(next);
       setPinned(next.pinned);
       setShowSettings(false);
+      setShowBuddy(false);
     },
     [settings.autostart],
   );
+
+  const toggleCompact = useCallback(() => {
+    const next = !settings.compact;
+    const updated = { ...settings, compact: next };
+    setSettings(updated);
+    setShowSettings(false);
+    setShowBuddy(false);
+    void ipc.saveSettings(updated);
+    void ipc.setCompact(next);
+  }, [settings]);
 
   const togglePin = useCallback(() => {
     const next = !pinned;
@@ -326,41 +359,106 @@ export default function App() {
   } as CSSProperties;
 
   return (
-    <div className={`app size-${settings.textSize}`} style={accentVars}>
+    <div
+      className={`app size-${settings.textSize} ${settings.compact ? "compact" : ""}`}
+      style={accentVars}
+    >
       <div className="panel">
         <header className="head" data-tauri-drag-region>
+          {settings.compact && (
+            <button
+              className="compact-face"
+              type="button"
+              title="Customize buddy"
+              aria-label="Customize buddy"
+              onClick={() => {
+                setShowSettings(false);
+                setShowBuddy(true);
+              }}
+            >
+              <Mascot
+                state={status}
+                mood={mood}
+                size={30}
+                shape={settings.shape}
+                color={settings.color}
+                showMouth={settings.showMouth}
+                eyeStyle={settings.eyeStyle}
+                eyeSize={settings.eyeSize}
+                eyeSpacing={settings.eyeSpacing}
+                eyeTilt={settings.eyeTilt}
+                eyeColor={settings.eyeColor}
+              />
+            </button>
+          )}
           <div className="brand" data-tauri-drag-region>
             <strong>bubo</strong>
+            {settings.compact && (
+              <span className="brand-sub">{mood === "idle" ? "English buddy" : mood}</span>
+            )}
           </div>
           <div className="head-actions">
+            {!settings.compact && (
+              <>
+                <button
+                  className="ghost icon"
+                  title="New chat"
+                  aria-label="New chat"
+                  disabled={status !== "idle"}
+                  onClick={() => void newChat()}
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                    <path
+                      d="M12 5v14M5 12h14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+                <button
+                  className="ghost icon"
+                  title={due > 0 ? `Practice ${due} corrections` : "Practice corrections"}
+                  aria-label="Practice"
+                  onClick={() => setShowDrill(true)}
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="8.2"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                    />
+                    <circle cx="12" cy="12" r="2.6" fill="currentColor" />
+                  </svg>
+                  {due > 0 && <span className="badge">{due > 9 ? "9+" : due}</span>}
+                </button>
+              </>
+            )}
             <button
               className="ghost icon"
-              title="New chat"
-              aria-label="New chat"
-              disabled={status !== "idle"}
-              onClick={() => void newChat()}
-            >
-              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-                <path
-                  d="M12 5v14M5 12h14"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-            <button
-              className="ghost icon"
-              title={due > 0 ? `Practice ${due} corrections` : "Practice corrections"}
-              aria-label="Practice"
-              onClick={() => setShowDrill(true)}
+              title="Customize buddy"
+              aria-label="Customize buddy"
+              onClick={() => {
+                setShowSettings(false);
+                setShowBuddy(true);
+              }}
             >
               <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
                 <circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-                <circle cx="12" cy="12" r="2.6" fill="currentColor" />
+                <circle cx="9.2" cy="10.4" r="1.1" fill="currentColor" />
+                <circle cx="14.8" cy="10.4" r="1.1" fill="currentColor" />
+                <path
+                  d="M9 14c.9 1.1 1.9 1.6 3 1.6s2.1-.5 3-1.6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
               </svg>
-              {due > 0 && <span className="badge">{due > 9 ? "9+" : due}</span>}
             </button>
             <button
               className={`ghost icon ${pinned ? "on" : ""}`}
@@ -383,10 +481,38 @@ export default function App() {
               </svg>
             </button>
             <button
+              className={`ghost icon ${settings.compact ? "on" : ""}`}
+              title={settings.compact ? "Full mode" : "Compact mode"}
+              aria-label={settings.compact ? "Full mode" : "Compact mode"}
+              aria-pressed={settings.compact}
+              onClick={toggleCompact}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="15"
+                height="15"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                {settings.compact ? (
+                  <path d="M4 9h5V4M20 15h-5v5" />
+                ) : (
+                  <path d="M9 4v5H4M15 20v-5h5" />
+                )}
+              </svg>
+            </button>
+            <button
               className="ghost icon"
               title="Settings"
               aria-label="Settings"
-              onClick={() => setShowSettings(true)}
+              onClick={() => {
+                setShowBuddy(false);
+                setShowSettings(true);
+              }}
             >
               <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
                 <path
@@ -421,27 +547,30 @@ export default function App() {
         </header>
 
         <div className="chat">
-          <div className="chat-stage">
-            <Mascot
-              state={status}
-              size={64}
-              energy={energy}
-              shape={settings.shape}
-              color={settings.color}
-              showMouth={settings.showMouth}
-              eyeStyle={settings.eyeStyle}
-              eyeSize={settings.eyeSize}
-              eyeSpacing={settings.eyeSpacing}
-              eyeTilt={settings.eyeTilt}
-              eyeColor={settings.eyeColor}
-              boopable
-            />
-            {settings.showStatus && status !== "idle" && (
-              <span className="status-pill">{STATUS_LABEL[status]}</span>
-            )}
-          </div>
+          {!settings.compact && (
+            <div className="chat-stage">
+              <Mascot
+                state={status}
+                mood={mood}
+                size={64}
+                energy={energy}
+                shape={settings.shape}
+                color={settings.color}
+                showMouth={settings.showMouth}
+                eyeStyle={settings.eyeStyle}
+                eyeSize={settings.eyeSize}
+                eyeSpacing={settings.eyeSpacing}
+                eyeTilt={settings.eyeTilt}
+                eyeColor={settings.eyeColor}
+                boopable
+              />
+              {settings.showStatus && status !== "idle" && (
+                <span className="status-pill">{STATUS_LABEL[status]}</span>
+              )}
+            </div>
+          )}
 
-          {empty && !showSettings ? (
+          {empty && !showSettings && !showBuddy ? (
             <div className="hero">
               <h1>Hey, I'm bubo.</h1>
               <p>
@@ -491,6 +620,16 @@ export default function App() {
           onStop={stop}
         />
 
+        {showBuddy && (
+          <BuddyPanel
+            settings={settings}
+            pinned={pinned}
+            onTogglePin={togglePin}
+            onClose={() => setShowBuddy(false)}
+            onSave={(next) => saveSettings(next, "")}
+          />
+        )}
+
         {showSettings && (
           <SettingsPanel
             settings={settings}
@@ -513,6 +652,7 @@ export default function App() {
 
         {showDrill && (
           <Drill
+            onMood={(correct) => react(correct ? "proud" : "sad", correct ? 1400 : 1500)}
             onClose={() => {
               setShowDrill(false);
               void ipc.drillStats().then((stats) => setDue(stats.due));

@@ -89,6 +89,38 @@ fn set_pinned(window: tauri::Window, pinned: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn set_compact(window: tauri::Window, compact: bool) -> Result<(), String> {
+    let (width, height) = if compact {
+        (360.0, 480.0)
+    } else {
+        (420.0, 640.0)
+    };
+    window
+        .set_size(tauri::LogicalSize::new(width, height))
+        .map_err(|error| error.to_string())?;
+
+    // Keep the smaller window inside the current monitor instead of letting
+    // it grow past the edge when it was parked near the bottom.
+    if let Ok(Some(monitor)) = window.current_monitor() {
+        let area = monitor.work_area();
+        let scale = window.scale_factor().unwrap_or(1.0);
+        let target_width = (width * scale).round() as i32;
+        let target_height = (height * scale).round() as i32;
+        if let Ok(position) = window.outer_position() {
+            let max_x = area.position.x + area.size.width as i32 - target_width;
+            let max_y = area.position.y + area.size.height as i32 - target_height;
+            let x = position.x.min(max_x).max(area.position.x);
+            let y = position.y.min(max_y).max(area.position.y);
+            if x != position.x || y != position.y {
+                let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 fn has_api_key() -> Result<bool, String> {
     Ok(config::load_api_key()?.is_some())
 }
@@ -519,6 +551,7 @@ pub fn run() {
             test_connection,
             set_autostart,
             set_pinned,
+            set_compact,
             cancel_reply,
             delete_message,
             chat,

@@ -20,6 +20,7 @@ Because the useful part of learning a language is the five minutes between real 
 - **Always there, never in the way**: frameless popup, global hotkey, tray icon, pin/unpin, hides on `Esc`.
 - **A mascot with a face**: 12 shapes, 9 colors plus a custom picker, 9 eye styles, eye color, spacing and tilt, optional mouth. It blinks, follows your pointer, thinks, talks while writing and hops when you click it.
 - **Ready-made personalities**: nine voices such as Warm Coach, Dry Wit or Hype Friend. Picking one changes only the tutor's tone; the mascot look stays exactly as you customized it. The free-text flavor field stacks on top.
+- **Compact mode**: a 360 x 480 chat card with the buddy in the header, the current mood under the name and a one-line composer. The full window is one click away.
 - **Bring your own endpoint**: Groq, OpenAI, OpenRouter, Ollama or any OpenAI-compatible URL, with model suggestions and a test connection button.
 - **Conversation first**: replies stream token by token; a separate pass returns corrections as strict JSON, so the card never depends on the model following inline formatting.
 - **Corrections that stick**: every fix is stored, linked to the message that produced it, and scheduled with a 1 / 3 / 7 / 21 / 45 day ladder. A miss comes back in ten minutes.

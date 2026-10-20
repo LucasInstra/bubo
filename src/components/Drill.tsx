@@ -7,9 +7,10 @@ type Phase = "loading" | "asking" | "answered" | "none" | "empty" | "error";
 
 interface DrillProps {
   onClose: () => void;
+  onMood?: (correct: boolean) => void;
 }
 
-export function Drill({ onClose }: DrillProps) {
+export function Drill({ onClose, onMood }: DrillProps) {
   const [stats, setStats] = useState<DrillStats>({ total: 0, due: 0 });
   const [item, setItem] = useState<DrillItem | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
@@ -86,6 +87,7 @@ export function Drill({ onClose }: DrillProps) {
       lastAnswered.current = item.id;
       setResult({ correct, item: updated ?? item });
       setPhase("answered");
+      onMood?.(correct);
       void ipc
         .drillStats()
         .then(setStats)

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { OrbState } from "../lib/types";
+import type { Mood, OrbState } from "../lib/types";
 
 export const MASCOT_SHAPES = [
   "round",
@@ -166,6 +166,7 @@ function eyeShape(style: string, radius: number, scale: number) {
 
 interface MascotProps {
   state: OrbState;
+  mood?: Mood;
   color?: string;
   shape?: string;
   energy?: number;
@@ -341,6 +342,7 @@ function bodyPath(shape: string, radius: number): Path2D {
  */
 export function Mascot({
   state,
+  mood = "idle",
   color = "#8b7dff",
   shape = "round",
   energy = 0,
@@ -356,10 +358,12 @@ export function Mascot({
 }: MascotProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<OrbState>(state);
+  const moodRef = useRef<Mood>(mood);
   const energyRef = useRef(energy);
   const boopRef = useRef(0);
 
   stateRef.current = state;
+  moodRef.current = mood;
   energyRef.current = energy;
 
   useEffect(() => {
@@ -380,6 +384,7 @@ export function Mascot({
     let blinkStart = -1;
     let nextWander = 0;
     let wonder = 0;
+    let moodBlend = 0;
     let lastState = stateRef.current;
     let lastTime = 0;
     let happyUntil = -1;
@@ -440,7 +445,18 @@ export function Mascot({
       const breathe = 1 + squish * eased.breatheAmp + smoothed * 0.03;
       const sway = Math.sin(time * 0.9) * radius * 0.022;
       const tilt = Math.sin(time * 2.1) * eased.tiltAmp;
-      const happy = Math.max(0, Math.min(1, (happyUntil - time) / 0.5));
+
+      const feeling = moodRef.current;
+      const moodHappy = feeling === "happy" || feeling === "proud";
+      const moodSad = feeling === "sad";
+      const moodSurprised = feeling === "surprised";
+      moodBlend += ((feeling === "idle" ? 0 : 1) - moodBlend) * Math.min(1, 0.14 * (delta * 60));
+      const moodBob = moodHappy ? Math.abs(Math.sin(time * 5.5)) * radius * 0.035 : 0;
+      const happy = Math.max(
+        0,
+        Math.min(1, (happyUntil - time) / 0.5),
+        moodHappy ? moodBlend : 0,
+      );
       const winking = winkUntil > time;
 
       const seesPointer = time - gaze.seen < 2.5;
@@ -450,8 +466,9 @@ export function Mascot({
         nextWander = time + 1.4 + Math.random() * 2.4;
       }
       if (current === "thinking") {
-        gaze.tx = Math.max(-1, Math.min(1, gaze.tx + (Math.random() - 0.5) * 0.3));
-        gaze.ty = Math.max(-1, Math.min(1, gaze.ty + (Math.random() - 0.5) * 0.2));
+        // slow orbit, like the avatar waiting for an answer
+        gaze.tx = Math.cos(time * 1.35) * 0.8;
+        gaze.ty = Math.sin(time * 1.35) * 0.35 + 0.06;
       }
       const ease = current === "thinking" ? 0.18 : 0.08;
       gaze.x += (gaze.tx - gaze.x) * ease * (delta * 60);
@@ -476,12 +493,17 @@ export function Mascot({
       }
 
       const squint = eased.squint;
-      const eyeOpen = Math.max(0.08, openness * squint);
+      let eyeOpen = Math.max(0.08, openness * squint);
+      eyeOpen *= 1 - 0.18 * (moodSad ? moodBlend : 0);
+      eyeOpen *= 1 + 0.08 * (moodSurprised ? moodBlend : 0);
 
       // the whole head drifts and leans with the gaze, so following the
       // pointer feels like turning towards it instead of only moving eyes
       const headX = gaze.x * radius * 0.075;
-      const headY = gaze.y * radius * 0.05;
+      const headY =
+        gaze.y * radius * 0.05 +
+        moodBob * moodBlend +
+        (moodSad ? radius * 0.05 * moodBlend : moodSurprised ? -radius * 0.035 * moodBlend : 0);
       const headTilt = gaze.x * 0.07;
 
       context.clearRect(0, 0, size, size);
@@ -591,24 +613,52 @@ export function Mascot({
         const talking =
           current === "streaming" ? 0.25 + Math.abs(Math.sin(time * 14)) * smoothed : 0;
 
-        let width = radius * 0.15;
-        let height = radius * 0.05;
+        if (moodSad && moodBlend > 0.4) {
+          context.strokeStyle = mouthColor;
+          context.lineWidth = Math.max(1.3, radius * 0.035);
+          context.lineCap = "round";
+          context.beginPath();
+          context.arc(0, mouthY + radius * 0.1, radius * 0.11, Math.PI * 1.15, Math.PI * 1.85);
+          context.stroke();
+        } else if (moodSurprised && moodBlend > 0.4) {
+          context.fillStyle = mouthColor;
+          context.beginPath();
+          context.ellipse(0, mouthY, radius * 0.07, radius * 0.1, 0, 0, TAU);
+          context.fill();
+        } else {
+          let width = radius * 0.15;
+          let height = radius * 0.05;
 
-        if (talking > 0.05) {
-          height = radius * (0.05 + talking * 0.12);
-          width = radius * 0.14;
-        } else if (current === "thinking") {
-          width = radius * 0.1;
-          height = radius * 0.045;
-        } else if (happy > 0.5) {
-          width = radius * 0.17;
-          height = radius * 0.055;
+          if (talking > 0.05) {
+            height = radius * (0.05 + talking * 0.12);
+            width = radius * 0.14;
+          } else if (current === "thinking") {
+            width = radius * 0.1;
+            height = radius * 0.045;
+          } else if (happy > 0.5) {
+            width = radius * 0.17;
+            height = radius * 0.055;
+          }
+
+          context.fillStyle = mouthColor;
+          context.beginPath();
+          context.roundRect(-width / 2, mouthY - height / 2, width, height, height / 2);
+          context.fill();
         }
+      }
 
-        context.fillStyle = mouthColor;
-        context.beginPath();
-        context.roundRect(-width / 2, mouthY - height / 2, width, height, height / 2);
-        context.fill();
+      if (feeling === "proud" && moodBlend > 0.05) {
+        context.fillStyle = `rgba(255,255,255,${0.92 * moodBlend})`;
+        for (const [x, y, scale] of [
+          [-0.78, -0.86, 0.16],
+          [0.82, -0.62, 0.11],
+        ]) {
+          context.save();
+          context.translate(radius * x, radius * y);
+          sparklePath(context, radius * scale * 2, radius * scale * 2);
+          context.fill();
+          context.restore();
+        }
       }
 
       // thinking dots, a small nod to the codex loader

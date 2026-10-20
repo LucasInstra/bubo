@@ -2,6 +2,8 @@ export type Role = "user" | "assistant";
 
 export type OrbState = "idle" | "thinking" | "streaming";
 
+export type Mood = "idle" | "happy" | "sad" | "surprised" | "proud";
+
 export interface Fix {
   wrong: string;
   right: string;
@@ -27,6 +29,7 @@ export interface Settings {
   hotkey: string;
   autostart: boolean;
   pinned: boolean;
+  compact: boolean;
   ignoreCapitalization: boolean;
   shape: string;
   color: string;
@@ -72,6 +75,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hotkey: "Ctrl+Alt+B",
   autostart: false,
   pinned: true,
+  compact: false,
   ignoreCapitalization: true,
   shape: "round",
   color: "#8b7dff",

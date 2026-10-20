@@ -38,6 +38,7 @@ export const ipc = {
     invoke<string>("test_connection", { settings, apiKey: apiKey || null }),
   setAutostart: (enabled: boolean) => invoke<void>("set_autostart", { enabled }),
   setPinned: (pinned: boolean) => invoke<void>("set_pinned", { pinned }),
+  setCompact: (compact: boolean) => invoke<void>("set_compact", { compact }),
   history: () => invoke<StoredMessage[]>("history"),
   clearHistory: () => invoke<void>("clear_history"),
   deleteMessage: (id: number) => invoke<void>("delete_message", { id }),
