@@ -568,16 +568,16 @@ export function Mascot({
         gaze.tx = Math.cos(time * 1.35) * 0.85;
         gaze.ty = Math.sin(time * 1.35) * 0.4 + 0.06;
       }
-      const ease = current === "thinking" ? 0.18 : 0.14;
+      const ease = current === "thinking" ? 0.2 : 0.16;
       gaze.x += (gaze.tx - gaze.x) * ease * (delta * 60);
       gaze.y += (gaze.ty - gaze.y) * ease * (delta * 60);
 
       // two spring substeps keep the head soft and slightly overshooting
       const halfStep = delta / 2;
       for (let step = 0; step < 2; step += 1) {
-        spring(headX, gaze.x * radius * 0.095, 95, 13, halfStep);
-        spring(headY, gaze.y * radius * 0.06, 90, 14, halfStep);
-        spring(headRot, gaze.x * 0.085, 80, 12, halfStep);
+        spring(headX, gaze.x * radius * 0.11, 95, 13, halfStep);
+        spring(headY, gaze.y * radius * 0.07, 90, 14, halfStep);
+        spring(headRot, gaze.x * 0.09, 80, 12, halfStep);
         spring(dragX, dragX.target, 150, 9, halfStep);
         spring(dragY, dragY.target, 150, 9, halfStep);
       }
@@ -693,15 +693,22 @@ export function Mascot({
       const arcLike = eyeStyle === "arcs" || eyeStyle === "wink";
       const baseHalf = arcLike ? base.width * 0.82 : base.width / 2;
       const minGap = eyeSpacing === "close" ? 0.04 : eyeSpacing === "wide" ? 0.24 : 0.13;
-      const eyeOffset = Math.max(radius * spacingScale, baseHalf + radius * minGap);
-      const eyeY = radius * 0.05 + gaze.y * radius * 0.08;
+      const happyArcs =
+        happy > 0.5 &&
+        (eyeStyle === "bars" || eyeStyle === "dots" || eyeStyle === "sleepy");
+      const happySpread = happyArcs
+        ? radius * 0.06 * Math.min(1, (happy - 0.5) / 0.5)
+        : 0;
+      const eyeOffset =
+        Math.max(radius * spacingScale, baseHalf + radius * minGap) + happySpread;
+      const eyeY = radius * 0.05 + gaze.y * radius * 0.15;
 
       for (const side of [-1, 1]) {
         const style = eyeStyle === "wink" ? (side === -1 ? "arcs" : "bars") : eyeStyle;
         const eye = eyeShape(style, radius, sizeScale);
         const eyeWidth = eye.width;
         const eyeHeight = eye.height * (style === "bars" ? 1 + wonder * 0.1 : 1);
-        const eyeX = side * eyeOffset + gaze.x * radius * 0.135;
+        const eyeX = side * eyeOffset + gaze.x * radius * 0.24;
         const closed = winking && side === -1;
         const cheerful =
           happy > 0.55 && (style === "bars" || style === "dots" || style === "sleepy");
@@ -716,7 +723,7 @@ export function Mascot({
           context.lineWidth = Math.max(1.4, eyeWidth * 0.72);
           context.lineCap = "round";
           context.beginPath();
-          context.arc(0, eyeHeight * 0.2, eyeWidth * 0.9, Math.PI * 1.14, Math.PI * 1.86);
+          context.arc(0, eyeHeight * 0.2, eyeWidth * 0.85, Math.PI * 1.14, Math.PI * 1.86);
           context.stroke();
         } else {
           context.scale(1, Math.max(0.1, eyeOpen));
