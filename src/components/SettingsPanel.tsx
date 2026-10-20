@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { ipc } from "../lib/ipc";
+import type { DrillStats, Settings } from "../lib/types";
 import { MASCOT_COLORS, MASCOT_SHAPES, Mascot, SHAPE_LABELS } from "./Mascot";
-import type { Settings } from "../lib/types";
 
 interface SettingsPanelProps {
   settings: Settings;
@@ -8,9 +9,15 @@ interface SettingsPanelProps {
   onClose: () => void;
   onSave: (next: Settings, apiKey: string) => Promise<void>;
   onNewChat: () => Promise<void>;
+  onQueueChanged: () => void;
 }
 
 const LEVELS = ["A2", "B1", "B2", "C1"];
+const TEXT_SIZES = [
+  ["small", "Small"],
+  ["normal", "Normal"],
+  ["large", "Large"],
+];
 
 export function SettingsPanel({
   settings,
@@ -18,13 +25,29 @@ export function SettingsPanel({
   onClose,
   onSave,
   onNewChat,
+  onQueueChanged,
 }: SettingsPanelProps) {
   const [draft, setDraft] = useState<Settings>(settings);
   const [apiKey, setApiKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [queue, setQueue] = useState<DrillStats>({ total: 0, due: 0 });
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [notice, setNotice] = useState("");
 
   const patch = (part: Partial<Settings>) => setDraft((current) => ({ ...current, ...part }));
+
+  const refreshQueue = useCallback(async () => {
+    try {
+      setQueue(await ipc.drillStats());
+    } catch (problem) {
+      console.error("could not read the practice queue", problem);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshQueue();
+  }, [refreshQueue]);
 
   const save = async () => {
     setBusy(true);
@@ -39,6 +62,36 @@ export function SettingsPanel({
     }
   };
 
+  const skipDue = async () => {
+    setNotice("");
+    try {
+      const moved = await ipc.drillSkipDue();
+      await refreshQueue();
+      onQueueChanged();
+      setNotice(moved > 0 ? `${moved} card(s) moved to tomorrow.` : "Nothing was due right now.");
+    } catch (problem) {
+      setError(String(problem));
+    }
+  };
+
+  const resetFixes = async () => {
+    if (!confirmReset) {
+      setConfirmReset(true);
+      setNotice("Click again to erase every saved correction.");
+      return;
+    }
+    setNotice("");
+    try {
+      const removed = await ipc.drillReset();
+      setConfirmReset(false);
+      await refreshQueue();
+      onQueueChanged();
+      setNotice(`${removed} correction(s) cleared.`);
+    } catch (problem) {
+      setError(String(problem));
+    }
+  };
+
   return (
     <div className="settings">
       <div className="settings-head">
@@ -49,59 +102,7 @@ export function SettingsPanel({
       </div>
 
       <div className="settings-body">
-        <label className="field">
-          <span>Groq API key {hasKey && <em className="ok">saved</em>}</span>
-          <input
-            type="password"
-            value={apiKey}
-            placeholder={hasKey ? "•••••••• (keep current)" : "gsk_..."}
-            onChange={(event) => setApiKey(event.target.value)}
-            spellCheck={false}
-          />
-        </label>
-
-        <label className="field">
-          <span>Model</span>
-          <input
-            value={draft.model}
-            onChange={(event) => patch({ model: event.target.value })}
-            spellCheck={false}
-          />
-        </label>
-
-        <label className="field">
-          <span>Base URL</span>
-          <input
-            value={draft.baseUrl}
-            onChange={(event) => patch({ baseUrl: event.target.value })}
-            spellCheck={false}
-          />
-        </label>
-
-        <label className="field">
-          <span>Show/hide hotkey</span>
-          <input
-            value={draft.hotkey}
-            onChange={(event) => patch({ hotkey: event.target.value })}
-            spellCheck={false}
-            placeholder="Ctrl+Alt+B"
-          />
-        </label>
-
-        <div className="field">
-          <span>My English level</span>
-          <div className="levels">
-            {LEVELS.map((level) => (
-              <button
-                key={level}
-                className={`chip ${draft.level === level ? "chip-on" : ""}`}
-                onClick={() => patch({ level })}
-              >
-                {level}
-              </button>
-            ))}
-          </div>
-        </div>
+        <div className="section-title">Look</div>
 
         <div className="field">
           <span>Your buddy</span>
@@ -176,11 +177,7 @@ export function SettingsPanel({
         <div className="field">
           <span>Message size</span>
           <div className="levels">
-            {[
-              ["small", "Small"],
-              ["normal", "Normal"],
-              ["large", "Large"],
-            ].map(([value, label]) => (
+            {TEXT_SIZES.map(([value, label]) => (
               <button
                 key={value}
                 className={`chip ${draft.textSize === value ? "chip-on" : ""}`}
@@ -192,6 +189,32 @@ export function SettingsPanel({
           </div>
         </div>
 
+        <div className="section-title">Learning</div>
+
+        <div className="field">
+          <span>My English level</span>
+          <div className="levels">
+            {LEVELS.map((level) => (
+              <button
+                key={level}
+                className={`chip ${draft.level === level ? "chip-on" : ""}`}
+                onClick={() => patch({ level })}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <label className="field row">
+          <span>Ignore capitalization</span>
+          <input
+            type="checkbox"
+            checked={draft.ignoreCapitalization}
+            onChange={(event) => patch({ ignoreCapitalization: event.target.checked })}
+          />
+        </label>
+
         <label className="field">
           <span>bubo's personality (optional)</span>
           <textarea
@@ -202,12 +225,46 @@ export function SettingsPanel({
           />
         </label>
 
-        <label className="field row">
-          <span>Ignore capitalization</span>
+        <div className="section-title">Connection</div>
+
+        <label className="field">
+          <span>Groq API key {hasKey && <em className="ok">saved</em>}</span>
           <input
-            type="checkbox"
-            checked={draft.ignoreCapitalization}
-            onChange={(event) => patch({ ignoreCapitalization: event.target.checked })}
+            type="password"
+            value={apiKey}
+            placeholder={hasKey ? "•••••••• (keep current)" : "gsk_..."}
+            onChange={(event) => setApiKey(event.target.value)}
+            spellCheck={false}
+          />
+        </label>
+
+        <label className="field">
+          <span>Model</span>
+          <input
+            value={draft.model}
+            onChange={(event) => patch({ model: event.target.value })}
+            spellCheck={false}
+          />
+        </label>
+
+        <label className="field">
+          <span>Base URL</span>
+          <input
+            value={draft.baseUrl}
+            onChange={(event) => patch({ baseUrl: event.target.value })}
+            spellCheck={false}
+          />
+        </label>
+
+        <div className="section-title">Behavior</div>
+
+        <label className="field">
+          <span>Show/hide hotkey</span>
+          <input
+            value={draft.hotkey}
+            onChange={(event) => patch({ hotkey: event.target.value })}
+            spellCheck={false}
+            placeholder="Ctrl+Alt+B"
           />
         </label>
 
@@ -227,11 +284,28 @@ export function SettingsPanel({
           </span>
         </div>
 
-        {error && <div className="settings-error">{error}</div>}
+        <div className="section-title">Practice</div>
 
-        <button className="primary" onClick={save} disabled={busy}>
-          {busy ? "saving..." : "Save"}
-        </button>
+        <div className="field">
+          <span>
+            {queue.due} due · {queue.total} saved
+          </span>
+          <div className="row-buttons">
+            <button className="ghost" onClick={() => void skipDue()}>
+              Skip due cards
+            </button>
+            <button className="ghost danger" onClick={() => void resetFixes()}>
+              {confirmReset ? "Click again to erase" : "Reset corrections"}
+            </button>
+          </div>
+          <span className="hint">
+            Skipping moves the cards to tomorrow. Resetting deletes every saved correction, including
+            the ones in old messages.
+          </span>
+        </div>
+
+        <div className="section-title">Chat</div>
+
         <button
           className="ghost danger"
           onClick={async () => {
@@ -240,6 +314,13 @@ export function SettingsPanel({
           }}
         >
           Start a new chat
+        </button>
+
+        {notice && <div className="hint">{notice}</div>}
+        {error && <div className="settings-error">{error}</div>}
+
+        <button className="primary" onClick={save} disabled={busy}>
+          {busy ? "saving..." : "Save"}
         </button>
       </div>
     </div>

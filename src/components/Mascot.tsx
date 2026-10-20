@@ -303,10 +303,10 @@ export function Mascot({
       context.restore();
 
       // eyes: a single solid highlight each, tilted inward like the reference
-      const eyeWidth = radius * 0.14;
-      const eyeHeight = radius * 0.32 * (1 + wonder * 0.1);
-      const eyeOffset = radius * 0.27;
-      const eyeY = radius * 0.04 + gaze.y * radius * 0.03;
+      const eyeWidth = radius * 0.2;
+      const eyeHeight = radius * 0.48 * (1 + wonder * 0.1);
+      const eyeOffset = radius * 0.28;
+      const eyeY = radius * 0.05 + gaze.y * radius * 0.03;
 
       for (const side of [-1, 1]) {
         const eyeX = side * eyeOffset + gaze.x * radius * 0.05;

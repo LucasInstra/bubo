@@ -210,6 +210,18 @@ fn drill_stats(state: State<'_, AppState>) -> Result<store::DrillStats, String> 
 }
 
 #[tauri::command]
+fn drill_skip_due(state: State<'_, AppState>) -> Result<usize, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::skip_due(&db).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn drill_reset(state: State<'_, AppState>) -> Result<usize, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::reset_fixes(&db).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn drill_next(
     state: State<'_, AppState>,
     include_future: bool,
@@ -360,6 +372,8 @@ pub fn run() {
             drill_stats,
             drill_next,
             drill_review,
+            drill_skip_due,
+            drill_reset,
             hide_window,
             quit_app
         ])

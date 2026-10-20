@@ -236,21 +236,8 @@ export default function App() {
     <div className={`app size-${settings.textSize}`} style={accentVars}>
       <div className="panel">
         <header className="head" data-tauri-drag-region>
-          <div className="mascot-stage">
-            <Mascot
-              state={status}
-              size={54}
-              energy={energy}
-              shape={settings.shape}
-              color={settings.color}
-              showMouth={settings.showMouth}
-              boopable
-            />
-            {settings.showStatus && (
-              <span className="status-pill" data-tauri-drag-region>
-                {STATUS_LABEL[status]}
-              </span>
-            )}
+          <div className="brand" data-tauri-drag-region>
+            <strong>bubo</strong>
           </div>
           <div className="head-actions">
             <button
@@ -259,7 +246,15 @@ export default function App() {
               aria-label="New chat"
               onClick={() => void newChat()}
             >
-              +
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                <path
+                  d="M12 5v14M5 12h14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                />
+              </svg>
             </button>
             <button
               className="ghost icon"
@@ -267,7 +262,7 @@ export default function App() {
               aria-label="Practice"
               onClick={() => setShowDrill(true)}
             >
-              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
                 <circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
                 <circle cx="12" cy="12" r="2.6" fill="currentColor" />
               </svg>
@@ -281,8 +276,8 @@ export default function App() {
             >
               <svg
                 viewBox="0 0 24 24"
-                width="14"
-                height="14"
+                width="15"
+                height="15"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.6"
@@ -299,7 +294,17 @@ export default function App() {
               aria-label="Settings"
               onClick={() => setShowSettings(true)}
             >
-              ⚙
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                <path
+                  d="M4 7h10M18 7h2M4 17h2M10 17h10"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+                <circle cx="16" cy="7" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                <circle cx="8" cy="17" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              </svg>
             </button>
             <button
               className="ghost icon"
@@ -307,38 +312,62 @@ export default function App() {
               aria-label="Hide"
               onClick={() => void ipc.hideWindow()}
             >
-              –
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                <path
+                  d="M6 10l6 6 6-6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </button>
           </div>
         </header>
 
-        {empty && !showSettings ? (
-          <div className="hero">
-            <h1>Hey, I'm bubo.</h1>
-            <p>
-              Talk to me in English. I keep the conversation going and quietly show what a native
-              speaker would have said.
-            </p>
-            <div className="suggestions">
-              {due > 0 && (
-                <button className="chip chip-practice" onClick={() => setShowDrill(true)}>
-                  Practice {due} {due === 1 ? "correction" : "corrections"} from our chats
-                </button>
-              )}
-              {SUGGESTIONS.map((suggestion) => (
-                <button key={suggestion} className="chip" onClick={() => void send(suggestion)}>
-                  {suggestion}
-                </button>
+        <div className="chat">
+          <div className="chat-stage">
+            <Mascot
+              state={status}
+              size={64}
+              energy={energy}
+              shape={settings.shape}
+              color={settings.color}
+              showMouth={settings.showMouth}
+              boopable
+            />
+            {settings.showStatus && <span className="status-pill">{STATUS_LABEL[status]}</span>}
+          </div>
+
+          {empty && !showSettings ? (
+            <div className="hero">
+              <h1>Hey, I'm bubo.</h1>
+              <p>
+                Talk to me in English. I keep the conversation going and quietly show what a native
+                speaker would have said.
+              </p>
+              <div className="suggestions">
+                {due > 0 && (
+                  <button className="chip chip-practice" onClick={() => setShowDrill(true)}>
+                    Practice {due} {due === 1 ? "correction" : "corrections"} from our chats
+                  </button>
+                )}
+                {SUGGESTIONS.map((suggestion) => (
+                  <button key={suggestion} className="chip" onClick={() => void send(suggestion)}>
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="messages" ref={listRef}>
+              {messages.map((message) => (
+                <Message key={message.id} message={message} />
               ))}
             </div>
-          </div>
-        ) : (
-          <div className="messages" ref={listRef}>
-            {messages.map((message) => (
-              <Message key={message.id} message={message} />
-            ))}
-          </div>
-        )}
+          )}
+        </div>
 
         <Composer disabled={status !== "idle"} onSend={(text) => void send(text)} />
 
@@ -349,6 +378,7 @@ export default function App() {
             onClose={() => setShowSettings(false)}
             onSave={saveSettings}
             onNewChat={newChat}
+            onQueueChanged={() => void ipc.drillStats().then((stats) => setDue(stats.due))}
           />
         )}
 

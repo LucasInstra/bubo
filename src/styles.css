@@ -79,20 +79,38 @@ button {
 /* header */
 
 .head {
-  position: relative;
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: 80px;
-  padding: 8px 10px 6px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px 8px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.mascot-stage {
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand strong {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.chat-stage {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
+  padding: 4px 0 2px;
 }
 
 .status-pill {
@@ -129,9 +147,6 @@ button {
 }
 
 .head-actions {
-  position: absolute;
-  top: 10px;
-  right: 10px;
   display: flex;
   gap: 2px;
 }
@@ -616,6 +631,40 @@ button {
   gap: 12px;
   padding: 14px;
   scrollbar-width: thin;
+}
+
+.section-title {
+  margin-top: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: rgba(236, 235, 255, 0.4);
+}
+
+.section-title:first-child {
+  margin-top: 0;
+}
+
+.row-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.row-buttons .ghost {
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  font-size: 11.5px;
+}
+
+.hint {
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--muted);
 }
 
 .field {

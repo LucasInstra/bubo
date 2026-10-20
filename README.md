@@ -7,8 +7,9 @@ Um tutor de inglês que vive num popup flutuante no canto da tela. Você convers
 - Janela sem bordas no canto inferior direito, sempre no topo por padrão, com botão de pin para liberar.
 - Atalho global configurável (padrão `Ctrl+Alt+B`), `Esc` esconde, ícone na bandeja com menu.
 - Orbe animado com rosto: olhos que piscam e seguem o mouse, boca que mexe enquanto ele escreve, respiração e brilho que mudam por estado (ocioso lilás, pensando âmbar, escrevendo verde). No chat ele fica ao lado do campo de digitação; na tela vazia aparece grande.
-- **Mascote configurável**: 8 formas (redondo, oval, quadrado, pílula, triângulo, hexágono, nuvem, gota), 10 cores e boca opcional. Ele fica no topo central do chat, com o status embaixo; clicar nele dá um pulinho.
+- **Mascote configurável**: 8 formas (redondo, oval, quadrado, pílula, triângulo, hexágono, nuvem, gota), 10 cores e boca opcional. Ele fica no topo do chat, centralizado, com o status embaixo; clicar nele dá um pulinho.
 - **Mais ajustes de aparência**: usar a cor do mascote no app inteiro e tamanho da mensagem (pequeno/normal/grande).
+- **Fila de prática**: em settings dá para pular os cards devidos (vão para amanhã) ou resetar todas as correções salvas.
 - Chat com streaming de resposta e bloco de correções por mensagem: trecho errado, versão natural e explicação curta em português.
 - **Prática**: cada correção entra numa fila de revisão espaçada (1, 3, 7, 21, 45 dias). O botão de alvo no header mostra quantas estão devidas e abre o drill.
 - Nível CEFR configurável (A2 → C1) e persona opcional.
@@ -37,7 +38,7 @@ Tauri v2 (Rust) + React + TypeScript + Vite.
 
 - A chave da API fica no Windows Credential Manager (serviço `bubo`), nunca em arquivo.
 - O processo Rust é o único que fala com o provedor; a chave não chega ao WebView.
-- Comandos IPC: `chat`, `history`, `clear_history`, `drill_stats`, `drill_next`, `drill_review`, `get_settings`, `save_settings`, `save_api_key`, `has_api_key`, `set_autostart`, `set_pinned`, `hide_window`, `quit_app`.
+- Comandos IPC: `chat`, `history`, `clear_history`, `drill_stats`, `drill_next`, `drill_review`, `drill_skip_due`, `drill_reset`, `get_settings`, `save_settings`, `save_api_key`, `has_api_key`, `set_autostart`, `set_pinned`, `hide_window`, `quit_app`.
 
 ## Desenvolvimento
 

@@ -31,7 +31,7 @@ export function Composer({ disabled, onSend }: ComposerProps) {
           ref={textareaRef}
           rows={1}
           value={value}
-          placeholder={disabled ? "bubo is writing..." : "Write in English... (Enter to send)"}
+          placeholder={disabled ? "bubo is writing..." : "Type in English..."}
           onChange={(event) => {
             setValue(event.target.value);
             resize();

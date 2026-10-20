@@ -172,6 +172,23 @@ pub fn purge_case_only(conn: &Connection) -> rusqlite::Result<usize> {
     )
 }
 
+/// Moves everything that is due to tomorrow.
+pub fn skip_due(conn: &Connection) -> rusqlite::Result<usize> {
+    let now = now();
+    conn.execute(
+        "UPDATE fixes SET due_at = ?1 WHERE due_at <= ?2",
+        params![now + 86_400, now],
+    )
+}
+
+/// Wipes the practice queue and the corrections stored on messages, so the
+/// backfill on the next start does not bring them back.
+pub fn reset_fixes(conn: &Connection) -> rusqlite::Result<usize> {
+    let removed = conn.execute("DELETE FROM fixes", [])?;
+    conn.execute("UPDATE messages SET fixes = NULL", [])?;
+    Ok(removed)
+}
+
 pub fn next_drill(conn: &Connection, include_future: bool) -> rusqlite::Result<Option<DrillItem>> {
     let now = now();
     if include_future {
@@ -320,6 +337,57 @@ mod tests {
 
         assert_eq!(super::purge_case_only(&conn).unwrap(), 1);
         assert_eq!(super::drill_stats(&conn).unwrap().total, 1);
+    }
+
+    #[test]
+    fn skipping_due_cards_pushes_them_to_tomorrow() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        super::save_fixes(
+            &conn,
+            &[Fix {
+                wrong: "i go".to_string(),
+                right: "I went".to_string(),
+                note: String::new(),
+            }],
+        )
+        .unwrap();
+
+        assert_eq!(super::drill_stats(&conn).unwrap().due, 1);
+        assert_eq!(super::skip_due(&conn).unwrap(), 1);
+        assert_eq!(super::drill_stats(&conn).unwrap().due, 0);
+        assert!(super::next_drill(&conn, false).unwrap().is_none());
+    }
+
+    #[test]
+    fn resetting_removes_the_queue_and_the_stored_fixes() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        insert(
+            &conn,
+            "assistant",
+            "ok",
+            Some(r#"[{"wrong":"i go","right":"I went","note":"passado"}]"#),
+        )
+        .unwrap();
+        super::save_fixes(
+            &conn,
+            &[Fix {
+                wrong: "i go".to_string(),
+                right: "I went".to_string(),
+                note: "passado".to_string(),
+            }],
+        )
+        .unwrap();
+
+        assert_eq!(super::reset_fixes(&conn).unwrap(), 1);
+        assert_eq!(super::drill_stats(&conn).unwrap().total, 0);
+
+        // The startup backfill must not resurrect what was intentionally erased.
+        super::backfill_fixes(&conn).unwrap();
+        assert_eq!(super::drill_stats(&conn).unwrap().total, 0);
     }
 
     #[test]
