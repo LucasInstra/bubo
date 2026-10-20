@@ -34,6 +34,34 @@ fn short_error(raw: &str) -> String {
     raw.chars().take(240).collect()
 }
 
+/// Models love an em dash. Replace it with a comma so replies read like a
+/// person typing, even when the prompt rule is ignored.
+pub fn tidy(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+
+    while let Some(character) = chars.next() {
+        if character == '—' || character == '–' {
+            while out.ends_with(' ') {
+                out.pop();
+            }
+            out.push(',');
+            out.push(' ');
+            while matches!(chars.peek(), Some(' ')) {
+                chars.next();
+            }
+        } else {
+            out.push(character);
+        }
+    }
+
+    while out.contains(",  ") {
+        out = out.replace(",  ", ", ");
+    }
+
+    out
+}
+
 async fn post(
     client: &reqwest::Client,
     settings: &Settings,
@@ -129,12 +157,13 @@ pub async fn stream_reply(
                 if text.is_empty() {
                     continue;
                 }
-                full.push_str(text);
+                let text = tidy(text);
+                full.push_str(&text);
                 let _ = app.emit(
                     "bubo-delta",
                     Delta {
                         request_id,
-                        delta: text,
+                        delta: &text,
                     },
                 );
             }
@@ -143,7 +172,7 @@ pub async fn stream_reply(
 
     if cancel.load(Ordering::Relaxed) {
         return Ok(Reply {
-            text: full,
+            text: tidy(&full),
             cancelled: true,
         });
     }
@@ -153,7 +182,7 @@ pub async fn stream_reply(
     }
 
     Ok(Reply {
-        text: full,
+        text: tidy(&full),
         cancelled: false,
     })
 }
@@ -211,8 +240,8 @@ pub fn parse_fixes(raw: &str) -> Vec<Fix> {
         .take(4)
         .map(|mut fix| {
             fix.wrong = fix.wrong.trim().to_string();
-            fix.right = fix.right.trim().to_string();
-            fix.note = fix.note.trim().to_string();
+            fix.right = tidy(fix.right.trim());
+            fix.note = tidy(fix.note.trim());
             fix
         })
         .collect()
@@ -267,6 +296,16 @@ mod tests {
         ));
         assert!(!only_case_differs("was very good", "It was very good"));
         assert!(!only_case_differs("i go", "I went"));
+    }
+
+    #[test]
+    fn replaces_dashes_with_commas() {
+        use super::tidy;
+        assert_eq!(tidy("a—b"), "a, b");
+        assert_eq!(tidy("a — b"), "a, b");
+        assert_eq!(tidy("a – b"), "a, b");
+        assert_eq!(tidy("message—what now"), "message, what now");
+        assert_eq!(tidy("no dash here"), "no dash here");
     }
 
     #[test]
