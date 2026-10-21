@@ -32,6 +32,7 @@ pub struct Settings {
     pub eye_tilt: String,
     pub eye_color: String,
     pub sad_style: String,
+    pub sad_style_migrated: bool,
     pub glass: bool,
     pub glass_opacity: u32,
 }
@@ -64,7 +65,8 @@ impl Default for Settings {
             eye_spacing: "normal".to_string(),
             eye_tilt: "straight".to_string(),
             eye_color: "auto".to_string(),
-            sad_style: "brows".to_string(),
+            sad_style: "flat".to_string(),
+            sad_style_migrated: true,
             glass: true,
             glass_opacity: 95,
         }
@@ -83,7 +85,16 @@ pub fn load_settings(app: &AppHandle) -> Result<Settings, String> {
         return Ok(Settings::default());
     }
     let raw = fs::read_to_string(path).map_err(|e| e.to_string())?;
-    Ok(serde_json::from_str(&raw).unwrap_or_default())
+    let mut settings: Settings = serde_json::from_str(&raw).unwrap_or_default();
+    // 0.5.9 moved the default sad face to the flat, deadpan eyes. Only the
+    // old default is migrated once; a deliberate pick of Brows is kept.
+    if !settings.sad_style_migrated {
+        if settings.sad_style == "brows" {
+            settings.sad_style = "flat".to_string();
+        }
+        settings.sad_style_migrated = true;
+    }
+    Ok(settings)
 }
 
 pub fn save_settings_file(app: &AppHandle, settings: &Settings) -> Result<(), String> {

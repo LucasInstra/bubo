@@ -491,7 +491,7 @@ export default function App() {
     >
       <div className="panel">
         {settings.glass && (
-          <GlassRefraction radius={16} band={38} displacement={48} blur={10} saturation={175} />
+          <GlassRefraction radius={16} band={34} displacement={76} blur={5} saturation={175} />
         )}
         <header className="head" data-tauri-drag-region>
           <button
@@ -847,6 +847,7 @@ export default function App() {
         {showHistory && (
           <HistoryPanel
             currentSession={sessionId}
+            glass={settings.glass}
             onClose={() => setShowHistory(false)}
             onOpen={openSession}
             onNew={async (id) => {
@@ -862,6 +863,7 @@ export default function App() {
 
         {showProgress && (
           <ProgressPanel
+            glass={settings.glass}
             onClose={() => setShowProgress(false)}
             onPractice={() => {
               setShowProgress(false);

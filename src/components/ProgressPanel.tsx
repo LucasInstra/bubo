@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { ipc } from "../lib/ipc";
 import { useModalFocus } from "../lib/modal";
 import type { ProgressStats, TopMistake } from "../lib/types";
+import { SheetGlass } from "./SheetGlass";
 
 interface ProgressPanelProps {
   onClose: () => void;
   onPractice: () => void;
+  glass: boolean;
 }
 
 function attemptsLabel(mistake: TopMistake): string {
@@ -20,7 +22,7 @@ function attemptsLabel(mistake: TopMistake): string {
   return parts.join(" · ");
 }
 
-export function ProgressPanel({ onClose, onPractice }: ProgressPanelProps) {
+export function ProgressPanel({ onClose, onPractice, glass }: ProgressPanelProps) {
   const [stats, setStats] = useState<ProgressStats | null>(null);
   const [error, setError] = useState("");
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -58,6 +60,7 @@ export function ProgressPanel({ onClose, onPractice }: ProgressPanelProps) {
       ref={dialogRef}
       tabIndex={-1}
     >
+      <SheetGlass enabled={glass} />
       <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={onClose} aria-label="Back">
           ←

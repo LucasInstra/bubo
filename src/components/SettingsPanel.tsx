@@ -5,6 +5,7 @@ import { matchProvider, PROVIDERS, type ProviderPreset } from "../lib/providers"
 import type { DrillStats, Settings } from "../lib/types";
 import type { UpdateStatus } from "../lib/updater";
 import { HotkeyInput } from "./HotkeyInput";
+import { SheetGlass } from "./SheetGlass";
 
 interface SettingsPanelProps {
   settings: Settings;
@@ -250,6 +251,7 @@ export function SettingsPanel({
       ref={dialogRef}
       tabIndex={-1}
     >
+      <SheetGlass enabled={settings.glass} />
       <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={onClose} aria-label="Back">
           ←

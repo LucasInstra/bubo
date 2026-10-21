@@ -56,9 +56,10 @@ export const EYE_SPACINGS = ["close", "normal", "wide"] as const;
 export const EYE_TILTS = ["soft", "straight", "sharp"] as const;
 export const EYE_COLORS = ["auto", "#fcfcff", "#fff4d6", "#241d33"] as const;
 
-export const SAD_STYLES = ["brows", "lids", "tear", "puppy"] as const;
+export const SAD_STYLES = ["flat", "brows", "lids", "tear", "puppy"] as const;
 export type SadStyle = (typeof SAD_STYLES)[number];
 export const SAD_LABELS: Record<SadStyle, string> = {
+  flat: "Flat lines",
   brows: "Brows",
   lids: "Eyelids",
   tear: "Tear",
@@ -715,7 +716,7 @@ export function Mascot({
       const surprisedScale = surprisedEyes ? 1.22 : 1;
       const sadKind: SadStyle = (SAD_STYLES as readonly string[]).includes(sadStyle)
         ? (sadStyle as SadStyle)
-        : "brows";
+        : "flat";
       const sadEyeScale = sadEyes
         ? sadKind === "lids"
           ? 0.62
@@ -723,15 +724,20 @@ export function Mascot({
             ? 0.9
             : sadKind === "puppy"
               ? 1.12
-              : 0.8
+              : sadKind === "flat"
+                ? 1
+                : 0.8
         : 1;
       const sadEyeWidthScale = sadEyes
         ? sadKind === "puppy"
           ? 1.05
           : sadKind === "tear"
             ? 0.98
-            : 0.95
+            : sadKind === "flat"
+              ? 1
+              : 0.95
         : 1;
+      const sadFlat = sadEyes && sadKind === "flat";
       const sadBrows = sadEyes && (sadKind === "brows" || sadKind === "puppy");
       const sadLids = sadEyes && sadKind === "lids";
       const sadPuppy = sadEyes && sadKind === "puppy";
@@ -856,7 +862,8 @@ export function Mascot({
         const eye = eyeShape(style, radius, sizeScale);
         const eyeWidth = eye.width;
         const eyeHeight = eye.height * (style === "bars" ? 1 + wonder * 0.1 : 1);
-        const eyeX = side * eyeOffset + gaze.x * radius * 0.24;
+        const eyeX =
+          side * (sadFlat ? radius * (spacingScale + 0.075) : eyeOffset) + gaze.x * radius * 0.24;
         const closed = winking && side === -1;
         const cheerful =
           happy > 0.55 && (style === "bars" || style === "dots" || style === "sleepy");
@@ -864,16 +871,26 @@ export function Mascot({
 
         context.save();
         context.translate(eyeX, eyeY);
-        context.rotate(style === "angry" ? side * 0.34 : side * tiltAngle);
+        context.rotate(sadFlat ? side * 0.03 : style === "angry" ? side * 0.34 : side * tiltAngle);
 
         // Mood and blink must reach every eye style, including the arc-based
         // ones. Apply the fold to the whole eye drawing first.
         context.scale(
           surprisedScale * sadEyeWidthScale,
-          Math.max(0.08, eyeOpen * streamPulse) * surprisedScale * sadEyeScale,
+          (sadFlat ? 1 : Math.max(0.08, eyeOpen * streamPulse)) * surprisedScale * sadEyeScale,
         );
 
-        if (sadEyes && drawArc) {
+        if (sadFlat) {
+          // The deadpan sad face: two flat dashes, no brows and no mouth.
+          const half = radius * 0.23;
+          context.strokeStyle = ink;
+          context.lineWidth = Math.max(1.5, radius * 0.075);
+          context.lineCap = "round";
+          context.beginPath();
+          context.moveTo(-half, 0);
+          context.lineTo(half, 0);
+          context.stroke();
+        } else if (sadEyes && drawArc) {
           // A closed, tired eye: a short lid that slopes down toward the
           // outside, instead of the happy arc.
           context.strokeStyle = ink;

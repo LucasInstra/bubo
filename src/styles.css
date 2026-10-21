@@ -1671,6 +1671,7 @@ button {
   position: absolute;
   top: 0;
   left: 8%;
+  z-index: 3;
   width: 84%;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
@@ -2212,7 +2213,8 @@ button {
 /* liquid glass theme: one translucent sheet over the desktop */
 
 .app.glass .panel {
-  background:
+  --glass-edge: 18px;
+  --glass-tint:
     radial-gradient(120% 90% at 8% -8%, rgba(255, 255, 255, 0.16), transparent 58%),
     linear-gradient(
       135deg,
@@ -2221,11 +2223,71 @@ button {
       rgba(255, 255, 255, 0.06)
     ),
     rgba(18, 14, 30, var(--glass-alpha, 0.72));
+  background: transparent;
   border-color: rgba(255, 255, 255, 0.18);
-  box-shadow:
-    0 24px 64px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.26),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+}
+
+/* The tint sits above the refraction, never below it: a background painted on
+   the surface itself would be the only thing the backdrop filter sees. The
+   mask leaves the rim clear, so the refracted edge stays visible even when the
+   glass is almost opaque. */
+
+.app.glass .panel::after,
+.app.glass .compact-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: var(--glass-tint, rgba(18, 14, 30, var(--glass-alpha, 0.72)));
+  pointer-events: none;
+  -webkit-mask-image:
+    linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0.32) 0,
+      #000 var(--glass-edge, 30px),
+      #000 calc(100% - var(--glass-edge, 30px)),
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.32) 0,
+      #000 var(--glass-edge, 30px),
+      #000 calc(100% - var(--glass-edge, 30px)),
+      transparent 100%
+    );
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0.32) 0,
+      #000 var(--glass-edge, 30px),
+      #000 calc(100% - var(--glass-edge, 30px)),
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.32) 0,
+      #000 var(--glass-edge, 30px),
+      #000 calc(100% - var(--glass-edge, 30px)),
+      transparent 100%
+    );
+  mask-composite: intersect;
+}
+
+/* A sheet covers the chat, not the desktop: it gets a flat frosted tint
+   instead of the clear rim, otherwise the conversation underneath would show
+   through the edges. */
+
+.app.glass .settings::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: var(--glass-tint, rgba(18, 14, 30, var(--glass-alpha, 0.72)));
+  pointer-events: none;
 }
 
 /* the refraction layer must sit under the sharp content */
@@ -2236,6 +2298,51 @@ button {
   height: 0;
   overflow: hidden;
   pointer-events: none;
+}
+
+/* the lit rim from the liquid-glass reference: two 1.5px rings, one screened
+   and one overlaid, so the edge picks up the light behind it */
+
+.glass-specular {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 1.5px;
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.16) 33%,
+    rgba(255, 255, 255, 0.52) 68%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  box-shadow:
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.45),
+    inset 0 1px 3px rgba(255, 255, 255, 0.22),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.28;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+.glass-specular-overlay {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.32) 33%,
+    rgba(255, 255, 255, 0.62) 68%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  mix-blend-mode: overlay;
+  opacity: 0.22;
 }
 
 .app.glass .head,
@@ -2315,11 +2422,27 @@ button {
 }
 
 .app.glass .settings {
-  background:
+  --glass-tint:
     radial-gradient(130% 80% at 0% 0%, rgba(255, 255, 255, 0.11), transparent 56%),
-    rgba(16, 13, 27, calc(var(--glass-alpha, 0.72) * 0.9));
+    rgba(16, 13, 27, calc(var(--glass-alpha, 0.72) * 0.95));
+  background: transparent;
   backdrop-filter: blur(40px) saturate(170%);
   -webkit-backdrop-filter: blur(40px) saturate(170%);
+}
+
+.app.glass .settings-head,
+.app.glass .settings-body,
+.app.glass .settings-footer {
+  position: relative;
+  z-index: 1;
+}
+
+/* A filtered sibling makes Chrome skip the sheet's backdrop blur, so the
+   panel refraction steps aside while a sheet covers it. */
+
+.app:has(.settings) .panel > .glass-refraction,
+.app:has(.settings) .panel > .glass-specular {
+  display: none;
 }
 
 .app.glass .settings-head {
@@ -2404,7 +2527,8 @@ button {
 }
 
 .app.glass.compact-liquid .compact-card {
-  background:
+  --glass-edge: 16px;
+  --glass-tint:
     radial-gradient(260px 190px at 16% 8%, rgba(139, 125, 255, 0.22), transparent 72%),
     radial-gradient(220px 180px at 94% 100%, rgba(73, 197, 255, 0.1), transparent 72%),
     linear-gradient(
@@ -2414,10 +2538,11 @@ button {
       rgba(255, 255, 255, 0.07)
     ),
     rgba(18, 14, 30, var(--glass-alpha, 0.72));
+  background: transparent;
   border-color: rgba(255, 255, 255, 0.2);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 /* glass identity for the controls, not just the background */
@@ -2558,4 +2683,70 @@ button {
 .session-delete-text {
   font-size: 9px;
   letter-spacing: 0.3px;
+}
+
+/* the compact pill is one piece of glass: the textarea must not paint its own
+   inset box inside the refraction */
+
+.app.glass .compact-card .composer textarea {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* a thin lit rim keeps every control reading as glass, even without its own
+   displacement layer */
+
+.app.glass .ghost,
+.app.glass .chip,
+.app.glass .send,
+.app.glass .compact-icon,
+.app.glass .composer-inner,
+.app.glass .brand-face,
+.app.glass .compact-face,
+.app.glass .status-pill,
+.app.glass .msg-user .bubble,
+.app.glass .msg-bot .bubble,
+.app.glass .compact-bubble {
+  position: relative;
+}
+
+.app.glass .ghost::after,
+.app.glass .chip::after,
+.app.glass .send::after,
+.app.glass .compact-icon::after,
+.app.glass .composer-inner::after,
+.app.glass .brand-face::after,
+.app.glass .compact-face::after,
+.app.glass .status-pill::after,
+.app.glass .msg-user .bubble::after,
+.app.glass .msg-bot .bubble::after,
+.app.glass .compact-bubble::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.06) 38%,
+    rgba(255, 255, 255, 0.24) 72%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.45;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
 }

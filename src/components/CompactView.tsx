@@ -52,7 +52,7 @@ export function CompactView({
     <div className="compact-stage">
       <div className="compact-card">
         {settings.glass && (
-          <GlassRefraction radius={16} band={32} displacement={44} blur={9} saturation={175} />
+          <GlassRefraction radius={16} band={26} displacement={64} blur={5} saturation={175} />
         )}
         <header className="compact-head" data-tauri-drag-region>
           <span className="compact-face" aria-hidden="true">

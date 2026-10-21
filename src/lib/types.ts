@@ -46,6 +46,7 @@ export interface Settings {
   eyeTilt: string;
   eyeColor: string;
   sadStyle: string;
+  sadStyleMigrated: boolean;
   noteLanguage: string;
   glass: boolean;
   glassOpacity: number;
@@ -137,7 +138,7 @@ export const DEFAULT_LOOK: LookSettings = {
   eyeSpacing: "normal",
   eyeTilt: "straight",
   eyeColor: "auto",
-  sadStyle: "brows",
+  sadStyle: "flat",
   showMouth: false,
   mouthStyle: "line",
   mouthSize: "medium",
@@ -156,6 +157,7 @@ export const DEFAULT_SETTINGS: Settings = {
   compact: false,
   ignoreCapitalization: true,
   ...DEFAULT_LOOK,
+  sadStyleMigrated: true,
   showStatus: true,
   accentFromMascot: true,
   textSize: "normal",
