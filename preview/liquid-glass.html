@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bubo · compact liquid glass</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #f7f4ff;
+        --muted: rgba(241, 237, 255, 0.62);
+        --accent: #9b8cff;
+        --glass: rgba(255, 255, 255, 0.09);
+        --line: rgba(255, 255, 255, 0.22);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        padding: 32px 20px;
+        overflow: hidden;
+        background:
+          radial-gradient(900px 600px at 18% 14%, rgba(121, 90, 255, 0.42), transparent 62%),
+          radial-gradient(760px 560px at 82% 20%, rgba(255, 115, 205, 0.24), transparent 64%),
+          radial-gradient(900px 700px at 55% 90%, rgba(69, 196, 255, 0.22), transparent 65%),
+          linear-gradient(145deg, #0b0815 0%, #120d23 48%, #07060c 100%);
+        color: var(--ink);
+        font-family:
+          "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+      }
+
+      .stage {
+        position: relative;
+        width: min(700px, 100%);
+      }
+
+      .stage-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 0 8px 12px;
+        color: rgba(241, 237, 255, 0.5);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .stage-label span:last-child {
+        text-transform: none;
+        letter-spacing: 0;
+        opacity: 0.75;
+      }
+
+      .blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(44px);
+        opacity: 0.7;
+        pointer-events: none;
+        animation: drift 16s ease-in-out infinite alternate;
+      }
+
+      .blob-a {
+        top: -40px;
+        left: -70px;
+        width: 260px;
+        height: 260px;
+        background: rgba(126, 95, 255, 0.5);
+      }
+
+      .blob-b {
+        right: -60px;
+        bottom: -70px;
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 111, 203, 0.28);
+        animation-delay: -6s;
+      }
+
+      .blob-c {
+        left: 38%;
+        bottom: -120px;
+        width: 320px;
+        height: 320px;
+        background: rgba(73, 197, 255, 0.22);
+        animation-delay: -11s;
+      }
+
+      @keyframes drift {
+        from {
+          transform: translate3d(0, 0, 0) scale(1);
+        }
+        to {
+          transform: translate3d(18px, -14px, 0) scale(1.08);
+        }
+      }
+
+      .glass-card {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        width: min(620px, 100%);
+        min-height: 360px;
+        margin: 0 auto;
+        padding: 18px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 32px;
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.045) 46%),
+          rgba(20, 15, 35, 0.45);
+        box-shadow:
+          0 36px 90px rgba(0, 0, 0, 0.55),
+          0 2px 0 rgba(255, 255, 255, 0.08) inset,
+          0 -1px 0 rgba(0, 0, 0, 0.3) inset;
+        backdrop-filter: blur(30px) saturate(160%);
+        -webkit-backdrop-filter: blur(30px) saturate(160%);
+        transition:
+          transform 0.25s ease,
+          border-color 0.25s ease;
+      }
+
+      .glass-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.3);
+      }
+
+      .glass-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 8%;
+        width: 84%;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+        opacity: 0.7;
+        pointer-events: none;
+      }
+
+      .glass-card::after {
+        content: "";
+        position: absolute;
+        top: -160px;
+        right: -120px;
+        width: 340px;
+        height: 340px;
+        border-radius: 50%;
+        background: radial-gradient(closest-side, rgba(255, 255, 255, 0.14), transparent 72%);
+        pointer-events: none;
+      }
+
+      .card-head {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .mascot {
+        display: grid;
+        place-items: center;
+        width: 58px;
+        height: 58px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.26);
+        border-radius: 50%;
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.18), rgba(139, 125, 255, 0.1));
+        box-shadow:
+          0 8px 22px rgba(0, 0, 0, 0.28),
+          0 1px 0 rgba(255, 255, 255, 0.25) inset;
+        pointer-events: none;
+        user-select: none;
+      }
+
+      .face {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 28%, #b7acff, #8b7dff 62%, #6f5ee8);
+        box-shadow:
+          0 6px 18px rgba(90, 70, 220, 0.55),
+          0 -3px 8px rgba(0, 0, 0, 0.18) inset;
+      }
+
+      .eye {
+        width: 6px;
+        height: 15px;
+        border-radius: 999px;
+        background: #fcfcff;
+        box-shadow: 0 0 4px rgba(255, 255, 255, 0.35);
+      }
+
+      .head-actions {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .icon-button {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(247, 244, 255, 0.72);
+        box-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.18) inset,
+          0 4px 10px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(12px);
+        cursor: pointer;
+        transition:
+          background 0.16s ease,
+          color 0.16s ease,
+          transform 0.16s ease;
+      }
+
+      .icon-button:hover {
+        background: rgba(255, 255, 255, 0.16);
+        color: #fff;
+        transform: translateY(-1px);
+      }
+
+      .icon-button:focus-visible {
+        outline: 2px solid rgba(196, 187, 255, 0.9);
+        outline-offset: 2px;
+      }
+
+      .conversation {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        justify-content: center;
+        gap: 10px;
+        padding: 14px 2px 12px;
+      }
+
+      .bubble {
+        max-width: 74%;
+        padding: 10px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        color: rgba(248, 245, 255, 0.9);
+        font-size: 12.5px;
+        line-height: 1.45;
+        box-shadow:
+          0 8px 24px rgba(0, 0, 0, 0.18),
+          0 1px 0 rgba(255, 255, 255, 0.16) inset;
+        backdrop-filter: blur(16px);
+      }
+
+      .bubble.assistant {
+        align-self: flex-end;
+        max-width: 64%;
+        border-radius: 18px 18px 5px 18px;
+        background: rgba(255, 255, 255, 0.075);
+      }
+
+      .bubble.user {
+        align-self: flex-start;
+        max-width: 72%;
+        border-radius: 5px 20px 20px 20px;
+        background: linear-gradient(135deg, rgba(139, 125, 255, 0.3), rgba(139, 125, 255, 0.12));
+        border-color: rgba(191, 181, 255, 0.3);
+      }
+
+      .composer {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 7px 7px 15px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.075);
+        box-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.2) inset,
+          0 12px 28px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(18px);
+      }
+
+      .composer input {
+        flex: 1;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--ink);
+        font: inherit;
+        font-size: 12px;
+      }
+
+      .composer input::placeholder {
+        color: rgba(241, 237, 255, 0.45);
+      }
+
+      .send {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        flex: none;
+        padding: 0;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 50%;
+        background: linear-gradient(135deg, #b3a8ff, #7b68ff);
+        color: #171126;
+        box-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.45) inset,
+          0 8px 18px rgba(96, 75, 255, 0.35);
+        cursor: pointer;
+        transition: transform 0.16s ease;
+      }
+
+      .send:hover {
+        transform: scale(1.05);
+      }
+
+      .send:focus-visible {
+        outline: 2px solid rgba(255, 255, 255, 0.9);
+        outline-offset: 2px;
+      }
+
+      .footnote {
+        margin: 12px 8px 0;
+        color: rgba(241, 237, 255, 0.42);
+        font-size: 11px;
+        line-height: 1.5;
+        text-align: center;
+      }
+
+      @media (max-width: 560px) {
+        body {
+          padding: 16px;
+        }
+
+        .glass-card {
+          min-height: 330px;
+          padding: 14px;
+          border-radius: 26px;
+        }
+
+        .mascot {
+          width: 50px;
+          height: 50px;
+        }
+
+        .mascot img {
+          width: 80px;
+          height: 80px;
+        }
+
+        .bubble {
+          font-size: 12px;
+        }
+
+        .stage-label span:last-child {
+          display: none;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .blob {
+          animation: none;
+        }
+
+        .glass-card,
+        .icon-button,
+        .send {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <span class="blob blob-a"></span>
+      <span class="blob blob-b"></span>
+      <span class="blob blob-c"></span>
+
+      <div class="stage-label">
+        <span>compact mode · liquid glass</span>
+        <span>static preview · the mascot is read-only</span>
+      </div>
+
+      <div class="glass-card" aria-label="bubo compact mode concept">
+        <header class="card-head">
+          <span class="mascot" aria-hidden="true">
+            <span class="face">
+              <span class="eye"></span>
+              <span class="eye"></span>
+            </span>
+          </span>
+
+          <div class="head-actions">
+            <button class="icon-button" type="button" aria-label="Pin window" title="Pin window">
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M9 3h6l-1 6 3 3v1H7v-1l3-3-1-6z" />
+                <path d="M12 13v8" />
+              </svg>
+            </button>
+
+            <button
+              class="icon-button"
+              type="button"
+              aria-label="Practice corrections"
+              title="Practice corrections"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="8" />
+                <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none" />
+              </svg>
+            </button>
+
+            <button class="icon-button" type="button" aria-label="Full mode" title="Full mode">
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 9h5V4M20 15h-5v5" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="conversation">
+          <div class="bubble assistant">
+            That sounds like a good weekend. Was the water warm?
+          </div>
+          <div class="bubble user">yes, and we eat a lot of seafood</div>
+        </div>
+
+        <div class="composer">
+          <input type="text" placeholder="Type in English..." aria-label="Message" />
+          <button class="send" type="button" aria-label="Send">
+            <svg
+              viewBox="0 0 24 24"
+              width="15"
+              height="15"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M5 12h13M13 6l6 6-6 6" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <p class="footnote">
+        Concept only: no window drag, no mascot grab, no correction card. Open this file directly
+        or through the Vite dev server.
+      </p>
+    </div>
+  </body>
+</html>
