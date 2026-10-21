@@ -22,6 +22,12 @@ export const GRAB = {
   stretch: 0.04,
   /** Cross-axis squash relative to the stretch, for volume. */
   squash: 0.35,
+  /** Anchor distance where the center-grab bias fades out, as a fraction of the radius. */
+  centerRadius: 0.45,
+  /** Whole-body follow factor for a grab at the center. */
+  centerFollow: 0.55,
+  /** Follow cap for a grab at the center. */
+  centerMaxFollow: 0.45,
 } as const;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -49,13 +55,39 @@ export function pullTarget(dx: number, dy: number, radius: number): Point {
 }
 
 /** Tiny whole-body translation target, so the grab reads as contact, not sliding. */
-export function followTarget(dx: number, dy: number, radius: number): Point {
-  return clampVector(dx * GRAB.follow, dy * GRAB.follow, safeRadius(radius) * GRAB.maxFollow);
+export function followTarget(dx: number, dy: number, radius: number, center = 0): Point {
+  const safe = safeRadius(radius);
+  const factor = GRAB.follow + (GRAB.centerFollow - GRAB.follow) * center;
+  const limit = safe * (GRAB.maxFollow + (GRAB.centerMaxFollow - GRAB.maxFollow) * center);
+  return clampVector(dx * factor, dy * factor, limit);
+}
+
+/**
+ * 1 for a grab right at the center, 0 once the anchor reaches `centerRadius`.
+ * A center grab has no cheek to pinch, so it should move the whole body more;
+ * edge grabs keep the local silicone behavior.
+ */
+export function centerBias(anchorX: number, anchorY: number, radius: number): number {
+  const distance = Math.hypot(anchorX, anchorY);
+  if (!Number.isFinite(distance)) return 0;
+  return clamp(1 - distance / (safeRadius(radius) * GRAB.centerRadius), 0, 1);
 }
 
 /** Clamps a grab point to the body, preserving its direction. */
 export function clampAnchor(x: number, y: number, radius: number): Point {
   return clampVector(x, y, safeRadius(radius) * GRAB.maxAnchor);
+}
+
+/** Centroid of a sampled outline, used to keep the face anchored to the body. */
+export function outlineCentroid(points: Point[]): Point {
+  if (points.length === 0) return { x: 0, y: 0 };
+  let x = 0;
+  let y = 0;
+  for (const point of points) {
+    x += point.x;
+    y += point.y;
+  }
+  return { x: x / points.length, y: y / points.length };
 }
 
 /**

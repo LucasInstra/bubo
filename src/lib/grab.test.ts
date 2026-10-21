@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { clampAnchor, deformOutline, followTarget, GRAB, gripPhysics, pullTarget } from "./grab";
+import {
+  centerBias,
+  clampAnchor,
+  deformOutline,
+  followTarget,
+  GRAB,
+  gripPhysics,
+  outlineCentroid,
+  pullTarget,
+} from "./grab";
 
 const radius = 100;
 
@@ -17,6 +26,18 @@ describe("grab targets", () => {
     const follow = followTarget(500, 500, radius);
     expect(Math.hypot(follow.x, follow.y)).toBeLessThanOrEqual(radius * GRAB.maxFollow);
     expect(Math.abs(follow.x)).toBeLessThan(radius * 0.1);
+  });
+
+  it("moves the body much more when grabbed at the center", () => {
+    const centered = followTarget(30, 0, radius, centerBias(0, 0, radius));
+    const edge = followTarget(30, 0, radius, centerBias(-radius * 0.7, 0, radius));
+    expect(centered.x).toBeGreaterThan(edge.x * 2);
+  });
+
+  it("fades the center bias out before the edge", () => {
+    expect(centerBias(0, 0, radius)).toBeCloseTo(1);
+    expect(centerBias(-radius * 0.2, 0, radius)).toBeGreaterThan(0);
+    expect(centerBias(-radius * 0.7, 0, radius)).toBe(0);
   });
 
   it("clamps a corner grab back onto the body", () => {
@@ -67,6 +88,28 @@ describe("deformOutline", () => {
     const largeWeight = Math.abs(large[1].x) / (radius * GRAB.maxPull);
     expect(largeWeight).toBeGreaterThan(smallWeight);
     expect(large.every((point) => Number.isFinite(point.x) && Number.isFinite(point.y))).toBe(true);
+  });
+});
+
+describe("outlineCentroid", () => {
+  it("finds the middle of a symmetric outline", () => {
+    const center = outlineCentroid([
+      { x: -10, y: 0 },
+      { x: 10, y: 0 },
+      { x: 0, y: -10 },
+      { x: 0, y: 10 },
+    ]);
+    expect(center.x).toBeCloseTo(0);
+    expect(center.y).toBeCloseTo(0);
+  });
+
+  it("follows a shifted outline and handles an empty one", () => {
+    const center = outlineCentroid([
+      { x: 4, y: 2 },
+      { x: 8, y: 6 },
+    ]);
+    expect(center).toEqual({ x: 6, y: 4 });
+    expect(outlineCentroid([])).toEqual({ x: 0, y: 0 });
   });
 });
 

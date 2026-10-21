@@ -1,9 +1,11 @@
 import { useEffect, useRef } from "react";
 import {
+  centerBias,
   clampAnchor,
   deformOutline,
   followTarget,
   gripPhysics,
+  outlineCentroid,
   pullTarget,
   type Point,
 } from "../lib/grab";
@@ -437,6 +439,7 @@ export function Mascot({
     const gaze = { x: 0, y: 0, tx: 0, ty: 0, seen: -10 };
     const radius = size * 0.3;
     const outline = bodyOutline(shape, radius);
+    const baseCenter = outlineCentroid(outline);
     const start = performance.now();
     let frame = 0;
     let smoothed = 0;
@@ -507,7 +510,8 @@ export function Mascot({
       drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
       // The body stays mostly planted: a tiny follow keeps contact, and the
       // capped local pull is what deforms the grabbed area.
-      const follow = followTarget(dx, dy, radius);
+      const bias = centerBias(drag.anchorX, drag.anchorY, radius);
+      const follow = followTarget(dx, dy, radius, bias);
       dragX.target = follow.x;
       dragY.target = follow.y;
       const pull = pullTarget(dx, dy, radius);
@@ -749,6 +753,11 @@ export function Mascot({
         radius,
       );
       const body = outline.length > 0 ? pathFromPoints(deformed) : bodyPath(shape, radius);
+      const deformedCenter = outlineCentroid(deformed);
+      const faceShift = {
+        x: deformedCenter.x - baseCenter.x,
+        y: deformedCenter.y - baseCenter.y,
+      };
       context.fillStyle = color;
       context.fill(body);
 
@@ -762,10 +771,10 @@ export function Mascot({
       context.fillRect(-radius * 1.4, -radius * 1.4, radius * 2.8, radius * 2.8);
       context.restore();
 
-      // Features stay rigid but are clipped by the deformed silhouette, so a
-      // big cheek pull cannot leave an eye floating outside the body.
+      // Face features follow the deformed silhouette's center so a center grab
+      // does not leave them behind, but they are never clipped or warped.
       context.save();
-      context.clip(body);
+      context.translate(faceShift.x, faceShift.y);
 
       // eyes: one flat shape each, no pupil; style, size, spacing, tilt and
       // color are configurable, and every solid shape folds when it blinks
