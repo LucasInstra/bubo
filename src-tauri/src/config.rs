@@ -64,7 +64,7 @@ impl Default for Settings {
             eye_tilt: "straight".to_string(),
             eye_color: "auto".to_string(),
             glass: true,
-            glass_opacity: 72,
+            glass_opacity: 95,
         }
     }
 }

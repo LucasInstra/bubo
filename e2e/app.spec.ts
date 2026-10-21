@@ -21,6 +21,17 @@ test("compact mode toggles back to full", async ({ page }) => {
   await expect(page.locator(".app.compact-liquid")).toHaveCount(0);
 });
 
+test("compact composer shows wrapped text", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=compact");
+  const area = page.locator(".compact-card .composer textarea");
+  await area.fill("first line\nsecond line");
+  const metrics = await area.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+  }));
+  expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.clientHeight + 1);
+});
+
 test("practice checks a correct answer", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=practice");
   await expect(page.getByText("how would you say this?")).toBeVisible();

@@ -2404,3 +2404,115 @@ button {
   backdrop-filter: blur(34px) saturate(175%);
   -webkit-backdrop-filter: blur(34px) saturate(175%);
 }
+
+/* glass identity for the controls, not just the background */
+
+.app.glass .ghost {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.app.glass .ghost:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.app.glass .ghost.icon {
+  border-radius: 50%;
+}
+
+.app.glass .ghost.icon.on {
+  border-color: rgba(139, 125, 255, 0.5);
+  background: var(--accent-soft);
+}
+
+.app.glass .primary {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.06)), var(--accent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 8px 20px rgba(0, 0, 0, 0.22);
+}
+
+.app.glass .primary:disabled {
+  box-shadow: none;
+}
+
+.app.glass .send {
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.07)), var(--accent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 8px 18px rgba(0, 0, 0, 0.22);
+}
+
+.app.glass .send:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.1)), #a396ff;
+}
+
+.app.glass .send:disabled {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.app.glass .send.stop {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.app.glass .status-pill {
+  padding: 2px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.app.glass .retry {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.app.glass .drill-seen {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.app.glass .combo-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.app.glass .brand-face {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.app.glass .brand strong,
+.app.glass .hero h1,
+.app.glass .settings-head > span {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+
+/* two lines fit in the compact pill before it starts to scroll */
+
+.compact-card .composer textarea {
+  max-height: 56px;
+}

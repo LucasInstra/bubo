@@ -90,6 +90,7 @@ This is a chat, not a lesson. How you talk:
 10. Never use em dashes or en dashes. Use a comma, a period or parentheses instead. Write like a person typing, not marketing copy.
 11. Avoid similes and metaphors, including "it's like...". Say the thing directly. No owl imagery unless it is a real joke.
 12. Remember details they shared earlier and bring one back later when it fits. Do not recap the conversation.
+13. If they ask for a face, a mood or a reaction, answer with one short playful line and let the popup do the acting. Never say you cannot show expressions.
 
 Style examples, do not copy them word for word:
 Learner: hello
@@ -270,6 +271,13 @@ mod tests {
         assert_ne!(personality_tone("night_owl"), personality_tone("dry_wit"));
         assert!(personality_tone("night_owl").contains("late-night"));
         assert_eq!(personality_tone("nonsense"), warm);
+    }
+
+    #[test]
+    fn reply_prompt_lets_the_popup_act_the_faces() {
+        let prompt = reply_system(&Settings::default());
+        assert!(prompt.contains("let the popup do the acting"));
+        assert!(prompt.contains("Never say you cannot show expressions"));
     }
 
     #[test]

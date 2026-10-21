@@ -12,6 +12,7 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { parseStoredFixes } from "./lib/format";
 import { ipc } from "./lib/ipc";
+import { moodRequest } from "./lib/mood";
 import type { Fix, Mood, Msg, OrbState, Settings, StoredMessage } from "./lib/types";
 import { DEFAULT_SETTINGS } from "./lib/types";
 import { useUpdater } from "./lib/updater";
@@ -166,7 +167,7 @@ export default function App() {
   }, [settings.compact]);
 
   const runTurn = useCallback(
-    async (text: string, base: Msg[] = messages) => {
+    async (text: string, requestedMood: Mood | null = null, base: Msg[] = messages) => {
       const value = text.trim();
       if (!value) return;
 
@@ -217,7 +218,9 @@ export default function App() {
             busyRef.current = false;
             setStatus("idle");
             setEnergy(0);
-            react("happy", 1200);
+            // A requested face keeps the spotlight; the usual happy nod is
+            // only for regular replies.
+            react(requestedMood ?? "happy", requestedMood ? 1800 : 1200);
             setMessages((current) =>
               current.map((message) =>
                 message.id === botMessage.id
@@ -299,11 +302,15 @@ export default function App() {
         setShowSettings(true);
         return false;
       }
+      // "do a happy face" is handled locally: the popup reacts right away,
+      // and the reply still goes to the model so the chat keeps flowing.
+      const requestedMood = moodRequest(text);
+      if (requestedMood) react(requestedMood, 3200);
       busyRef.current = true;
-      void runTurn(text);
+      void runTurn(text, requestedMood);
       return true;
     },
-    [hasKey, runTurn],
+    [hasKey, react, runTurn],
   );
 
   const retry = useCallback(
@@ -326,7 +333,7 @@ export default function App() {
       );
       setMessages(base);
       busyRef.current = true;
-      void runTurn(user.content, base);
+      void runTurn(user.content, null, base);
     },
     [messages, runTurn, hasKey],
   );

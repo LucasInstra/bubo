@@ -702,6 +702,8 @@ export function Mascot({
       const sadEyes = moodSad && moodBlend > 0.4;
       const surprisedEyes = moodSurprised && moodBlend > 0.4;
       const surprisedScale = surprisedEyes ? 1.22 : 1;
+      const sadEyeScale = sadEyes ? 0.8 : 1;
+      const sadEyeWidthScale = sadEyes ? 0.95 : 1;
 
       // Point-based grip: the silhouette itself deforms around the grabbed
       // spot, with only a tiny body translation. The blob stays planted while
@@ -812,7 +814,8 @@ export function Mascot({
         radius * 0.05 +
         gaze.y * radius * 0.15 +
         streamBob +
-        (surprisedEyes ? -radius * 0.03 * moodBlend : 0);
+        (surprisedEyes ? -radius * 0.03 * moodBlend : 0) +
+        (sadEyes ? radius * 0.02 * moodBlend : 0);
 
       for (const side of [-1, 1]) {
         const style = eyeStyle === "wink" ? (side === -1 ? "arcs" : "bars") : eyeStyle;
@@ -830,22 +833,21 @@ export function Mascot({
         context.rotate(style === "angry" ? side * 0.34 : side * tiltAngle);
 
         // Mood and blink must reach every eye style, including the arc-based
-        // ones. Apply the vertical fold to the whole eye drawing first.
-        context.scale(surprisedScale, Math.max(0.08, eyeOpen * streamPulse) * surprisedScale);
+        // ones. Apply the fold to the whole eye drawing first.
+        context.scale(
+          surprisedScale * sadEyeWidthScale,
+          Math.max(0.08, eyeOpen * streamPulse) * surprisedScale * sadEyeScale,
+        );
 
-        if (sadEyes) {
-          // A sad eye is a downward arc, independent of the chosen style.
-          // It is the clearest read without a mouth, and it keeps the same
-          // spacing-safe width for every eye shape.
-          const sadRadius = Math.min(
-            radius * 0.22 * sizeScale,
-            Math.max(radius * 0.12, eyeOffset - radius * 0.04),
-          );
+        if (sadEyes && drawArc) {
+          // A closed, tired eye: a short lid that slopes down toward the
+          // outside, instead of the happy arc.
           context.strokeStyle = ink;
-          context.lineWidth = Math.max(1.5, radius * 0.055 * sizeScale);
+          context.lineWidth = Math.max(1.4, eyeWidth * 0.6);
           context.lineCap = "round";
           context.beginPath();
-          context.arc(0, -eyeHeight * 0.1, sadRadius, Math.PI * 0.16, Math.PI * 0.84);
+          context.moveTo(-side * eyeWidth * 0.7, -eyeWidth * 0.1);
+          context.lineTo(side * eyeWidth * 0.7, eyeWidth * 0.16);
           context.stroke();
         } else if (drawArc) {
           context.strokeStyle = ink;
@@ -878,6 +880,24 @@ export function Mascot({
         }
 
         context.restore();
+      }
+
+      if (sadEyes) {
+        // Sad brows are the main read: inner ends up, outer ends down. They
+        // sit above whatever eye shape was chosen, so the mood survives every
+        // style, including the closed ones.
+        context.strokeStyle = ink;
+        context.lineWidth = Math.max(1.4, radius * 0.05 * sizeScale);
+        context.lineCap = "round";
+        const browHalf = Math.min(radius * 0.13 * sizeScale, (eyeOffset - radius * 0.03) / 2);
+        const browY = eyeY - radius * 0.25 * sizeScale;
+        for (const side of [-1, 1]) {
+          const eyeX = side * eyeOffset + gaze.x * radius * 0.24;
+          context.beginPath();
+          context.moveTo(eyeX - side * browHalf, browY - radius * 0.035);
+          context.lineTo(eyeX + side * browHalf, browY + radius * 0.035);
+          context.stroke();
+        }
       }
 
       if (showMouth) {

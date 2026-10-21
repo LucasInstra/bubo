@@ -158,5 +158,5 @@ export const DEFAULT_SETTINGS: Settings = {
   textSize: "normal",
   noteLanguage: "en",
   glass: true,
-  glassOpacity: 72,
+  glassOpacity: 95,
 };
