@@ -25,20 +25,19 @@ Because the useful part of learning a language is the five minutes between real 
 - **Conversation first**: replies stream token by token; a separate pass returns corrections as strict JSON, so the card never depends on the model following inline formatting.
 - **Corrections that stick**: every fix is stored, linked to the message that produced it, and scheduled with a 1 / 3 / 7 / 21 / 45 day ladder. A miss comes back in ten minutes.
 - **Practice mode**: rewrite the wrong sentence, get instant feedback, see the original context. Skip the due cards or reset the deck from settings.
+- **Progress**: streak, accuracy, a 14-day activity strip and the mistakes you practice most, all from the local database.
 - **Local by default**: API key in the Windows Credential Manager, history in SQLite, no telemetry, no account.
 - **Recoverable**: stop a reply mid-stream, retry a failed turn, copy or delete a message.
 
 ## Screenshots
 
-| Chat and corrections | Practice |
-| --- | --- |
-| ![Chat](docs/screenshots/chat.png) | ![Practice](docs/screenshots/practice.png) |
+| Chat and corrections | Practice | Progress |
+| --- | --- | --- |
+| ![Chat](docs/screenshots/chat.png) | ![Practice](docs/screenshots/practice.png) | ![Progress](docs/screenshots/progress.png) |
 
-| Buddy panel | Compact mode |
-| --- | --- |
-| ![Buddy panel](docs/screenshots/buddy.png) | ![Compact mode](docs/screenshots/compact.png) |
-
-The empty state is in `docs/screenshots/empty.png`.
+| Buddy panel | Compact mode | Empty state |
+| --- | --- | --- |
+| ![Buddy panel](docs/screenshots/buddy.png) | ![Compact mode](docs/screenshots/compact.png) | ![Empty state](docs/screenshots/empty.png) |
 
 ## Install
 
@@ -149,7 +148,6 @@ src-tauri/src/
 ## Roadmap
 
 - Session history and a browsable archive.
-- Progress view: accuracy, streak, most frequent mistakes.
 - Per-message "practice this" on the correction card.
 - Tighter Content Security Policy for the webview.
 - Voice practice (speak and listen), later, deliberately.

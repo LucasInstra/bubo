@@ -398,6 +398,12 @@ fn drill_stats(state: State<'_, AppState>) -> Result<store::DrillStats, String> 
 }
 
 #[tauri::command]
+fn progress_stats(state: State<'_, AppState>) -> Result<store::ProgressStats, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::progress_stats(&db).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn drill_skip_due(state: State<'_, AppState>) -> Result<usize, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     store::skip_due(&db).map_err(|e| e.to_string())
@@ -587,6 +593,7 @@ pub fn run() {
             history,
             clear_history,
             drill_stats,
+            progress_stats,
             drill_next,
             drill_review,
             drill_skip_due,

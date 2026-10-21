@@ -33,6 +33,40 @@ pub struct DrillStats {
     pub due: i64,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DayActivity {
+    pub date: String,
+    pub messages: i64,
+    pub reviews: i64,
+    pub correct: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TopMistake {
+    pub wrong: String,
+    pub right: String,
+    pub note: String,
+    pub streak: i64,
+    pub attempts: i64,
+    pub correct: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProgressStats {
+    pub streak: i64,
+    pub messages: i64,
+    pub cards: i64,
+    pub due: i64,
+    pub reviews: i64,
+    pub correct: i64,
+    pub accuracy: f64,
+    pub days: Vec<DayActivity>,
+    pub top: Vec<TopMistake>,
+}
+
 pub fn open(path: PathBuf) -> rusqlite::Result<Connection> {
     let conn = Connection::open(path)?;
     init(&conn)?;
@@ -75,7 +109,15 @@ fn init(conn: &Connection) -> rusqlite::Result<()> {
             streak INTEGER NOT NULL DEFAULT 0,
             due_at INTEGER NOT NULL,
             UNIQUE(wrong, right)
-        );",
+        );
+        CREATE TABLE IF NOT EXISTS reviews (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fix_id INTEGER NOT NULL,
+            correct INTEGER NOT NULL,
+            reviewed_at INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_reviews_fix ON reviews(fix_id);
+        CREATE INDEX IF NOT EXISTS idx_reviews_at ON reviews(reviewed_at);",
     )?;
     // Older databases predate the link between a correction and its message.
     let _ = conn.execute("ALTER TABLE fixes ADD COLUMN message_id INTEGER", []);
@@ -109,6 +151,10 @@ pub fn delete(conn: &Connection, id: i64) -> rusqlite::Result<()> {
 
 /// Deletes a message together with the corrections that point at it.
 pub fn delete_message(conn: &Connection, id: i64) -> rusqlite::Result<()> {
+    conn.execute(
+        "DELETE FROM reviews WHERE fix_id IN (SELECT id FROM fixes WHERE message_id = ?1)",
+        [id],
+    )?;
     conn.execute("DELETE FROM fixes WHERE message_id = ?1", [id])?;
     delete(conn, id)
 }
@@ -190,6 +236,102 @@ pub fn drill_stats(conn: &Connection) -> rusqlite::Result<DrillStats> {
     )
 }
 
+const STREAK_SQL: &str = "
+WITH activity AS (
+    SELECT DISTINCT date(created_at / 1000, 'unixepoch', 'localtime') AS day FROM messages
+    UNION
+    SELECT DISTINCT date(reviewed_at / 1000, 'unixepoch', 'localtime') FROM reviews
+),
+ranked AS (
+    SELECT day, julianday(day) - ROW_NUMBER() OVER (ORDER BY day) AS grp FROM activity
+)
+SELECT CASE
+    WHEN (SELECT MAX(day) FROM activity) IN (date('now', 'localtime'), date('now', 'localtime', '-1 day'))
+    THEN (SELECT COUNT(*) FROM ranked WHERE grp = (SELECT grp FROM ranked ORDER BY day DESC LIMIT 1))
+    ELSE 0
+END";
+
+const DAYS_SQL: &str = "
+WITH RECURSIVE days(d) AS (
+    SELECT date('now', 'localtime', '-13 days')
+    UNION ALL
+    SELECT date(d, '+1 day') FROM days WHERE d < date('now', 'localtime')
+)
+SELECT d,
+    (SELECT COUNT(*) FROM messages WHERE date(created_at / 1000, 'unixepoch', 'localtime') = d),
+    (SELECT COUNT(*) FROM reviews WHERE date(reviewed_at / 1000, 'unixepoch', 'localtime') = d),
+    (SELECT COUNT(*) FROM reviews WHERE correct = 1 AND date(reviewed_at / 1000, 'unixepoch', 'localtime') = d)
+FROM days
+ORDER BY d";
+
+const TOP_SQL: &str = "
+SELECT f.wrong, f.right, f.note, f.streak, COUNT(r.id), COALESCE(SUM(r.correct), 0)
+FROM fixes f
+LEFT JOIN reviews r ON r.fix_id = f.id
+GROUP BY f.id
+ORDER BY COUNT(r.id) DESC, f.created_at DESC
+LIMIT 5";
+
+pub fn progress_stats(conn: &Connection) -> rusqlite::Result<ProgressStats> {
+    let now = now();
+    let messages = conn.query_row("SELECT COUNT(*) FROM messages", [], |row| row.get(0))?;
+    let (cards, due) = conn.query_row(
+        "SELECT COUNT(*), COALESCE(SUM(CASE WHEN due_at <= ?1 THEN 1 ELSE 0 END), 0) FROM fixes",
+        [now],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+    let (reviews, correct) = conn.query_row(
+        "SELECT COUNT(*), COALESCE(SUM(correct), 0) FROM reviews",
+        [],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+    let streak = conn
+        .query_row(STREAK_SQL, [], |row| row.get::<_, i64>(0))
+        .unwrap_or(0);
+
+    let mut day_statement = conn.prepare(DAYS_SQL)?;
+    let days = day_statement
+        .query_map([], |row| {
+            Ok(DayActivity {
+                date: row.get(0)?,
+                messages: row.get(1)?,
+                reviews: row.get(2)?,
+                correct: row.get(3)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+
+    let mut top_statement = conn.prepare(TOP_SQL)?;
+    let top = top_statement
+        .query_map([], |row| {
+            Ok(TopMistake {
+                wrong: row.get(0)?,
+                right: row.get(1)?,
+                note: row.get(2)?,
+                streak: row.get(3)?,
+                attempts: row.get(4)?,
+                correct: row.get(5)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+
+    Ok(ProgressStats {
+        streak,
+        messages,
+        cards,
+        due,
+        reviews,
+        correct,
+        accuracy: if reviews > 0 {
+            correct as f64 / reviews as f64
+        } else {
+            0.0
+        },
+        days,
+        top,
+    })
+}
+
 /// Removes cards whose only difference is letter case.
 pub fn purge_case_only(conn: &Connection) -> rusqlite::Result<usize> {
     let mut statement = conn.prepare("SELECT id, wrong, right FROM fixes")?;
@@ -207,6 +349,7 @@ pub fn purge_case_only(conn: &Connection) -> rusqlite::Result<usize> {
     let mut removed = 0;
     for (id, wrong, right) in rows {
         if wrong.trim().to_lowercase() == right.trim().to_lowercase() {
+            conn.execute("DELETE FROM reviews WHERE fix_id = ?1", [id])?;
             conn.execute("DELETE FROM fixes WHERE id = ?1", [id])?;
             removed += 1;
         }
@@ -226,6 +369,7 @@ pub fn skip_due(conn: &Connection) -> rusqlite::Result<usize> {
 /// Wipes the practice queue and the corrections stored on messages, so the
 /// backfill on the next start does not bring them back.
 pub fn reset_fixes(conn: &Connection) -> rusqlite::Result<usize> {
+    conn.execute("DELETE FROM reviews", [])?;
     let removed = conn.execute("DELETE FROM fixes", [])?;
     conn.execute("UPDATE messages SET fixes = NULL", [])?;
     Ok(removed)
@@ -293,10 +437,15 @@ pub fn review_drill(
     } else {
         600_000
     };
+    let reviewed = now();
 
     conn.execute(
         "UPDATE fixes SET streak = ?1, due_at = ?2 WHERE id = ?3",
-        params![streak, now() + delay, id],
+        params![streak, reviewed + delay, id],
+    )?;
+    conn.execute(
+        "INSERT INTO reviews (fix_id, correct, reviewed_at) VALUES (?1, ?2, ?3)",
+        params![id, if correct { 1 } else { 0 }, reviewed],
     )?;
 
     Ok(Some(DrillItem { streak, ..item }))
@@ -637,5 +786,43 @@ mod tests {
                 "expected {expected_days} days, got {delay} ms"
             );
         }
+    }
+
+    #[test]
+    fn progress_tracks_reviews_and_reset() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        insert(&conn, "user", "i go yesterday", None).unwrap();
+        let bot = insert(&conn, "assistant", "ok", None).unwrap();
+        super::save_fixes_for_message(
+            &conn,
+            &[Fix {
+                wrong: "i go".to_string(),
+                right: "I went".to_string(),
+                note: "passado".to_string(),
+            }],
+            Some(bot),
+        )
+        .unwrap();
+
+        let item = super::next_drill(&conn, true, None).unwrap().unwrap();
+        super::review_drill(&conn, item.id, true).unwrap();
+
+        let stats = super::progress_stats(&conn).unwrap();
+        assert_eq!(stats.messages, 2);
+        assert_eq!(stats.cards, 1);
+        assert_eq!(stats.reviews, 1);
+        assert_eq!(stats.correct, 1);
+        assert!((stats.accuracy - 1.0).abs() < f64::EPSILON);
+        assert_eq!(stats.days.len(), 14);
+        assert_eq!(stats.top[0].attempts, 1);
+        assert_eq!(stats.top[0].correct, 1);
+        assert!(stats.streak >= 1);
+
+        super::reset_fixes(&conn).unwrap();
+        let after = super::progress_stats(&conn).unwrap();
+        assert_eq!(after.reviews, 0);
+        assert_eq!(after.cards, 0);
     }
 }

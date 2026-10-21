@@ -61,6 +61,34 @@ export interface DrillStats {
   due: number;
 }
 
+export interface DayActivity {
+  date: string;
+  messages: number;
+  reviews: number;
+  correct: number;
+}
+
+export interface TopMistake {
+  wrong: string;
+  right: string;
+  note: string;
+  streak: number;
+  attempts: number;
+  correct: number;
+}
+
+export interface ProgressStats {
+  streak: number;
+  messages: number;
+  cards: number;
+  due: number;
+  reviews: number;
+  correct: number;
+  accuracy: number;
+  days: DayActivity[];
+  top: TopMistake[];
+}
+
 export interface StoredMessage {
   id: number;
   role: Role;

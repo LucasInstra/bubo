@@ -5,6 +5,7 @@ import { BuddyPanel } from "./components/BuddyPanel";
 import { Drill } from "./components/Drill";
 import { Mascot } from "./components/Mascot";
 import { Message } from "./components/Message";
+import { ProgressPanel } from "./components/ProgressPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { parseStoredFixes } from "./lib/format";
 import { ipc } from "./lib/ipc";
@@ -48,6 +49,7 @@ export default function App() {
   const [hasKey, setHasKey] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showBuddy, setShowBuddy] = useState(false);
+  const [showProgress, setShowProgress] = useState(false);
   const [mood, setMood] = useState<Mood>("idle");
   const [status, setStatus] = useState<OrbState>("idle");
   const [energy, setEnergy] = useState(0);
@@ -114,6 +116,7 @@ export default function App() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         if (showDrill) setShowDrill(false);
+        else if (showProgress) setShowProgress(false);
         else if (showBuddy) setShowBuddy(false);
         else if (showSettings) setShowSettings(false);
         else void ipc.hideWindow();
@@ -121,7 +124,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [showSettings, showBuddy, showDrill]);
+  }, [showSettings, showBuddy, showProgress, showDrill]);
 
   useEffect(
     () => () => {
@@ -384,6 +387,7 @@ export default function App() {
             aria-label="Customize buddy"
             onClick={() => {
               setShowSettings(false);
+              setShowProgress(false);
               setShowBuddy(true);
             }}
           >
@@ -443,6 +447,27 @@ export default function App() {
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="1.7"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+                <button
+                  className="ghost icon"
+                  title="Progress"
+                  aria-label="Progress"
+                  onClick={() => {
+                    setShowSettings(false);
+                    setShowBuddy(false);
+                    setShowDrill(false);
+                    setShowProgress(true);
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                    <path
+                      d="M5 19v-6M12 19V6M19 19v-9"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
                       strokeLinecap="round"
                     />
                   </svg>
@@ -521,6 +546,7 @@ export default function App() {
                 aria-label="Settings"
                 onClick={() => {
                   setShowBuddy(false);
+                  setShowProgress(false);
                   setShowSettings(true);
                 }}
               >
@@ -647,6 +673,16 @@ export default function App() {
           onSend={send}
           onStop={stop}
         />
+
+        {showProgress && (
+          <ProgressPanel
+            onClose={() => setShowProgress(false)}
+            onPractice={() => {
+              setShowProgress(false);
+              setShowDrill(true);
+            }}
+          />
+        )}
 
         {showBuddy && (
           <BuddyPanel

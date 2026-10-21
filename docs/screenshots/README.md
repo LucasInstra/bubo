@@ -6,6 +6,7 @@ The PNGs here are captured from the real UI with sample data. Replace them whene
 | --- | --- | --- |
 | `chat.png` | 420 x 640 | A conversation with the corrections card and composer |
 | `practice.png` | 420 x 640 | A drill card with the "you wrote" context and streak |
+| `progress.png` | 420 x 640 | Streak, accuracy, 14-day activity and most practiced mistakes |
 | `buddy.png` | 420 x 640 | Buddy panel with the personality grid |
 | `compact.png` | 400 x 280 | Horizontal compact card with the header mascot |
 | `empty.png` | 420 x 640 | First screen with the mascot, practice chip and suggestions |

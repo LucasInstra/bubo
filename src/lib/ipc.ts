@@ -1,6 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { DrillItem, DrillStats, Fix, Msg, Settings, StoredMessage } from "./types";
+import type {
+  DrillItem,
+  DrillStats,
+  Fix,
+  Msg,
+  ProgressStats,
+  Settings,
+  StoredMessage,
+} from "./types";
 
 interface DeltaEvent {
   requestId: string;
@@ -43,6 +51,7 @@ export const ipc = {
   clearHistory: () => invoke<void>("clear_history"),
   deleteMessage: (id: number) => invoke<void>("delete_message", { id }),
   drillStats: () => invoke<DrillStats>("drill_stats"),
+  progressStats: () => invoke<ProgressStats>("progress_stats"),
   drillNext: (includeFuture: boolean, excludeId: number | null = null) =>
     invoke<DrillItem | null>("drill_next", { includeFuture, excludeId }),
   drillReview: (id: number, correct: boolean) =>
