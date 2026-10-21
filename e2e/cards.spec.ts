@@ -50,3 +50,31 @@ test("deletes a correction from the card", async ({ page }) => {
     },
   });
 });
+
+test("explains a correction inline", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=app");
+  await expect(page.locator(".fixes")).toBeVisible();
+
+  const explain = page.getByRole("button", { name: "Explain this correction" });
+  await explain.click();
+
+  const explanation = page.locator(".fix-explain");
+  await expect(explanation).toBeVisible();
+  await expect(explanation).toContainText(
+    "Use the past simple for a finished action. Add a time marker when it helps.",
+  );
+  await expect(explanation).toContainText("I went to the gym yesterday.");
+  await expect(explanation).toContainText("She called me last night.");
+
+  expect(await calls(page)).toContainEqual({
+    cmd: "explain_fix",
+    args: {
+      wrong: "i go to the gym yesterday",
+      right: "I went to the gym yesterday",
+      note: "past simple",
+    },
+  });
+
+  await explain.click();
+  await expect(explanation).toHaveCount(0);
+});

@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import { stripLegacyFixes } from "../lib/format";
+import { ipc } from "../lib/ipc";
 import type { Fix, Msg } from "../lib/types";
 
 interface MessageProps {
@@ -28,6 +29,10 @@ export const Message = memo(function Message({
   const [confirmingFix, setConfirmingFix] = useState<string | null>(null);
   const [busyFix, setBusyFix] = useState<string | null>(null);
   const [fixError, setFixError] = useState("");
+  const [explaining, setExplaining] = useState<string | null>(null);
+  const [explanation, setExplanation] = useState<{ key: string; text: string } | null>(null);
+  const [explainError, setExplainError] = useState("");
+  const [explainErrorKey, setExplainErrorKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (!confirming) return;
@@ -58,6 +63,28 @@ export const Message = memo(function Message({
       setFixError("could not delete this correction");
     } finally {
       setBusyFix(null);
+    }
+  };
+
+  const explain = async (fix: Fix) => {
+    const key = fixKey(fix);
+    if (explanation?.key === key) {
+      setExplanation(null);
+      return;
+    }
+
+    setExplainError("");
+    setExplainErrorKey(null);
+    setExplaining(key);
+    try {
+      const text = await ipc.explainFix(fix.wrong, fix.right, fix.note);
+      setExplanation({ key, text });
+    } catch (problem) {
+      console.error("could not explain the correction", problem);
+      setExplainError("could not explain this correction");
+      setExplainErrorKey(key);
+    } finally {
+      setExplaining(null);
     }
   };
 
@@ -129,29 +156,42 @@ export const Message = memo(function Message({
                   <span className="fix-right">{fix.right}</span>
                 </div>
                 {fix.note && <div className="fix-note">{fix.note}</div>}
-                {(onPracticeFix || onDeleteFix) && (
-                  <div className="fix-actions">
-                    {onPracticeFix && (
-                      <button
-                        aria-label="Practice this correction"
-                        disabled={!message.dbId}
-                        onClick={() => onPracticeFix(message, fix)}
-                      >
-                        practice
-                      </button>
-                    )}
-                    {onDeleteFix && (
-                      <button
-                        className="danger"
-                        aria-label="Delete this correction"
-                        disabled={!message.dbId || busyFix === key}
-                        onClick={() => void removeFix(fix)}
-                      >
-                        {confirmingFix === key ? "erase?" : busyFix === key ? "…" : "delete"}
-                      </button>
-                    )}
+                {explanation?.key === key && (
+                  <div className="fix-explain" role="status">
+                    {explanation.text}
                   </div>
                 )}
+                {explainError && explainErrorKey === key && (
+                  <div className="fix-error">{explainError}</div>
+                )}
+                <div className="fix-actions">
+                  <button
+                    aria-label="Explain this correction"
+                    disabled={explaining === key}
+                    onClick={() => void explain(fix)}
+                  >
+                    {explaining === key ? "explaining..." : "explain"}
+                  </button>
+                  {onPracticeFix && (
+                    <button
+                      aria-label="Practice this correction"
+                      disabled={!message.dbId}
+                      onClick={() => onPracticeFix(message, fix)}
+                    >
+                      practice
+                    </button>
+                  )}
+                  {onDeleteFix && (
+                    <button
+                      className="danger"
+                      aria-label="Delete this correction"
+                      disabled={!message.dbId || busyFix === key}
+                      onClick={() => void removeFix(fix)}
+                    >
+                      {confirmingFix === key ? "erase?" : busyFix === key ? "…" : "delete"}
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}

@@ -11,11 +11,14 @@ test("settings switches provider and base URL", async ({ page }) => {
 
 test("compact mode toggles back to full", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=compact");
-  await expect(page.locator(".app.compact")).toBeVisible();
-  await expect(page.locator(".brand-face")).toBeVisible();
+  await expect(page.locator(".app.compact-liquid")).toBeVisible();
+  await expect(page.locator(".compact-face")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Pin window" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Hide" })).toBeVisible();
+  await expect(page.locator(".compact-card .composer textarea")).toBeVisible();
 
   await page.getByRole("button", { name: "Full mode" }).click();
-  await expect(page.locator(".app.compact")).toHaveCount(0);
+  await expect(page.locator(".app.compact-liquid")).toHaveCount(0);
 });
 
 test("practice checks a correct answer", async ({ page }) => {

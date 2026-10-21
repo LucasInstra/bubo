@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Composer } from "./components/Composer";
 import { BuddyPanel } from "./components/BuddyPanel";
+import { CompactView } from "./components/CompactView";
 import { Drill } from "./components/Drill";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { Mascot } from "./components/Mascot";
@@ -450,6 +451,25 @@ export default function App() {
     "--accent-soft": withAlpha(accent, 0.16),
     "--stage-size": `${stageSize}px`,
   } as CSSProperties;
+
+  if (settings.compact && hasKey) {
+    return (
+      <div className={`app size-${settings.textSize} compact-liquid`} style={accentVars}>
+        <CompactView
+          settings={settings}
+          messages={messages}
+          status={status}
+          mood={mood}
+          pinned={pinned}
+          onTogglePin={togglePin}
+          onFull={toggleCompact}
+          onHide={() => void ipc.hideWindow()}
+          onSend={send}
+          onStop={stop}
+        />
+      </div>
+    );
+  }
 
   return (
     <div

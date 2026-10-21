@@ -71,6 +71,8 @@ export const ipc = {
     invoke<DrillItem | null>("drill_focus", { wrong, right }),
   deleteFix: (messageId: number, wrong: string, right: string) =>
     invoke<void>("delete_fix", { messageId, wrong, right }),
+  explainFix: (wrong: string, right: string, note: string) =>
+    invoke<string>("explain_fix", { wrong, right, note }),
   drillSkipDue: () => invoke<number>("drill_skip_due"),
   drillReset: () => invoke<number>("drill_reset"),
   hideWindow: () => invoke<void>("hide_window"),

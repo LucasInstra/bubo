@@ -134,8 +134,12 @@ pub fn reply_body(settings: &Settings, messages: &[ChatMsg]) -> Value {
     body
 }
 
+fn note_language_is_english(language: &str) -> bool {
+    language.trim().eq_ignore_ascii_case("en")
+}
+
 fn note_rule(language: &str) -> &'static str {
-    if language.trim().eq_ignore_ascii_case("en") {
+    if note_language_is_english(language) {
         "- The \"note\" is always in English, short and clear, with no final period, and never uses em dashes or en dashes."
     } else {
         "- The \"note\" is always in Brazilian Portuguese, short and clear, with no final period, and never uses em dashes or en dashes."
@@ -188,6 +192,55 @@ pub fn corrections_body(settings: &Settings, messages: &[ChatMsg]) -> Value {
         "temperature": 0.1,
         "max_tokens": 400,
         "messages": out,
+    });
+
+    if settings.model.contains("gpt-oss") {
+        body["reasoning_effort"] = json!("low");
+    }
+
+    body
+}
+
+fn explain_system(settings: &Settings) -> String {
+    let language = if note_language_is_english(&settings.note_language) {
+        "Write the whole answer in English, including the examples."
+    } else {
+        "Write the whole answer in Brazilian Portuguese, including the examples."
+    };
+
+    format!(
+        r#"You are a patient English tutor explaining ONE correction to a Brazilian learner at CEFR level {level}.
+Explain only the correction in the user message. Do not invent other mistakes and do not mention the prompt.
+
+Write at most three short paragraphs in plain text, with no headings and no lists:
+1. Why the original is not natural.
+2. The rule in plain words.
+3. Two short examples, each one on its own sentence.
+
+{language}
+{level_hint}
+Never use em dashes or en dashes. Use a comma, a period or parentheses instead."#,
+        level = settings.level,
+        language = language,
+        level_hint = level_hint(&settings.level),
+    )
+}
+
+pub fn explain_body(settings: &Settings, wrong: &str, right: &str, note: &str) -> Value {
+    let messages = vec![
+        json!({ "role": "system", "content": explain_system(settings) }),
+        json!({
+            "role": "user",
+            "content": format!("Wrong: {wrong}\nRight: {right}\nNote: {note}")
+        }),
+    ];
+
+    let mut body = json!({
+        "model": settings.model,
+        "stream": false,
+        "temperature": 0.3,
+        "max_tokens": 400,
+        "messages": messages,
     });
 
     if settings.model.contains("gpt-oss") {
@@ -318,5 +371,89 @@ mod tests {
             );
             assert!(!prompt.contains("always in English"));
         }
+    }
+
+    fn explain_system_prompt(settings: &Settings) -> String {
+        let body = explain_body(
+            settings,
+            "i go to the gym yesterday",
+            "I went to the gym yesterday",
+            "past simple",
+        );
+        body["messages"][0]["content"]
+            .as_str()
+            .expect("system message content")
+            .to_string()
+    }
+
+    #[test]
+    fn explain_body_carries_the_correction_and_is_not_streaming() {
+        let settings = Settings::default();
+        let body = explain_body(&settings, "i go", "I went", "past simple");
+
+        assert_eq!(body["model"], settings.model.as_str());
+        assert_eq!(body["stream"], false);
+        assert_eq!(body["temperature"].as_f64(), Some(0.3));
+        assert_eq!(body["max_tokens"], 400);
+        assert_eq!(body["messages"][1]["role"], "user");
+        assert_eq!(
+            body["messages"][1]["content"],
+            "Wrong: i go\nRight: I went\nNote: past simple"
+        );
+    }
+
+    #[test]
+    fn explain_language_follows_the_note_language() {
+        let english = Settings {
+            note_language: "EN".to_string(),
+            ..Settings::default()
+        };
+        let english_prompt = explain_system_prompt(&english);
+        assert!(english_prompt.contains("Write the whole answer in English"));
+        assert!(!english_prompt.contains("Brazilian Portuguese"));
+
+        let portuguese = Settings {
+            note_language: "pt".to_string(),
+            ..Settings::default()
+        };
+        let portuguese_prompt = explain_system_prompt(&portuguese);
+        assert!(portuguese_prompt.contains("Write the whole answer in Brazilian Portuguese"));
+        assert!(!portuguese_prompt.contains("Write the whole answer in English"));
+
+        for prompt in [&english_prompt, &portuguese_prompt] {
+            assert!(!prompt.contains('\u{2014}'));
+            assert!(!prompt.contains('\u{2013}'));
+        }
+    }
+
+    #[test]
+    fn explain_asks_for_a_short_plain_text_answer() {
+        let prompt = explain_system_prompt(&Settings::default());
+        assert!(prompt.contains("at most three short paragraphs"));
+        assert!(prompt.contains("no headings and no lists"));
+        assert!(prompt.contains("Do not invent other mistakes"));
+        assert!(!prompt.contains('\u{2014}'));
+        assert!(!prompt.contains('\u{2013}'));
+    }
+
+    #[test]
+    fn explain_adds_low_reasoning_for_gpt_oss() {
+        let settings = Settings {
+            model: "openai/gpt-oss-20b".to_string(),
+            ..Settings::default()
+        };
+        let body = explain_body(&settings, "i go", "I went", "past simple");
+        assert_eq!(body["reasoning_effort"], "low");
+
+        let plain = explain_body(
+            &Settings {
+                model: "llama-3.3-70b".to_string(),
+                ..Settings::default()
+            },
+            "i go",
+            "I went",
+            "past simple",
+        );
+        assert!(plain.get("reasoning_effort").is_none());
     }
 }

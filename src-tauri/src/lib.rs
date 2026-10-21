@@ -437,6 +437,36 @@ async fn chat(
 }
 
 #[tauri::command]
+async fn explain_fix(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    wrong: String,
+    right: String,
+    note: String,
+) -> Result<String, String> {
+    let client = state.http.clone();
+    let settings = config::load_settings(&app)?;
+    let api_key =
+        config::load_api_key()?.ok_or("No API key yet. Open settings and paste your Groq key.")?;
+
+    let body = prompt::explain_body(&settings, &wrong, &right, &note);
+    let text = llm::complete(&app, &client, &settings, &api_key, body).await?;
+    let text = llm::tidy(&text).trim().to_string();
+
+    if text.is_empty() {
+        return Err("The model returned an empty explanation. Try again.".to_string());
+    }
+
+    log::write(
+        &app,
+        "info",
+        &format!("explanation done chars={}", text.len()),
+    );
+
+    Ok(text)
+}
+
+#[tauri::command]
 fn history(state: State<'_, AppState>) -> Result<Vec<store::StoredMessage>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let session = store::current_session(&db).map_err(|e| e.to_string())?;
@@ -746,6 +776,7 @@ pub fn run() {
             cancel_reply,
             delete_message,
             chat,
+            explain_fix,
             history,
             current_session,
             list_sessions,
