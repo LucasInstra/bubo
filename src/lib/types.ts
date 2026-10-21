@@ -106,6 +106,36 @@ export interface SessionSummary {
   preview: string | null;
 }
 
+export type LookSettings = Pick<
+  Settings,
+  | "shape"
+  | "color"
+  | "eyeStyle"
+  | "eyeSize"
+  | "eyeSpacing"
+  | "eyeTilt"
+  | "eyeColor"
+  | "showMouth"
+  | "mouthStyle"
+  | "mouthSize"
+  | "mouthColor"
+>;
+
+/** The original bubo face. Kept next to the default settings so the reset control never drifts. */
+export const DEFAULT_LOOK: LookSettings = {
+  shape: "round",
+  color: "#8b7dff",
+  eyeStyle: "bars",
+  eyeSize: "large",
+  eyeSpacing: "normal",
+  eyeTilt: "straight",
+  eyeColor: "auto",
+  showMouth: false,
+  mouthStyle: "line",
+  mouthSize: "medium",
+  mouthColor: "auto",
+};
+
 export const DEFAULT_SETTINGS: Settings = {
   baseUrl: "https://api.groq.com/openai/v1",
   model: "openai/gpt-oss-120b",
@@ -117,18 +147,8 @@ export const DEFAULT_SETTINGS: Settings = {
   pinned: true,
   compact: false,
   ignoreCapitalization: true,
-  shape: "round",
-  color: "#8b7dff",
-  showMouth: true,
-  mouthStyle: "line",
-  mouthSize: "medium",
-  mouthColor: "auto",
+  ...DEFAULT_LOOK,
   showStatus: true,
   accentFromMascot: true,
   textSize: "normal",
-  eyeStyle: "bars",
-  eyeSize: "medium",
-  eyeSpacing: "normal",
-  eyeTilt: "soft",
-  eyeColor: "auto",
 };

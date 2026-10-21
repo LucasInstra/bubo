@@ -42,7 +42,7 @@
       rootElement.style.height = `${height}px`;
       rootElement.style.overflow = "hidden";
 
-      const settings = { ...DEFAULT_SETTINGS, compact };
+      const settings = { ...DEFAULT_SETTINGS, compact, hotkey: "Ctrl+Alt+B" };
       const stored = [
         {
           id: 1,
@@ -89,6 +89,10 @@
         drill_review: () => ({ ...drillItem, streak: 3 }),
         set_compact: () => null,
         save_settings: () => null,
+        test_connection: () => ({
+          message: "Connected, 3 model(s) available",
+          models: ["gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini"],
+        }),
       };
 
       window.__TAURI_INTERNALS__ = {

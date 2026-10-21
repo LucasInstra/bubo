@@ -44,4 +44,15 @@ test("mascot accepts a drag gesture", async ({ page }) => {
   await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2 + 20);
   await page.mouse.up();
   await expect(hit).toHaveCSS("cursor", "grab");
+
+  // grabbing a cheek instead of the center should follow the cursor and
+  // release just as cleanly
+  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.5);
+  await page.mouse.down();
+  await expect(hit).toHaveCSS("cursor", "grabbing");
+
+  await page.mouse.move(box.x + box.width * 0.34, box.y + box.height * 0.42, { steps: 6 });
+  await page.mouse.up();
+  await expect(hit).toHaveCSS("cursor", "grab");
+  await expect(page.locator("vite-error-overlay")).toHaveCount(0);
 });

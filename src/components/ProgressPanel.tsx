@@ -46,7 +46,7 @@ export function ProgressPanel({ onClose, onPractice }: ProgressPanelProps) {
 
   return (
     <div className="settings progress" role="dialog" aria-modal="true" aria-label="Progress">
-      <div className="settings-head">
+      <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={onClose} aria-label="Back">
           ←
         </button>

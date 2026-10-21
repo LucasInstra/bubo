@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PERSONALITIES, personality } from "../lib/personalities";
-import type { Settings } from "../lib/types";
+import { DEFAULT_LOOK, type Settings } from "../lib/types";
 import {
   EYE_COLORS,
   EYE_SIZES,
@@ -61,6 +61,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
   const [error, setError] = useState("");
 
   const patch = (part: Partial<Settings>) => setDraft((current) => ({ ...current, ...part }));
+  const resetLook = () => patch(DEFAULT_LOOK);
   const dirty = JSON.stringify(draft) !== JSON.stringify(settings);
 
   useEffect(() => {
@@ -96,7 +97,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
 
   return (
     <div className="settings buddy" role="dialog" aria-modal="true" aria-label="Customize buddy">
-      <div className="settings-head">
+      <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={() => void close()} aria-label="Back">
           ←
         </button>
@@ -158,14 +159,17 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
         </div>
 
         <label className="field">
-          <span>Extra flavor (optional)</span>
+          <span>Extra flavor &amp; personality</span>
           <textarea
             rows={2}
             value={draft.persona}
-            placeholder="e.g. talk about music, mention movies"
+            placeholder="e.g. be a little sarcastic, keep replies short, talk about music"
             onChange={(event) => patch({ persona: event.target.value })}
           />
-          <span className="hint">Added on top of the voice you picked above.</span>
+          <span className="hint">
+            Adds topics, quirks or a whole custom personality on top of the picked voice. Tone
+            instructions here win over the preset.
+          </span>
         </label>
 
         <div className="section-title">Look</div>
@@ -243,6 +247,13 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="field row">
+          <span>Start over from the original bubo face</span>
+          <button className="ghost" type="button" onClick={resetLook}>
+            Reset look to bubo default
+          </button>
         </div>
 
         <div className="field">

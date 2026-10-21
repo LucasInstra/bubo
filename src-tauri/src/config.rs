@@ -47,7 +47,7 @@ impl Default for Settings {
             ignore_capitalization: true,
             shape: "round".to_string(),
             color: "#8b7dff".to_string(),
-            show_mouth: true,
+            show_mouth: false,
             mouth_style: "line".to_string(),
             mouth_size: "medium".to_string(),
             mouth_color: "auto".to_string(),
@@ -55,9 +55,9 @@ impl Default for Settings {
             accent_from_mascot: true,
             text_size: "normal".to_string(),
             eye_style: "bars".to_string(),
-            eye_size: "medium".to_string(),
+            eye_size: "large".to_string(),
             eye_spacing: "normal".to_string(),
-            eye_tilt: "soft".to_string(),
+            eye_tilt: "straight".to_string(),
             eye_color: "auto".to_string(),
         }
     }

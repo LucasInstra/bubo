@@ -46,6 +46,15 @@ fn personality_tone(id: &str) -> &'static str {
         "strict_examiner" => {
             "You are terse and exacting, with no fluff. Short sentences, no filler, no praise before it is earned. The separate correction step handles grammar, so focus on pushing the conversation forward."
         }
+        "shy_penpal" => {
+            "You are a shy pen pal who warms up slowly. Keep replies short and a little tentative, offer one small detail about yourself first, and ask a gentle question only now and then. Never tease, never push, and never comment on their English."
+        }
+        "storyteller" => {
+            "You are a storyteller who loves anecdotes. When it fits, answer with one short story from your own day, in two or three sentences, then connect it back to the learner. Never stretch it into a long tale and never invent facts about the learner."
+        }
+        "night_owl" => {
+            "You are a calm late-night owl with dry humor. Speak quietly, with one small deadpan joke when the moment allows. No exclamation marks, no rushing, and keep the learner company instead of hyping them up."
+        }
         _ => {
             "You are a warm, curious friend with a steady streak. You have opinions and you share them. You notice small details, not every feeling. Encouragement is quiet and specific, never cheerleader loud."
         }
@@ -58,7 +67,7 @@ pub fn reply_system(settings: &Settings) -> String {
         tone.to_string()
     } else {
         format!(
-            "{tone} Extra instruction from the learner: {}",
+            "{tone} The learner also wrote this about your personality, tone and interests: \"{}\". Follow it as a real character instruction. When it conflicts with the voice above, this instruction wins, but stay kind and keep the rules below.",
             settings.persona.trim()
         )
     };
@@ -192,6 +201,12 @@ mod tests {
             personality_tone("hype_friend"),
             personality_tone("calm_mentor")
         );
+        assert_ne!(
+            personality_tone("shy_penpal"),
+            personality_tone("storyteller")
+        );
+        assert_ne!(personality_tone("night_owl"), personality_tone("dry_wit"));
+        assert!(personality_tone("night_owl").contains("late-night"));
         assert_eq!(personality_tone("nonsense"), warm);
     }
 
@@ -205,7 +220,35 @@ mod tests {
         let prompt = reply_system(&settings);
         assert!(prompt.contains("deadpan"));
         assert!(prompt.contains("talk about music"));
+        assert!(prompt.contains("real character instruction"));
         assert!(!prompt.contains('\u{2014}'));
         assert!(!prompt.contains('\u{2013}'));
+    }
+
+    #[test]
+    fn persona_can_define_a_character_and_overrides_the_voice() {
+        let settings = Settings {
+            personality: "warm_coach".to_string(),
+            persona: "be sarcastic and keep replies short".to_string(),
+            ..Settings::default()
+        };
+        let prompt = reply_system(&settings);
+        assert!(prompt.contains("be sarcastic and keep replies short"));
+        assert!(prompt.contains("personality, tone and interests"));
+        assert!(prompt.contains("this instruction wins"));
+        assert!(!prompt.contains('\u{2014}'));
+        assert!(!prompt.contains('\u{2013}'));
+    }
+
+    #[test]
+    fn empty_persona_keeps_only_the_voice() {
+        let settings = Settings {
+            personality: "calm_mentor".to_string(),
+            persona: "   ".to_string(),
+            ..Settings::default()
+        };
+        let prompt = reply_system(&settings);
+        assert!(prompt.contains("unhurried mentor"));
+        assert!(!prompt.contains("personality, tone and interests"));
     }
 }

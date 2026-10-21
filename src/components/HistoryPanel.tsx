@@ -95,7 +95,7 @@ export function HistoryPanel({
 
   return (
     <div className="settings history" role="dialog" aria-modal="true" aria-label="History">
-      <div className="settings-head">
+      <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={onClose} aria-label="Back">
           ←
         </button>

@@ -102,7 +102,7 @@ export function Drill({ onClose, onMood }: DrillProps) {
 
   return (
     <div className="settings" role="dialog" aria-modal="true" aria-label="Practice">
-      <div className="settings-head">
+      <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={onClose} aria-label="Back">
           ←
         </button>

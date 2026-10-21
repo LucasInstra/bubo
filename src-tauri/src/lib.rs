@@ -95,7 +95,10 @@ fn set_compact(
     state: State<'_, AppState>,
     compact: bool,
 ) -> Result<(), String> {
-    let origin = window.outer_position().ok().map(|position| (position.x, position.y));
+    let origin = window
+        .outer_position()
+        .ok()
+        .map(|position| (position.x, position.y));
 
     if compact {
         if let (Some(position), Ok(mut slot)) = (origin, state.compact_origin.lock()) {
@@ -162,11 +165,58 @@ fn save_api_key(key: String) -> Result<(), String> {
     config::save_api_key(key)
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ConnectionTest {
+    message: String,
+    models: Vec<String>,
+}
+
+/// Extracts model ids from an OpenAI-compatible `/models` response body.
+///
+/// Accepts `{"data": [{"id": "..."}]}` (OpenAI/Groq/OpenRouter/Ollama) and, as
+/// a fallback, a top-level `{"models": ["..."]}` or `{"models": [{"id": "..."}]}`.
+/// Invalid or unexpected bodies yield an empty list; ids are deduped in order.
+fn parse_model_ids(body: &str) -> Vec<String> {
+    fn push(models: &mut Vec<String>, id: &str) {
+        let id = id.trim();
+        if !id.is_empty() && !models.iter().any(|existing| existing == id) {
+            models.push(id.to_string());
+        }
+    }
+
+    fn collect(entries: &[serde_json::Value], models: &mut Vec<String>) {
+        for entry in entries {
+            if let Some(id) = entry.as_str() {
+                push(models, id);
+            } else if let Some(id) = entry.get("id").and_then(|id| id.as_str()) {
+                push(models, id);
+            }
+        }
+    }
+
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(body) else {
+        return Vec::new();
+    };
+
+    let mut models = Vec::new();
+    if let Some(data) = value.get("data").and_then(|data| data.as_array()) {
+        collect(data, &mut models);
+    }
+    if models.is_empty() {
+        if let Some(entries) = value.get("models").and_then(|models| models.as_array()) {
+            collect(entries, &mut models);
+        }
+    }
+
+    models
+}
+
 #[tauri::command]
 async fn test_connection(
     settings: config::Settings,
     api_key: Option<String>,
-) -> Result<String, String> {
+) -> Result<ConnectionTest, String> {
     let base = settings.base_url.trim().trim_end_matches('/');
     if base.is_empty() {
         return Err("Add a base URL first.".to_string());
@@ -200,19 +250,14 @@ async fn test_connection(
         return Err(format!("{status}: {detail}"));
     }
 
-    let count = serde_json::from_str::<serde_json::Value>(&body)
-        .ok()
-        .and_then(|value| {
-            value
-                .get("data")
-                .and_then(|data| data.as_array())
-                .map(|data| data.len())
-        });
+    let models = parse_model_ids(&body);
+    let message = if models.is_empty() {
+        "Connected".to_string()
+    } else {
+        format!("Connected, {} model(s) available", models.len())
+    };
 
-    Ok(match count {
-        Some(count) => format!("Connected, {count} model(s) available"),
-        None => "Connected".to_string(),
-    })
+    Ok(ConnectionTest { message, models })
 }
 
 #[tauri::command]
@@ -639,4 +684,58 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running bubo");
+}
+
+#[cfg(test)]
+mod connection_tests {
+    use super::parse_model_ids;
+
+    #[test]
+    fn parses_data_ids_in_order_and_dedupes() {
+        let body = r#"{"data":[{"id":"b"},{"id":"a"},{"id":"a"}]}"#;
+        assert_eq!(parse_model_ids(body), vec!["b", "a"]);
+    }
+
+    #[test]
+    fn falls_back_to_top_level_models_array() {
+        let body = r#"{"models":["x",{"id":"y"}]}"#;
+        assert_eq!(parse_model_ids(body), vec!["x", "y"]);
+    }
+
+    #[test]
+    fn invalid_or_unexpected_bodies_yield_empty() {
+        assert!(parse_model_ids("not json").is_empty());
+        assert!(parse_model_ids("{}").is_empty());
+        assert!(parse_model_ids(r#"{"data":"nope"}"#).is_empty());
+        assert!(parse_model_ids(r#"{"data":[{"name":"x"}]}"#).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod hotkey_tests {
+    use super::Shortcut;
+
+    #[test]
+    fn recorded_chords_are_accepted_by_the_backend_parser() {
+        // Keep these in sync with src/lib/hotkey.ts. global-hotkey spells the
+        // Windows key as Super; META is not a valid modifier token in 0.8.
+        for chord in [
+            "Ctrl+Alt+B",
+            "Ctrl+Alt+Shift+Super+K",
+            "Ctrl+Shift+F5",
+            "Alt+Space",
+            "Alt+Numpad0",
+            "Alt+NumpadEnter",
+            "Ctrl+Comma",
+            "Ctrl+Semicolon",
+            "Alt+Quote",
+            "Ctrl+Backquote",
+            "Ctrl+Backspace",
+            "Ctrl+Escape",
+            "Ctrl+F24",
+            "Super+PageDown",
+        ] {
+            assert!(chord.parse::<Shortcut>().is_ok(), "{chord} should parse");
+        }
+    }
 }

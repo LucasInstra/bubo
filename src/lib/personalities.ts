@@ -1,3 +1,14 @@
+export const MOUTH_STYLES = ["line", "smile", "grin", "cat", "open", "flat"] as const;
+export const MOUTH_SIZES = ["small", "medium", "large"] as const;
+export const MOUTH_COLORS = [
+  "auto",
+  "#fcfcff",
+  "#241d33",
+  "#ec4899",
+  "#ef4444",
+  "#f59e0b",
+] as const;
+
 export interface PersonalityPreview {
   shape: string;
   color: string;
@@ -5,6 +16,10 @@ export interface PersonalityPreview {
   eyeSize: string;
   eyeSpacing: string;
   eyeTilt: string;
+  showMouth: boolean;
+  mouthStyle: string;
+  mouthSize: string;
+  mouthColor: string;
 }
 
 export interface Personality {
@@ -31,6 +46,10 @@ export const PERSONALITIES: Personality[] = [
       eyeSize: "medium",
       eyeSpacing: "normal",
       eyeTilt: "soft",
+      showMouth: true,
+      mouthStyle: "smile",
+      mouthSize: "medium",
+      mouthColor: "#241d33",
     },
   },
   {
@@ -44,6 +63,10 @@ export const PERSONALITIES: Personality[] = [
       eyeSize: "large",
       eyeSpacing: "wide",
       eyeTilt: "sharp",
+      showMouth: true,
+      mouthStyle: "grin",
+      mouthSize: "large",
+      mouthColor: "#241d33",
     },
   },
   {
@@ -57,6 +80,10 @@ export const PERSONALITIES: Personality[] = [
       eyeSize: "medium",
       eyeSpacing: "normal",
       eyeTilt: "sharp",
+      showMouth: true,
+      mouthStyle: "cat",
+      mouthSize: "medium",
+      mouthColor: "#241d33",
     },
   },
   {
@@ -70,6 +97,10 @@ export const PERSONALITIES: Personality[] = [
       eyeSize: "medium",
       eyeSpacing: "wide",
       eyeTilt: "sharp",
+      showMouth: true,
+      mouthStyle: "grin",
+      mouthSize: "medium",
+      mouthColor: "#fcfcff",
     },
   },
   {
@@ -83,6 +114,10 @@ export const PERSONALITIES: Personality[] = [
       eyeSize: "small",
       eyeSpacing: "close",
       eyeTilt: "soft",
+      showMouth: true,
+      mouthStyle: "line",
+      mouthSize: "small",
+      mouthColor: "#241d33",
     },
   },
   {
@@ -96,6 +131,10 @@ export const PERSONALITIES: Personality[] = [
       eyeSize: "small",
       eyeSpacing: "close",
       eyeTilt: "soft",
+      showMouth: true,
+      mouthStyle: "smile",
+      mouthSize: "small",
+      mouthColor: "#fcfcff",
     },
   },
   {
@@ -109,6 +148,10 @@ export const PERSONALITIES: Personality[] = [
       eyeSize: "medium",
       eyeSpacing: "wide",
       eyeTilt: "straight",
+      showMouth: true,
+      mouthStyle: "open",
+      mouthSize: "small",
+      mouthColor: "#241d33",
     },
   },
   {
@@ -122,6 +165,10 @@ export const PERSONALITIES: Personality[] = [
       eyeSize: "medium",
       eyeSpacing: "normal",
       eyeTilt: "straight",
+      showMouth: true,
+      mouthStyle: "flat",
+      mouthSize: "medium",
+      mouthColor: "#fcfcff",
     },
   },
   {
@@ -135,6 +182,61 @@ export const PERSONALITIES: Personality[] = [
       eyeSize: "medium",
       eyeSpacing: "close",
       eyeTilt: "sharp",
+      showMouth: true,
+      mouthStyle: "flat",
+      mouthSize: "small",
+      mouthColor: "#241d33",
+    },
+  },
+  {
+    id: "shy_penpal",
+    label: "Shy Pen Pal",
+    vibe: "quiet at first, warm once you know them",
+    preview: {
+      shape: "drop",
+      color: "#38bdf8",
+      eyeStyle: "dots",
+      eyeSize: "small",
+      eyeSpacing: "close",
+      eyeTilt: "straight",
+      showMouth: true,
+      mouthStyle: "smile",
+      mouthSize: "small",
+      mouthColor: "#241d33",
+    },
+  },
+  {
+    id: "storyteller",
+    label: "Storyteller",
+    vibe: "every reply turns into a small story",
+    preview: {
+      shape: "pill",
+      color: "#eab308",
+      eyeStyle: "sparkle",
+      eyeSize: "large",
+      eyeSpacing: "normal",
+      eyeTilt: "soft",
+      showMouth: true,
+      mouthStyle: "open",
+      mouthSize: "medium",
+      mouthColor: "#241d33",
+    },
+  },
+  {
+    id: "night_owl",
+    label: "Night Owl",
+    vibe: "calm late-night company, dry humor",
+    preview: {
+      shape: "triangle",
+      color: "#334155",
+      eyeStyle: "sleepy",
+      eyeSize: "large",
+      eyeSpacing: "wide",
+      eyeTilt: "straight",
+      showMouth: true,
+      mouthStyle: "flat",
+      mouthSize: "medium",
+      mouthColor: "#f59e0b",
     },
   },
 ];

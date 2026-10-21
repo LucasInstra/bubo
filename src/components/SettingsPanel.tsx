@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ipc } from "../lib/ipc";
 import { matchProvider, PROVIDERS, type ProviderPreset } from "../lib/providers";
 import type { DrillStats, Settings } from "../lib/types";
+import { HotkeyInput } from "./HotkeyInput";
 
 interface SettingsPanelProps {
   settings: Settings;
@@ -21,6 +22,19 @@ const TEXT_SIZES = [
   ["normal", "Normal"],
   ["large", "Large"],
 ];
+
+function modelChoices(source: string[], selected: string): string[] {
+  const seen = new Set<string>();
+  const options: string[] = [];
+  for (const model of source) {
+    const value = model.trim();
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    options.push(value);
+  }
+  if (selected && !seen.has(selected)) options.push(selected);
+  return options;
+}
 
 export function SettingsPanel({
   settings,
@@ -44,10 +58,18 @@ export function SettingsPanel({
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState("");
   const [testOk, setTestOk] = useState(false);
+  const [testModels, setTestModels] = useState<string[]>([]);
+  const [modelOpen, setModelOpen] = useState(false);
+  const comboRef = useRef<HTMLDivElement>(null);
+  const testRun = useRef(0);
 
   const patch = (part: Partial<Settings>) => setDraft((current) => ({ ...current, ...part }));
   const provider =
     PROVIDERS.find((preset) => preset.id === providerId) ?? matchProvider(draft.baseUrl);
+  const modelOptions = modelChoices(
+    testModels.length > 0 ? testModels : provider.models,
+    draft.model,
+  );
   const dirty = apiKey.length > 0 || JSON.stringify(draft) !== JSON.stringify(settings);
 
   const refreshQueue = useCallback(async () => {
@@ -79,9 +101,34 @@ export function SettingsPanel({
     };
   }, []);
 
+  useEffect(() => {
+    if (!modelOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      const target = event.target as Node | null;
+      if (!comboRef.current || !target || !comboRef.current.contains(target)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setModelOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [modelOpen]);
+
+  const resetTest = () => {
+    // Invalidate a test that is still in flight, so a late response cannot
+    // repopulate the model list for an endpoint the user already changed.
+    testRun.current += 1;
+    setTesting(false);
+    setTestResult("");
+    setTestModels([]);
+    setTestOk(false);
+    setModelOpen(false);
+  };
+
   const chooseProvider = (preset: ProviderPreset) => {
     setProviderId(preset.id);
-    setTestResult("");
+    resetTest();
     if (preset.id === "custom") {
       patch({ baseUrl: "" });
       return;
@@ -91,22 +138,30 @@ export function SettingsPanel({
 
   const updateBaseUrl = (value: string) => {
     setProviderId(matchProvider(value).id);
-    setTestResult("");
+    resetTest();
     patch({ baseUrl: value });
   };
 
   const test = async () => {
+    const run = testRun.current + 1;
+    testRun.current = run;
     setTesting(true);
     setTestResult("");
+    setTestModels([]);
+    setModelOpen(false);
     try {
-      const message = await ipc.testConnection(draft, apiKey);
+      const result = await ipc.testConnection(draft, apiKey);
+      if (run !== testRun.current) return;
       setTestOk(true);
-      setTestResult(message);
+      setTestResult(result.message);
+      setTestModels(result.models ?? []);
     } catch (problem) {
+      if (run !== testRun.current) return;
       setTestOk(false);
       setTestResult(typeof problem === "string" ? problem : "Could not connect.");
+      setTestModels([]);
     } finally {
-      setTesting(false);
+      if (run === testRun.current) setTesting(false);
     }
   };
 
@@ -156,7 +211,7 @@ export function SettingsPanel({
 
   return (
     <div className="settings" role="dialog" aria-modal="true" aria-label="Settings">
-      <div className="settings-head">
+      <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={onClose} aria-label="Back">
           ←
         </button>
@@ -241,26 +296,93 @@ export function SettingsPanel({
           />
         </label>
 
-        <label className="field">
-          <span>Model</span>
-          <input
-            list="bubo-models"
-            value={draft.model}
-            onChange={(event) => patch({ model: event.target.value })}
-            spellCheck={false}
-            placeholder="model id"
-          />
-          {provider.models.length > 0 && (
-            <datalist id="bubo-models">
-              {provider.models.map((model) => (
-                <option key={model} value={model} />
-              ))}
-            </datalist>
-          )}
+        <div className="field">
+          <label htmlFor="bubo-model">Model</label>
+          <div
+            className="combo"
+            ref={comboRef}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                setModelOpen(false);
+              }
+            }}
+          >
+            <input
+              id="bubo-model"
+              value={draft.model}
+              onChange={(event) => patch({ model: event.target.value })}
+              spellCheck={false}
+              placeholder="model id"
+              autoComplete="off"
+              aria-haspopup="listbox"
+              aria-expanded={modelOpen}
+              aria-controls={modelOpen ? "bubo-model-options" : undefined}
+            />
+            <button
+              type="button"
+              className={`combo-toggle ${modelOpen ? "open" : ""}`}
+              aria-label="Choose model"
+              aria-expanded={modelOpen}
+              aria-controls="bubo-model-options"
+              onClick={() => setModelOpen((open) => !open)}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+            {modelOpen && (
+              <div
+                className="combo-list"
+                id="bubo-model-options"
+                role="listbox"
+                aria-label="Model options"
+              >
+                {modelOptions.length === 0 ? (
+                  <span className="combo-empty">
+                    No suggestions yet. Type a model id or test the connection.
+                  </span>
+                ) : (
+                  modelOptions.map((model) => (
+                    <button
+                      key={model}
+                      type="button"
+                      role="option"
+                      aria-selected={draft.model === model}
+                      className={`combo-option ${draft.model === model ? "on" : ""}`}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        patch({ model });
+                        setModelOpen(false);
+                      }}
+                    >
+                      <span className="combo-option-label">{model}</span>
+                      {draft.model === model && (
+                        <span className="combo-check" aria-hidden="true">
+                          ✓
+                        </span>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
           <span className="hint">
-            Type any model id, or pick a suggestion from {provider.label}.
+            {testModels.length > 0
+              ? `${testModels.length} model${testModels.length === 1 ? "" : "s"} from the endpoint.`
+              : `Type any model id, or pick a suggestion from ${provider.label}.`}
           </span>
-        </label>
+        </div>
 
         <label className="field">
           <span>API key {hasKey && <em className="ok">saved</em>}</span>
@@ -270,7 +392,7 @@ export function SettingsPanel({
             placeholder={hasKey ? "•••••••• (keep current)" : provider.keyHint}
             onChange={(event) => {
               setApiKey(event.target.value);
-              setTestResult("");
+              resetTest();
             }}
             spellCheck={false}
           />
@@ -288,15 +410,10 @@ export function SettingsPanel({
 
         <div className="section-title">Behavior</div>
 
-        <label className="field">
+        <div className="field">
           <span>Show/hide hotkey</span>
-          <input
-            value={draft.hotkey}
-            onChange={(event) => patch({ hotkey: event.target.value })}
-            spellCheck={false}
-            placeholder="Ctrl+Alt+B"
-          />
-        </label>
+          <HotkeyInput value={draft.hotkey} onChange={(hotkey) => patch({ hotkey })} />
+        </div>
 
         <label className="field row">
           <span>Start with Windows</span>
@@ -309,7 +426,7 @@ export function SettingsPanel({
 
         <div className="field note">
           <span>
-            Combine Ctrl, Alt or Shift with a key, like <code>Ctrl+Alt+B</code>. ESC hides the
+            Combine Ctrl, Alt or Super (Win) with a key, like <code>Ctrl+Alt+B</code>. ESC hides the
             window.
           </span>
         </div>

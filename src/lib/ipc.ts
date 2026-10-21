@@ -31,6 +31,11 @@ interface SavedEvent {
   assistantId: number | null;
 }
 
+export interface ConnectionTest {
+  message: string;
+  models: string[];
+}
+
 export interface ChatHandlers {
   onDelta: (delta: string) => void;
   onDone: () => void;
@@ -44,7 +49,7 @@ export const ipc = {
   hasApiKey: () => invoke<boolean>("has_api_key"),
   saveApiKey: (key: string) => invoke<void>("save_api_key", { key }),
   testConnection: (settings: Settings, apiKey: string) =>
-    invoke<string>("test_connection", { settings, apiKey: apiKey || null }),
+    invoke<ConnectionTest>("test_connection", { settings, apiKey: apiKey || null }),
   setAutostart: (enabled: boolean) => invoke<void>("set_autostart", { enabled }),
   setPinned: (pinned: boolean) => invoke<void>("set_pinned", { pinned }),
   setCompact: (compact: boolean) => invoke<void>("set_compact", { compact }),

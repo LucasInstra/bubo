@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { gripDeformation } from "../lib/grab";
 import type { Mood, OrbState } from "../lib/types";
 
 export const MASCOT_SHAPES = [
@@ -395,7 +396,15 @@ export function Mascot({
     const headRot = { value: 0, velocity: 0 };
     const dragX = { value: 0, velocity: 0, target: 0 };
     const dragY = { value: 0, velocity: 0, target: 0 };
-    const drag = { active: false, startX: 0, startY: 0, moved: 0 };
+    const drag = {
+      active: false,
+      startX: 0,
+      startY: 0,
+      moved: 0,
+      // grabbed point, relative to the body center in canvas units
+      anchorX: 0,
+      anchorY: 0,
+    };
 
     const spring = (
       state: { value: number; velocity: number },
@@ -427,7 +436,7 @@ export function Mascot({
       const dy = event.clientY - drag.startY;
       drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
       // soft limit: the further you pull, the more resistance, but no wall
-      const limit = radius * 0.55;
+      const limit = radius * 1.0;
       const pull = (value: number) => Math.sign(value) * limit * Math.tanh(Math.abs(value) / limit);
       dragX.target = pull(dx);
       dragY.target = pull(dy);
@@ -439,6 +448,16 @@ export function Mascot({
       drag.startX = event.clientX;
       drag.startY = event.clientY;
       drag.moved = 0;
+      // remember where the body was grabbed so the deformation pivots there,
+      // clamped to the body so a transparent corner still anchors on a cheek
+      const rect = hit.getBoundingClientRect();
+      const offsetX = event.clientX - (rect.left + rect.width / 2);
+      const offsetY = event.clientY - (rect.top + rect.height / 2);
+      const offset = Math.hypot(offsetX, offsetY);
+      const maxAnchor = radius * 0.85;
+      const anchorScale = offset > maxAnchor ? maxAnchor / offset : 1;
+      drag.anchorX = offsetX * anchorScale;
+      drag.anchorY = offsetY * anchorScale;
       try {
         hit.setPointerCapture(event.pointerId);
       } catch {
@@ -593,15 +612,10 @@ export function Mascot({
       eyeOpen *= 1 - 0.18 * (moodSad ? moodBlend : 0);
       eyeOpen *= 1 + 0.08 * (moodSurprised ? moodBlend : 0);
 
-      // directional pull: the trailing edge lags behind while the leading edge
-      // stretches towards the pointer, so it reads as being pulled instead of
-      // simply moving. The spring adds the wobble on release.
-      const dragDistance = Math.hypot(dragX.value, dragY.value);
-      const pull = Math.min(1, dragDistance / (radius * 0.55));
-      const pullAngle = Math.atan2(dragY.value, dragX.value);
-      const stretch = 1 + pull * 0.28;
-      const squash = 1 - pull * 0.08;
-      const lean = (dragX.value / (radius * 0.55)) * 0.05;
+      // point-based grip: the grabbed spot follows the pointer, and the body
+      // deforms around it instead of scaling about its own center
+      const grip = gripDeformation(drag.anchorX, drag.anchorY, dragX.value, dragY.value, radius);
+      const lean = (dragX.value / (radius * 1.2)) * 0.05;
       const moodDrop = moodSad
         ? radius * 0.05 * moodBlend
         : moodSurprised
@@ -612,12 +626,15 @@ export function Mascot({
 
       context.save();
       context.translate(
-        center + sway + headX.value + dragX.value * 0.55,
-        center + boop + headY.value + dragY.value * 0.55 + moodBob * moodBlend + moodDrop + hop,
+        center + sway + headX.value,
+        center + boop + headY.value + moodBob * moodBlend + moodDrop + hop,
       );
       context.rotate(tilt + headRot.value + lean);
 
-      // soft aura follows the body, outside the stretch so it never clips
+      // The aura follows the body but stays round: apply only the follow
+      // translation, outside the grip deformation, so it never goes elliptical.
+      context.save();
+      if (grip.strength > 0.001) context.translate(grip.followX, grip.followY);
       const auraRadius = radius * 1.9;
       const aura = context.createRadialGradient(0, 0, radius * 0.4, 0, 0, auraRadius);
       aura.addColorStop(0, `${color}${hovering ? "3a" : "2e"}`);
@@ -627,16 +644,20 @@ export function Mascot({
       context.beginPath();
       context.arc(0, 0, auraRadius, 0, TAU);
       context.fill();
+      context.restore();
+
+      // Deform around the grabbed spot first, then move the body with the
+      // cursor, so that spot tracks the pointer instead of overshooting it.
+      if (grip.strength > 0.001) {
+        context.translate(drag.anchorX, drag.anchorY);
+        context.rotate(grip.axis);
+        context.scale(grip.scaleAlong, grip.scaleCross);
+        context.rotate(-grip.axis);
+        context.translate(-drag.anchorX, -drag.anchorY);
+        context.translate(grip.followX, grip.followY);
+      }
 
       context.scale(1 / breathe, breathe);
-
-      if (pull > 0.01) {
-        context.rotate(pullAngle);
-        context.translate(-radius * 0.82, 0);
-        context.scale(stretch, squash);
-        context.translate(radius * 0.82, 0);
-        context.rotate(-pullAngle);
-      }
 
       // body
       const body = bodyPath(shape, radius);
