@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>bubo e2e harness</title>
+    <style>
+      html,
+      body,
+      #root {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        background: #0a0910;
+        overflow: hidden;
+      }
+      #root {
+        position: relative;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      import "/src/styles.css";
+      import React from "react";
+      import { createRoot } from "react-dom/client";
+      import App from "/src/App.tsx";
+      import { Drill } from "/src/components/Drill.tsx";
+      import { DEFAULT_SETTINGS } from "/src/lib/types.ts";
+
+      const params = new URLSearchParams(location.search);
+      const mode = params.get("case") ?? "app";
+      const compact = mode === "compact";
+      const width = compact ? 400 : 420;
+      const height = compact ? 280 : 640;
+
+      Object.defineProperty(window, "innerWidth", { configurable: true, get: () => width });
+      const rootElement = document.getElementById("root");
+      rootElement.style.width = `${width}px`;
+      rootElement.style.height = `${height}px`;
+      rootElement.style.overflow = "hidden";
+
+      const settings = { ...DEFAULT_SETTINGS, compact };
+      const stored = [
+        {
+          id: 1,
+          role: "user",
+          content: "my weekend was cool, i went to the beach",
+          fixes: null,
+          createdAt: 1,
+        },
+        {
+          id: 2,
+          role: "assistant",
+          content: "That sounds like a good weekend. Was the water warm?",
+          fixes: null,
+          createdAt: 2,
+        },
+      ];
+
+      const drillItem = {
+        id: 1,
+        wrong: "i go to the gym yesterday",
+        right: "I went to the gym yesterday",
+        note: "passado simples",
+        streak: 2,
+        context: "i go to the gym yesterday and i feel good",
+      };
+
+      const handlers = {
+        get_settings: () => settings,
+        has_api_key: () => true,
+        history: () => stored,
+        current_session: () => 1,
+        list_sessions: () => [
+          {
+            id: 1,
+            title: "A weekend at the beach",
+            createdAt: 1,
+            updatedAt: 2,
+            messages: 2,
+            preview: "my weekend was cool, i went to the beach",
+          },
+        ],
+        drill_stats: () => ({ total: 1, due: 1 }),
+        drill_next: () => drillItem,
+        drill_review: () => ({ ...drillItem, streak: 3 }),
+        set_compact: () => null,
+        save_settings: () => null,
+      };
+
+      window.__TAURI_INTERNALS__ = {
+        invoke: async (cmd) => (handlers[cmd] ? handlers[cmd]() : null),
+        transformCallback: () => 0,
+        unregisterCallback: () => {},
+      };
+
+      const root = createRoot(rootElement);
+      if (mode === "practice") {
+        root.render(React.createElement(Drill, { onClose: () => {} }));
+      } else {
+        root.render(React.createElement(App));
+      }
+    </script>
+  </body>
+</html>

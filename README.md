@@ -117,26 +117,35 @@ Only the text you send is forwarded to your provider. There is no analytics and 
 npm install
 npm run tauri dev       # hot-reload window
 npm run test:unit       # frontend tests (Vitest)
+npm run test:e2e        # Playwright against the web UI with mocked IPC
+npm run lint            # ESLint
+npm run format:check    # Prettier
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 npm run tauri build     # release installer
 ```
 
+The webview runs with a Content Security Policy defined in `src-tauri/tauri.conf.json`. The E2E suite drives the real React UI through a small harness that mocks the Tauri IPC bridge.
+
 ### Project structure
 
 ```
 src/                      React UI
-  components/Mascot.tsx   canvas mascot (face, gaze, states)
+  components/Mascot.tsx   canvas mascot (face, gaze, drag, states)
   components/Drill.tsx    practice flow
-  components/Settings.tsx sectioned settings
+  components/BuddyPanel.tsx    voice + look customization
+  components/ProgressPanel.tsx streak, accuracy, activity
+  components/HistoryPanel.tsx  session list
+  components/SettingsPanel.tsx app settings
   lib/ipc.ts              typed bridge to Rust
 src-tauri/src/
   lib.rs                  window, tray, hotkey, commands
   llm.rs                  streaming, retries, JSON parsing
   prompt.rs               tutor and correction prompts
-  store.rs                SQLite: messages, fixes, scheduling
+  store.rs                SQLite: sessions, messages, fixes, reviews
   config.rs               settings + credential storage
   log.rs                  rotating diagnostics
+e2e/                      Playwright harness and tests
 ```
 
 ## Troubleshooting

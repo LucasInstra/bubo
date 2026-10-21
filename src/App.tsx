@@ -107,7 +107,10 @@ export default function App() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      void ipc.drillStats().then((stats) => setDue(stats.due)).catch(() => {});
+      void ipc
+        .drillStats()
+        .then((stats) => setDue(stats.due))
+        .catch(() => {});
     }, 60_000);
     return () => clearInterval(timer);
   }, []);
@@ -266,7 +269,10 @@ export default function App() {
           setEnergy(0);
         }
         busyRef.current = false;
-        void ipc.drillStats().then((stats) => setDue(stats.due)).catch(console.error);
+        void ipc
+          .drillStats()
+          .then((stats) => setDue(stats.due))
+          .catch(console.error);
       }
     },
     [messages, react],
@@ -715,8 +721,7 @@ export default function App() {
               onScroll={() => {
                 const list = listRef.current;
                 if (!list) return;
-                stickRef.current =
-                  list.scrollHeight - list.scrollTop - list.clientHeight < 48;
+                stickRef.current = list.scrollHeight - list.scrollTop - list.clientHeight < 48;
               }}
             >
               {messages.map((message) => (

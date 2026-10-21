@@ -274,9 +274,7 @@ export function SettingsPanel({
             }}
             spellCheck={false}
           />
-          <span className="hint">
-            Stored in the Windows Credential Manager. {provider.keySite}
-          </span>
+          <span className="hint">Stored in the Windows Credential Manager. {provider.keySite}</span>
         </label>
 
         <div className="row-buttons">
@@ -331,8 +329,8 @@ export function SettingsPanel({
             </button>
           </div>
           <span className="hint">
-            Skipping moves the cards to tomorrow. Resetting deletes every saved correction, including
-            the ones in old messages.
+            Skipping moves the cards to tomorrow. Resetting deletes every saved correction,
+            including the ones in old messages.
           </span>
         </div>
 

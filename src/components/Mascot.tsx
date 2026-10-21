@@ -113,30 +113,9 @@ function heartPath(context: CanvasRenderingContext2D, width: number, height: num
     -width * 0.2,
     -height * 0.5,
   );
-  context.bezierCurveTo(
-    -width * 0.06,
-    -height * 0.5,
-    0,
-    -height * 0.34,
-    0,
-    -height * 0.18,
-  );
-  context.bezierCurveTo(
-    0,
-    -height * 0.34,
-    width * 0.06,
-    -height * 0.5,
-    width * 0.2,
-    -height * 0.5,
-  );
-  context.bezierCurveTo(
-    width * 0.52,
-    -height * 0.5,
-    width * 0.6,
-    -height * 0.08,
-    0,
-    height * 0.38,
-  );
+  context.bezierCurveTo(-width * 0.06, -height * 0.5, 0, -height * 0.34, 0, -height * 0.18);
+  context.bezierCurveTo(0, -height * 0.34, width * 0.06, -height * 0.5, width * 0.2, -height * 0.5);
+  context.bezierCurveTo(width * 0.52, -height * 0.5, width * 0.6, -height * 0.08, 0, height * 0.38);
   context.closePath();
 }
 
@@ -449,8 +428,7 @@ export function Mascot({
       drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
       // soft limit: the further you pull, the more resistance, but no wall
       const limit = radius * 0.55;
-      const pull = (value: number) =>
-        Math.sign(value) * limit * Math.tanh(Math.abs(value) / limit);
+      const pull = (value: number) => Math.sign(value) * limit * Math.tanh(Math.abs(value) / limit);
       dragX.target = pull(dx);
       dragY.target = pull(dy);
     };
@@ -529,11 +507,7 @@ export function Mascot({
       const moodSurprised = feeling === "surprised";
       moodBlend += ((feeling === "idle" ? 0 : 1) - moodBlend) * Math.min(1, 0.14 * (delta * 60));
       const moodBob = moodHappy ? Math.abs(Math.sin(time * 5.5)) * radius * 0.035 : 0;
-      const happy = Math.max(
-        0,
-        Math.min(1, (happyUntil - time) / 0.5),
-        moodHappy ? moodBlend : 0,
-      );
+      const happy = Math.max(0, Math.min(1, (happyUntil - time) / 0.5), moodHappy ? moodBlend : 0);
       const winking = winkUntil > time;
 
       const seesPointer = time - gaze.seen < 2.5;
@@ -593,8 +567,7 @@ export function Mascot({
         nextHop = time + 10 + Math.random() * 12;
       }
       if (hopAt >= 0 && time - hopAt >= 0.5) hopAt = -1;
-      const hop =
-        hopAt >= 0 ? Math.sin(((time - hopAt) / 0.5) * Math.PI) * radius * 0.06 : 0;
+      const hop = hopAt >= 0 ? Math.sin(((time - hopAt) / 0.5) * Math.PI) * radius * 0.06 : 0;
       const hovering = time - hoverSeen < 0.35;
 
       if (blinkStart < 0 && time >= nextBlink) blinkStart = time;
@@ -700,13 +673,9 @@ export function Mascot({
       const baseHalf = arcLike ? base.width * 0.82 : base.width / 2;
       const minGap = eyeSpacing === "close" ? 0.04 : eyeSpacing === "wide" ? 0.24 : 0.13;
       const happyArcs =
-        happy > 0.5 &&
-        (eyeStyle === "bars" || eyeStyle === "dots" || eyeStyle === "sleepy");
-      const happySpread = happyArcs
-        ? radius * 0.06 * Math.min(1, (happy - 0.5) / 0.5)
-        : 0;
-      const eyeOffset =
-        Math.max(radius * spacingScale, baseHalf + radius * minGap) + happySpread;
+        happy > 0.5 && (eyeStyle === "bars" || eyeStyle === "dots" || eyeStyle === "sleepy");
+      const happySpread = happyArcs ? radius * 0.06 * Math.min(1, (happy - 0.5) / 0.5) : 0;
+      const eyeOffset = Math.max(radius * spacingScale, baseHalf + radius * minGap) + happySpread;
       const eyeY = radius * 0.05 + gaze.y * radius * 0.15;
 
       for (const side of [-1, 1]) {
@@ -761,8 +730,7 @@ export function Mascot({
       if (showMouth) {
         const mouthX = gaze.x * radius * 0.14;
         const mouthY = radius * 0.41 + gaze.y * radius * 0.08;
-        const mouthInk =
-          mouthColor && mouthColor !== "auto" ? mouthColor : shade(color, 0.3, 0.85);
+        const mouthInk = mouthColor && mouthColor !== "auto" ? mouthColor : shade(color, 0.3, 0.85);
         const mouthScale = mouthSize === "small" ? 0.82 : mouthSize === "large" ? 1.2 : 1;
         const talking =
           current === "streaming" ? 0.25 + Math.abs(Math.sin(time * 14)) * smoothed : 0;
@@ -799,13 +767,7 @@ export function Mascot({
           context.scale(1, 1 + talking * 0.35);
           for (const side of [-1, 1]) {
             context.beginPath();
-            context.arc(
-              side * radius * 0.075,
-              0,
-              radius * 0.075,
-              Math.PI * 0.1,
-              Math.PI * 0.9,
-            );
+            context.arc(side * radius * 0.075, 0, radius * 0.075, Math.PI * 0.1, Math.PI * 0.9);
             context.stroke();
           }
         } else if (mouthStyle === "grin") {
@@ -889,7 +851,23 @@ export function Mascot({
       hit.removeEventListener("pointerdown", onPointerDown);
       hit.removeEventListener("pointercancel", onPointerUp);
     };
-  }, [size, canvasSize, shape, color, boopable, showMouth, mouthStyle, mouthSize, mouthColor, eyeStyle, eyeSize, eyeSpacing, eyeTilt, eyeColor, animate]);
+  }, [
+    size,
+    canvasSize,
+    shape,
+    color,
+    boopable,
+    showMouth,
+    mouthStyle,
+    mouthSize,
+    mouthColor,
+    eyeStyle,
+    eyeSize,
+    eyeSpacing,
+    eyeTilt,
+    eyeColor,
+    animate,
+  ]);
 
   return (
     <div

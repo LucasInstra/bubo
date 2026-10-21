@@ -55,13 +55,7 @@ const MOUTH_SIZES = [
 ];
 const MOUTH_COLORS = ["auto", "#fcfcff", "#241d33", "#ec4899", "#ef4444", "#f59e0b"];
 
-export function BuddyPanel({
-  settings,
-  pinned,
-  onTogglePin,
-  onClose,
-  onSave,
-}: BuddyPanelProps) {
+export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: BuddyPanelProps) {
   const [draft, setDraft] = useState<Settings>(settings);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
