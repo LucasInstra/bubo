@@ -1,18 +1,18 @@
 # Screenshots
 
-Drop the real captures here, then update the image paths in the root README.
+The PNGs here are captured from the real UI with sample data. Replace them whenever the layout changes, keeping the same filenames so the root README keeps working.
 
-Suggested set:
-
-| File | What to capture |
-| --- | --- |
-| `chat.svg` (replace with `chat.png`) | A conversation with the corrections card visible |
-| `practice.svg` | A drill card, ideally with the "you wrote" context line |
-| `empty.svg` | First screen with the mascot and suggestion chips |
-| `settings.svg` | Look section: mascot preview, colors, shapes and eyes |
+| File | Size | What it shows |
+| --- | --- | --- |
+| `chat.png` | 420 x 640 | A conversation with the corrections card and composer |
+| `practice.png` | 420 x 640 | A drill card with the "you wrote" context and streak |
+| `buddy.png` | 420 x 640 | Buddy panel with the personality grid |
+| `compact.png` | 400 x 280 | Horizontal compact card with the header mascot |
+| `empty.png` | 420 x 640 | First screen with the mascot, practice chip and suggestions |
 
 Tips:
 
-- Capture the window at 100% scaling for crisp text.
-- 2x resolution PNGs look better on GitHub; the README scales them.
+- Capture at 100% scaling for crisp text.
+- Use a plain dark backdrop, never the desktop.
+- The chat, practice and buddy cards are 420 x 640. Compact is 400 x 280.
 - Keep the same filenames referenced by the README, or update the links.

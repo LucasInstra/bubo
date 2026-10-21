@@ -32,13 +32,13 @@ Because the useful part of learning a language is the five minutes between real 
 
 | Chat and corrections | Practice |
 | --- | --- |
-| ![Chat](docs/screenshots/chat.svg) | ![Practice](docs/screenshots/practice.svg) |
+| ![Chat](docs/screenshots/chat.png) | ![Practice](docs/screenshots/practice.png) |
 
-| Empty state | Settings |
+| Buddy panel | Compact mode |
 | --- | --- |
-| ![Empty state](docs/screenshots/empty.svg) | ![Settings](docs/screenshots/settings.svg) |
+| ![Buddy panel](docs/screenshots/buddy.png) | ![Compact mode](docs/screenshots/compact.png) |
 
-> The images above are placeholders. Drop real PNGs into `docs/screenshots/` and update the paths when the UI is final.
+The empty state is in `docs/screenshots/empty.png`.
 
 ## Install
 
