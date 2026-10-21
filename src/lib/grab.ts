@@ -7,21 +7,21 @@ export interface Point {
 /** Tunable constants for the grab feel. All sizes are fractions of the body radius. */
 export const GRAB = {
   /** Furthest the grab anchor can sit from the center. */
-  maxAnchor: 0.8,
+  maxAnchor: 0.86,
   /** Local displacement cap. The cheek stretches this far, then the falloff spreads. */
-  maxPull: 0.3,
+  maxPull: 0.45,
   /** How much of the raw pointer delta translates the whole body. */
-  follow: 0.06,
+  follow: 0.1,
   /** Hard cap for that translation. */
-  maxFollow: 0.08,
+  maxFollow: 0.13,
   /** Gaussian falloff at rest, as a fraction of the radius. */
-  falloffNear: 0.3,
+  falloffNear: 0.34,
   /** Gaussian falloff at full pull. Bigger pulls spread the deformation instead of spiking. */
-  falloffFar: 0.44,
+  falloffFar: 0.58,
   /** Global stretch along the pull axis at full pull. */
-  stretch: 0.03,
+  stretch: 0.04,
   /** Cross-axis squash relative to the stretch, for volume. */
-  squash: 0.4,
+  squash: 0.35,
 } as const;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -36,9 +36,16 @@ function clampVector(x: number, y: number, limit: number): Point {
   return { x: x * scale, y: y * scale };
 }
 
-/** Local displacement target for a pointer delta, capped to keep the body planted. */
+/** Local displacement target for a pointer delta, capped softly to keep the body planted. */
 export function pullTarget(dx: number, dy: number, radius: number): Point {
-  return clampVector(dx, dy, safeRadius(radius) * GRAB.maxPull);
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return { x: 0, y: 0 };
+  const limit = safeRadius(radius) * GRAB.maxPull;
+  const distance = Math.hypot(dx, dy);
+  if (distance === 0) return { x: 0, y: 0 };
+  // Soft limit: the cheek keeps giving a little instead of stopping dead.
+  const mapped = limit * Math.tanh(distance / limit);
+  const scale = mapped / distance;
+  return { x: dx * scale, y: dy * scale };
 }
 
 /** Tiny whole-body translation target, so the grab reads as contact, not sliding. */

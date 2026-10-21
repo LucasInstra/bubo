@@ -655,8 +655,8 @@ export function Mascot({
         // which reads closer to silicone than the reference's looser gelatin.
         spring(dragX, dragX.target, 150, 13, halfStep);
         spring(dragY, dragY.target, 150, 13, halfStep);
-        spring(pullX, pullX.target, 210, 20, halfStep);
-        spring(pullY, pullY.target, 210, 20, halfStep);
+        spring(pullX, pullX.target, 210, 19.5, halfStep);
+        spring(pullY, pullY.target, 210, 19.5, halfStep);
       }
 
       if (current === "idle" && time > nextHop) {

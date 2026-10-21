@@ -4,9 +4,11 @@ import { clampAnchor, deformOutline, followTarget, GRAB, gripPhysics, pullTarget
 const radius = 100;
 
 describe("grab targets", () => {
-  it("caps the local pull at the configured fraction of the radius", () => {
+  it("softens the local pull near the configured fraction of the radius", () => {
     const pull = pullTarget(500, -500, radius);
-    expect(Math.hypot(pull.x, pull.y)).toBeCloseTo(radius * GRAB.maxPull);
+    const limit = radius * GRAB.maxPull;
+    expect(Math.hypot(pull.x, pull.y)).toBeLessThanOrEqual(limit + 0.001);
+    expect(Math.hypot(pull.x, pull.y)).toBeGreaterThan(limit * 0.9);
     expect(pull.x).toBeGreaterThan(0);
     expect(pull.y).toBeLessThan(0);
   });
