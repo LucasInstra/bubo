@@ -16,3 +16,13 @@ A static, separate concept for a more minimal compact mode. It is not wired into
 - The liquid glass look comes from a translucent card, backdrop blur, a bright top edge, inner highlights and soft colored blobs behind the card.
 
 If the concept is approved, the next step is porting the layout into `App.tsx` and `Composer.tsx`, using the real compact state and disabling mascot interaction in compact mode.
+
+## Reaction lab
+
+`preview/reactions.html` uses the real `Mascot` component and lets you trigger every state and mood with buttons. It needs the Vite dev server:
+
+```powershell
+npm run dev
+```
+
+Open `http://localhost:1420/preview/reactions.html`. Click the bubo for a boop, drag a cheek for the grab, or use the state and mood buttons. The "show mouth" checkbox reveals the talking, smile and frown animations.

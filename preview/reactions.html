@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bubo · reaction lab</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b0a11;
+        --panel: #141220;
+        --line: rgba(255, 255, 255, 0.1);
+        --text: #f4f1ff;
+        --muted: #9d97b5;
+        --accent: #8b7dff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        padding: 28px;
+        background:
+          radial-gradient(700px 520px at 50% 18%, rgba(139, 125, 255, 0.18), transparent 70%),
+          var(--bg);
+        color: var(--text);
+        font-family:
+          "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+      }
+
+      .lab {
+        width: min(760px, 100%);
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: linear-gradient(180deg, #171423, #0f0d18);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+      }
+
+      .head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 10px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 18px;
+        letter-spacing: -0.02em;
+      }
+
+      p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .stage {
+        display: grid;
+        place-items: center;
+        min-height: 310px;
+        margin: 14px 0;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 18px;
+        background:
+          radial-gradient(320px 240px at 50% 46%, rgba(139, 125, 255, 0.12), transparent 72%),
+          rgba(255, 255, 255, 0.02);
+      }
+
+      .state {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 5px 9px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .state::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #5ee0a0;
+        box-shadow: 0 0 8px rgba(94, 224, 160, 0.7);
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      button {
+        padding: 7px 10px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        font: inherit;
+        font-size: 11.5px;
+        cursor: pointer;
+        transition:
+          background 0.15s ease,
+          border-color 0.15s ease;
+      }
+
+      button:hover {
+        border-color: rgba(139, 125, 255, 0.5);
+        background: rgba(139, 125, 255, 0.12);
+      }
+
+      button.on {
+        border-color: rgba(139, 125, 255, 0.7);
+        background: rgba(139, 125, 255, 0.2);
+      }
+
+      button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: var(--muted);
+        font-size: 11.5px;
+        cursor: pointer;
+      }
+
+      .toggle input {
+        accent-color: var(--accent);
+      }
+
+      .legend {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 18px;
+        margin-top: 16px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.5;
+      }
+
+      .legend strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      @media (max-width: 620px) {
+        .legend {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      import React, { useState } from "react";
+      import { createRoot } from "react-dom/client";
+      import { Mascot } from "/src/components/Mascot.tsx";
+
+      const MOODS = ["idle", "happy", "proud", "sad", "surprised"];
+      const STATES = ["idle", "thinking", "streaming"];
+
+      function Lab() {
+        const [state, setState] = useState("idle");
+        const [mood, setMood] = useState("idle");
+        const [mouth, setMouth] = useState(false);
+
+        const pickState = (next) => {
+          setState(next);
+          setMood("idle");
+        };
+        const pickMood = (next) => {
+          setState("idle");
+          setMood(next);
+        };
+
+        return React.createElement(
+          "div",
+          { className: "lab" },
+          React.createElement(
+            "div",
+            { className: "head" },
+            React.createElement(
+              "div",
+              null,
+              React.createElement("h1", null, "bubo reaction lab"),
+              React.createElement(
+                "p",
+                null,
+                "The real Mascot component. Click the bubo for a boop, drag a cheek to test the grab, or use the buttons below.",
+              ),
+            ),
+            React.createElement(
+              "span",
+              { className: "state" },
+              `${state} · ${mood}`,
+            ),
+          ),
+
+          React.createElement(
+            "div",
+            { className: "stage" },
+            React.createElement(Mascot, {
+              state,
+              mood,
+              size: 260,
+              shape: "round",
+              color: "#8b7dff",
+              showMouth: mouth,
+              mouthStyle: "smile",
+              mouthSize: "medium",
+              mouthColor: "auto",
+              eyeStyle: "bars",
+              eyeSize: "large",
+              eyeSpacing: "normal",
+              eyeTilt: "straight",
+              eyeColor: "auto",
+              energy: state === "streaming" ? 0.85 : 0,
+              boopable: true,
+            }),
+          ),
+
+          React.createElement(
+            "div",
+            { className: "controls" },
+            ...STATES.map((value) =>
+              React.createElement(
+                "button",
+                {
+                  key: value,
+                  type: "button",
+                  className: state === value ? "on" : "",
+                  onClick: () => pickState(value),
+                },
+                `state: ${value}`,
+              ),
+            ),
+            ...MOODS.map((value) =>
+              React.createElement(
+                "button",
+                {
+                  key: value,
+                  type: "button",
+                  className: mood === value ? "on" : "",
+                  onClick: () => pickMood(value),
+                },
+                `mood: ${value}`,
+              ),
+            ),
+            React.createElement(
+              "label",
+              { className: "toggle" },
+              React.createElement("input", {
+                type: "checkbox",
+                checked: mouth,
+                onChange: (event) => setMouth(event.target.checked),
+              }),
+              "show mouth",
+            ),
+          ),
+
+          React.createElement(
+            "div",
+            { className: "legend" },
+            React.createElement(
+              "span",
+              null,
+              React.createElement("strong", null, "In the app: "),
+              "click = boop; hover = aura; send = thinking then streaming; reply done = happy; error = sad; practice right = proud; practice wrong = sad.",
+            ),
+            React.createElement(
+              "span",
+              null,
+              React.createElement("strong", null, "Grab: "),
+              "pull a cheek outward to stretch, push inward to dent; the center grab moves more of the body.",
+            ),
+          ),
+        );
+      }
+
+      createRoot(document.getElementById("root")).render(React.createElement(Lab));
+    </script>
+  </body>
+</html>
