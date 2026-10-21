@@ -25,9 +25,9 @@ export const GRAB = {
   /** Anchor distance where the center-grab bias fades out, as a fraction of the radius. */
   centerRadius: 0.45,
   /** Whole-body follow factor for a grab at the center. */
-  centerFollow: 0.55,
+  centerFollow: 0.75,
   /** Follow cap for a grab at the center. */
-  centerMaxFollow: 0.45,
+  centerMaxFollow: 0.8,
 } as const;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));

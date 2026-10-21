@@ -32,6 +32,11 @@ describe("grab targets", () => {
     const centered = followTarget(30, 0, radius, centerBias(0, 0, radius));
     const edge = followTarget(30, 0, radius, centerBias(-radius * 0.7, 0, radius));
     expect(centered.x).toBeGreaterThan(edge.x * 2);
+
+    const centeredFar = followTarget(500, 0, radius, centerBias(0, 0, radius));
+    const edgeFar = followTarget(500, 0, radius, 0);
+    expect(centeredFar.x).toBeCloseTo(radius * GRAB.centerMaxFollow);
+    expect(centeredFar.x).toBeGreaterThan(edgeFar.x * 3);
   });
 
   it("fades the center bias out before the edge", () => {
