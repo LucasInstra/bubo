@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { Composer } from "./components/Composer";
 import { BuddyPanel } from "./components/BuddyPanel";
 import { Drill } from "./components/Drill";
+import { HistoryPanel } from "./components/HistoryPanel";
 import { Mascot } from "./components/Mascot";
 import { Message } from "./components/Message";
 import { ProgressPanel } from "./components/ProgressPanel";
@@ -50,6 +51,8 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showBuddy, setShowBuddy] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [sessionId, setSessionId] = useState<number | null>(null);
   const [mood, setMood] = useState<Mood>("idle");
   const [status, setStatus] = useState<OrbState>("idle");
   const [energy, setEnergy] = useState(0);
@@ -77,15 +80,17 @@ export default function App() {
     let alive = true;
     (async () => {
       try {
-        const [loadedSettings, loadedKey, stored] = await Promise.all([
+        const [loadedSettings, loadedKey, stored, loadedSession] = await Promise.all([
           ipc.getSettings(),
           ipc.hasApiKey(),
           ipc.history(),
+          ipc.currentSession(),
         ]);
         if (!alive) return;
         setSettings(loadedSettings);
         setPinned(loadedSettings.pinned);
         setHasKey(loadedKey);
+        setSessionId(loadedSession);
         setMessages(stored.map(fromStored));
         void ipc.setCompact(loadedSettings.compact);
         if (!loadedKey) setShowSettings(true);
@@ -117,6 +122,7 @@ export default function App() {
       if (event.key === "Escape") {
         if (showDrill) setShowDrill(false);
         else if (showProgress) setShowProgress(false);
+        else if (showHistory) setShowHistory(false);
         else if (showBuddy) setShowBuddy(false);
         else if (showSettings) setShowSettings(false);
         else void ipc.hideWindow();
@@ -124,7 +130,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [showSettings, showBuddy, showProgress, showDrill]);
+  }, [showSettings, showBuddy, showProgress, showHistory, showDrill]);
 
   useEffect(
     () => () => {
@@ -345,8 +351,32 @@ export default function App() {
 
   const newChat = useCallback(async () => {
     if (statusRef.current !== "idle") return;
-    await ipc.clearHistory();
+    const id = await ipc.newSession();
+    setSessionId(id);
     setMessages([]);
+    setShowHistory(false);
+  }, []);
+
+  const openSession = useCallback(async (id: number) => {
+    if (statusRef.current !== "idle") return;
+    const stored = await ipc.openSession(id);
+    setSessionId(id);
+    setMessages(stored.map(fromStored));
+    setShowHistory(false);
+    void ipc
+      .drillStats()
+      .then((stats) => setDue(stats.due))
+      .catch(() => {});
+  }, []);
+
+  const reloadCurrentSession = useCallback(async () => {
+    const [stored, id] = await Promise.all([ipc.history(), ipc.currentSession()]);
+    setSessionId(id);
+    setMessages(stored.map(fromStored));
+    void ipc
+      .drillStats()
+      .then((stats) => setDue(stats.due))
+      .catch(() => {});
   }, []);
 
   const stop = useCallback(() => {
@@ -388,6 +418,7 @@ export default function App() {
             onClick={() => {
               setShowSettings(false);
               setShowProgress(false);
+              setShowHistory(false);
               setShowBuddy(true);
             }}
           >
@@ -453,11 +484,43 @@ export default function App() {
                 </button>
                 <button
                   className="ghost icon"
+                  title="History"
+                  aria-label="History"
+                  disabled={status !== "idle"}
+                  onClick={() => {
+                    setShowSettings(false);
+                    setShowBuddy(false);
+                    setShowProgress(false);
+                    setShowDrill(false);
+                    setShowHistory(true);
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="8.2"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                    />
+                    <path
+                      d="M12 7.5V12l3 1.8"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+                <button
+                  className="ghost icon"
                   title="Progress"
                   aria-label="Progress"
                   onClick={() => {
                     setShowSettings(false);
                     setShowBuddy(false);
+                    setShowHistory(false);
                     setShowDrill(false);
                     setShowProgress(true);
                   }}
@@ -547,6 +610,7 @@ export default function App() {
                 onClick={() => {
                   setShowBuddy(false);
                   setShowProgress(false);
+                  setShowHistory(false);
                   setShowSettings(true);
                 }}
               >
@@ -673,6 +737,22 @@ export default function App() {
           onSend={send}
           onStop={stop}
         />
+
+        {showHistory && (
+          <HistoryPanel
+            currentSession={sessionId}
+            onClose={() => setShowHistory(false)}
+            onOpen={openSession}
+            onNew={async (id) => {
+              setSessionId(id);
+              setMessages([]);
+              setShowHistory(false);
+            }}
+            onCurrentChanged={async () => {
+              await reloadCurrentSession();
+            }}
+          />
+        )}
 
         {showProgress && (
           <ProgressPanel

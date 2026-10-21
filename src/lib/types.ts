@@ -97,6 +97,15 @@ export interface StoredMessage {
   createdAt: number;
 }
 
+export interface SessionSummary {
+  id: number;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  messages: number;
+  preview: string | null;
+}
+
 export const DEFAULT_SETTINGS: Settings = {
   baseUrl: "https://api.groq.com/openai/v1",
   model: "openai/gpt-oss-120b",

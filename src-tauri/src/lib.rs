@@ -382,7 +382,38 @@ async fn chat(
 #[tauri::command]
 fn history(state: State<'_, AppState>) -> Result<Vec<store::StoredMessage>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    store::list(&db, 200).map_err(|e| e.to_string())
+    let session = store::current_session(&db).map_err(|e| e.to_string())?;
+    store::messages_for_session(&db, session, 200).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn current_session(state: State<'_, AppState>) -> Result<i64, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::current_session(&db).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn list_sessions(state: State<'_, AppState>) -> Result<Vec<store::SessionSummary>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::list_sessions(&db).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn new_session(state: State<'_, AppState>) -> Result<i64, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::create_session(&db).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn open_session(state: State<'_, AppState>, id: i64) -> Result<Vec<store::StoredMessage>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::open_session(&db, id, 200).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn delete_session(state: State<'_, AppState>, id: i64) -> Result<i64, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::delete_session(&db, id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -591,6 +622,11 @@ pub fn run() {
             delete_message,
             chat,
             history,
+            current_session,
+            list_sessions,
+            new_session,
+            open_session,
+            delete_session,
             clear_history,
             drill_stats,
             progress_stats,

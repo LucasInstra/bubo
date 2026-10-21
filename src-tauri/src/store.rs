@@ -17,6 +17,17 @@ pub struct StoredMessage {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct SessionSummary {
+    pub id: i64,
+    pub title: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+    pub messages: i64,
+    pub preview: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DrillItem {
     pub id: i64,
     pub wrong: String,
@@ -73,7 +84,6 @@ pub fn open(path: PathBuf) -> rusqlite::Result<Connection> {
     backfill_fixes(&conn)?;
     Ok(conn)
 }
-
 /// Older databases stored corrections only inside messages; seed the drill
 /// table from them so history is practiceable right away. Idempotent.
 fn backfill_fixes(conn: &Connection) -> rusqlite::Result<()> {
@@ -98,6 +108,7 @@ fn init(conn: &Connection) -> rusqlite::Result<()> {
             role TEXT NOT NULL,
             content TEXT NOT NULL,
             fixes TEXT,
+            session_id INTEGER,
             created_at INTEGER NOT NULL
         );
         CREATE TABLE IF NOT EXISTS fixes (
@@ -116,11 +127,52 @@ fn init(conn: &Connection) -> rusqlite::Result<()> {
             correct INTEGER NOT NULL,
             reviewed_at INTEGER NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS meta (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
         CREATE INDEX IF NOT EXISTS idx_reviews_fix ON reviews(fix_id);
-        CREATE INDEX IF NOT EXISTS idx_reviews_at ON reviews(reviewed_at);",
+        CREATE INDEX IF NOT EXISTS idx_reviews_at ON reviews(reviewed_at);
+        CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id);",
     )?;
     // Older databases predate the link between a correction and its message.
     let _ = conn.execute("ALTER TABLE fixes ADD COLUMN message_id INTEGER", []);
+    // ... and the link between a message and a session.
+    let _ = conn.execute("ALTER TABLE messages ADD COLUMN session_id INTEGER", []);
+    migrate_sessions(conn)
+}
+
+/// Gives every existing message a session and remembers which one is open.
+fn migrate_sessions(conn: &Connection) -> rusqlite::Result<()> {
+    let now = now();
+    conn.execute(
+        "INSERT INTO sessions (title, created_at, updated_at)
+         SELECT COALESCE(
+                  (SELECT substr(content, 1, 48) FROM messages WHERE role = 'user' ORDER BY id LIMIT 1),
+                  'Conversation'
+                ),
+                COALESCE((SELECT MIN(created_at) FROM messages), ?1),
+                COALESCE((SELECT MAX(created_at) FROM messages), ?1)
+         WHERE NOT EXISTS (SELECT 1 FROM sessions)",
+        [now],
+    )?;
+
+    let first: i64 = conn.query_row("SELECT MIN(id) FROM sessions", [], |row| row.get(0))?;
+    conn.execute(
+        "UPDATE messages SET session_id = ?1 WHERE session_id IS NULL",
+        [first],
+    )?;
+    conn.execute(
+        "INSERT OR IGNORE INTO meta (key, value)
+         VALUES ('current_session', (SELECT CAST(MAX(id) AS TEXT) FROM sessions))",
+        [],
+    )?;
     Ok(())
 }
 
@@ -131,17 +183,197 @@ fn now() -> i64 {
         .unwrap_or(0)
 }
 
+pub fn set_current_session(conn: &Connection, id: i64) -> rusqlite::Result<()> {
+    conn.execute(
+        "INSERT INTO meta (key, value) VALUES ('current_session', ?1)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        [id.to_string()],
+    )?;
+    Ok(())
+}
+
+pub fn current_session(conn: &Connection) -> rusqlite::Result<i64> {
+    if let Some(value) = conn
+        .query_row(
+            "SELECT value FROM meta WHERE key = 'current_session'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()?
+    {
+        if let Ok(id) = value.parse::<i64>() {
+            let exists = conn
+                .query_row("SELECT 1 FROM sessions WHERE id = ?1", [id], |_| Ok(()))
+                .optional()?
+                .is_some();
+            if exists {
+                return Ok(id);
+            }
+        }
+    }
+
+    let newest = conn.query_row("SELECT MAX(id) FROM sessions", [], |row| {
+        row.get::<_, Option<i64>>(0)
+    })?;
+    match newest {
+        Some(id) => {
+            set_current_session(conn, id)?;
+            Ok(id)
+        }
+        None => create_session(conn),
+    }
+}
+
+pub fn create_session(conn: &Connection) -> rusqlite::Result<i64> {
+    let stamp = now();
+    conn.execute(
+        "INSERT INTO sessions (title, created_at, updated_at) VALUES ('New chat', ?1, ?1)",
+        [stamp],
+    )?;
+    let id = conn.last_insert_rowid();
+    set_current_session(conn, id)?;
+    Ok(id)
+}
+
+pub fn list_sessions(conn: &Connection) -> rusqlite::Result<Vec<SessionSummary>> {
+    let mut statement = conn.prepare(
+        "SELECT s.id, s.title, s.created_at, s.updated_at,
+                (SELECT COUNT(*) FROM messages m WHERE m.session_id = s.id),
+                (SELECT content FROM messages m
+                  WHERE m.session_id = s.id AND m.role = 'user'
+                  ORDER BY m.id DESC LIMIT 1)
+         FROM sessions s
+         ORDER BY s.updated_at DESC, s.id DESC",
+    )?;
+    let rows = statement.query_map([], |row| {
+        let preview: Option<String> = row.get(5)?;
+        Ok(SessionSummary {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            created_at: row.get(2)?,
+            updated_at: row.get(3)?,
+            messages: row.get(4)?,
+            preview: preview.map(|text| text.chars().take(90).collect()),
+        })
+    })?;
+    rows.collect()
+}
+
+pub fn messages_for_session(
+    conn: &Connection,
+    session_id: i64,
+    limit: i64,
+) -> rusqlite::Result<Vec<StoredMessage>> {
+    let mut statement = conn.prepare(
+        "SELECT id, role, content, fixes, created_at FROM messages
+         WHERE session_id = ?1 ORDER BY id DESC LIMIT ?2",
+    )?;
+    let rows = statement.query_map(params![session_id, limit], |row| {
+        Ok(StoredMessage {
+            id: row.get(0)?,
+            role: row.get(1)?,
+            content: row.get(2)?,
+            fixes: row.get(3)?,
+            created_at: row.get(4)?,
+        })
+    })?;
+    let mut messages = rows.collect::<rusqlite::Result<Vec<_>>>()?;
+    messages.reverse();
+    Ok(messages)
+}
+
+pub fn open_session(
+    conn: &Connection,
+    id: i64,
+    limit: i64,
+) -> rusqlite::Result<Vec<StoredMessage>> {
+    let exists = conn
+        .query_row("SELECT 1 FROM sessions WHERE id = ?1", [id], |_| Ok(()))
+        .optional()?
+        .is_some();
+    if !exists {
+        return Err(rusqlite::Error::QueryReturnedNoRows);
+    }
+    set_current_session(conn, id)?;
+    messages_for_session(conn, id, limit)
+}
+
+/// Removes a session and everything that belonged to it, returning the
+/// session that should be open next.
+pub fn delete_session(conn: &Connection, id: i64) -> rusqlite::Result<i64> {
+    let current = current_session(conn)?;
+    conn.execute(
+        "DELETE FROM reviews WHERE fix_id IN (
+            SELECT id FROM fixes WHERE message_id IN (
+                SELECT id FROM messages WHERE session_id = ?1
+            )
+        )",
+        [id],
+    )?;
+    conn.execute(
+        "DELETE FROM fixes WHERE message_id IN (SELECT id FROM messages WHERE session_id = ?1)",
+        [id],
+    )?;
+    conn.execute("DELETE FROM messages WHERE session_id = ?1", [id])?;
+    conn.execute("DELETE FROM sessions WHERE id = ?1", [id])?;
+
+    if id == current {
+        let newest = conn.query_row("SELECT MAX(id) FROM sessions", [], |row| {
+            row.get::<_, Option<i64>>(0)
+        })?;
+        let next = match newest {
+            Some(next) => next,
+            None => create_session(conn)?,
+        };
+        set_current_session(conn, next)?;
+        Ok(next)
+    } else {
+        Ok(current)
+    }
+}
+
 pub fn insert(
     conn: &Connection,
     role: &str,
     content: &str,
     fixes: Option<&str>,
 ) -> rusqlite::Result<i64> {
+    let session_id = current_session(conn)?;
+    insert_in_session(conn, role, content, fixes, session_id)
+}
+
+pub fn insert_in_session(
+    conn: &Connection,
+    role: &str,
+    content: &str,
+    fixes: Option<&str>,
+    session_id: i64,
+) -> rusqlite::Result<i64> {
+    let stamp = now();
     conn.execute(
-        "INSERT INTO messages (role, content, fixes, created_at) VALUES (?1, ?2, ?3, ?4)",
-        params![role, content, fixes, now()],
+        "INSERT INTO messages (role, content, fixes, session_id, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![role, content, fixes, session_id, stamp],
     )?;
-    Ok(conn.last_insert_rowid())
+    let id = conn.last_insert_rowid();
+
+    if role == "user" {
+        let title: String = content.trim().chars().take(48).collect();
+        conn.execute(
+            "UPDATE sessions
+             SET title = CASE WHEN title = 'New chat' AND ?1 != '' THEN ?1 ELSE title END,
+                 updated_at = ?2
+             WHERE id = ?3",
+            params![title, stamp, session_id],
+        )?;
+    } else {
+        conn.execute(
+            "UPDATE sessions SET updated_at = ?1 WHERE id = ?2",
+            params![stamp, session_id],
+        )?;
+    }
+
+    Ok(id)
 }
 
 pub fn delete(conn: &Connection, id: i64) -> rusqlite::Result<()> {
@@ -167,6 +399,7 @@ pub fn set_message_fixes(conn: &Connection, id: i64, fixes: Option<&str>) -> rus
     Ok(())
 }
 
+#[cfg(test)]
 pub fn list(conn: &Connection, limit: i64) -> rusqlite::Result<Vec<StoredMessage>> {
     let mut stmt = conn.prepare(
         "SELECT id, role, content, fixes, created_at FROM messages ORDER BY id DESC LIMIT ?1",
@@ -824,5 +1057,31 @@ mod tests {
         let after = super::progress_stats(&conn).unwrap();
         assert_eq!(after.reviews, 0);
         assert_eq!(after.cards, 0);
+    }
+
+    #[test]
+    fn sessions_create_open_and_delete() {
+        let conn = memory_db();
+        let first = super::current_session(&conn).unwrap();
+        insert(&conn, "user", "hello from the first session", None).unwrap();
+
+        let second = super::create_session(&conn).unwrap();
+        assert_ne!(first, second);
+        insert(&conn, "user", "hello from the second session", None).unwrap();
+
+        let sessions = super::list_sessions(&conn).unwrap();
+        assert_eq!(sessions.len(), 2);
+        assert_eq!(sessions[0].id, second);
+        assert!(sessions[0].title.contains("hello from the second"));
+
+        let messages = super::open_session(&conn, first, 200).unwrap();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(super::current_session(&conn).unwrap(), first);
+
+        let next = super::delete_session(&conn, first).unwrap();
+        assert_eq!(next, second);
+        let remaining = super::list_sessions(&conn).unwrap();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].id, second);
     }
 }

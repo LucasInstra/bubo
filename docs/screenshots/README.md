@@ -9,6 +9,7 @@ The PNGs here are captured from the real UI with sample data. Replace them whene
 | `progress.png` | 420 x 640 | Streak, accuracy, 14-day activity and most practiced mistakes |
 | `buddy.png` | 420 x 640 | Buddy panel with the personality grid |
 | `compact.png` | 400 x 280 | Horizontal compact card with the header mascot |
+| `history.png` | 420 x 640 | Session list with the open conversation highlighted |
 | `empty.png` | 420 x 640 | First screen with the mascot, practice chip and suggestions |
 
 Tips:
