@@ -75,6 +75,14 @@
       <section class="hero" aria-labelledby="hero-title">
         <div class="wrap hero-grid">
           <div class="hero-copy">
+            <img
+              class="hero-mascot"
+              src="assets/bubo.png"
+              width="132"
+              height="132"
+              alt="bubo, a small purple round mascot with two vertical bar eyes"
+            />
+
             <p class="eyebrow">
               <span class="dot" aria-hidden="true"></span>
               Windows 10/11 · bring your own model key
@@ -122,12 +130,14 @@
           </div>
 
           <figure class="hero-shot">
-            <img
-              src="screenshots/chat.png"
-              width="420"
-              height="640"
-              alt="bubo chat window showing a learner message, a friendly reply, and a corrections card with three fixes"
-            />
+            <a class="shot-link" href="screenshots/chat.png" data-lightbox>
+              <img
+                src="screenshots/chat.png"
+                width="420"
+                height="640"
+                alt="bubo chat window showing a learner message, a friendly reply, and a corrections card with three fixes"
+              />
+            </a>
           </figure>
         </div>
       </section>
@@ -311,36 +321,40 @@
             <p class="kicker">Screenshots</p>
             <h2 id="screenshots-title">A look inside</h2>
             <p>
-              Real screens from the app: a chat with corrections, the practice deck, progress, old
-              sessions and compact mode.
+              Real screens from the app: the buddy editor, a chat with corrections, the practice
+              deck, progress, history and compact mode. Click any screenshot to open it larger.
             </p>
           </header>
 
           <div class="gallery">
             <figure class="shot">
-              <img
-                src="screenshots/buddy.png"
-                width="420"
-                height="640"
-                loading="lazy"
-                decoding="async"
-                alt="bubo buddy panel listing personality voices and the start of the look editor"
-              />
+              <a class="shot-link" href="screenshots/look.png" data-lightbox>
+                <img
+                  src="screenshots/look.png"
+                  width="420"
+                  height="640"
+                  loading="lazy"
+                  decoding="async"
+                  alt="bubo buddy customization with the default purple round mascot, bars eyes, size L, straight tilt and no mouth, plus shape, color, eye and mouth controls"
+                />
+              </a>
               <figcaption>
-                <strong>Your buddy, your rules</strong>
-                <span>Twelve voices, twelve shapes and a face you can tune.</span>
+                <strong>The default bubo</strong>
+                <span>Purple, round, bars eyes, size L, straight tilt and no mouth. Every part is editable.</span>
               </figcaption>
             </figure>
 
             <figure class="shot">
-              <img
-                src="screenshots/practice.png"
-                width="420"
-                height="640"
-                loading="lazy"
-                decoding="async"
-                alt="bubo practice screen with a sentence to rewrite, the original context and a check button"
-              />
+              <a class="shot-link" href="screenshots/practice.png" data-lightbox>
+                <img
+                  src="screenshots/practice.png"
+                  width="420"
+                  height="640"
+                  loading="lazy"
+                  decoding="async"
+                  alt="bubo practice screen with a sentence to rewrite, the original context and a check button"
+                />
+              </a>
               <figcaption>
                 <strong>Practice what tripped you</strong>
                 <span>Rewrite the sentence and get instant feedback.</span>
@@ -348,14 +362,16 @@
             </figure>
 
             <figure class="shot">
-              <img
-                src="screenshots/progress.png"
-                width="420"
-                height="640"
-                loading="lazy"
-                decoding="async"
-                alt="bubo progress screen with a four-day streak, accuracy, a 14-day chart and most practiced mistakes"
-              />
+              <a class="shot-link" href="screenshots/progress.png" data-lightbox>
+                <img
+                  src="screenshots/progress.png"
+                  width="420"
+                  height="640"
+                  loading="lazy"
+                  decoding="async"
+                  alt="bubo progress screen with a four-day streak, accuracy, a 14-day chart and most practiced mistakes"
+                />
+              </a>
               <figcaption>
                 <strong>See the streak grow</strong>
                 <span>Accuracy, activity and your most repeated mistakes.</span>
@@ -363,14 +379,16 @@
             </figure>
 
             <figure class="shot">
-              <img
-                src="screenshots/history.png"
-                width="420"
-                height="640"
-                loading="lazy"
-                decoding="async"
-                alt="bubo history screen listing saved chat sessions with message counts and dates"
-              />
+              <a class="shot-link" href="screenshots/history.png" data-lightbox>
+                <img
+                  src="screenshots/history.png"
+                  width="420"
+                  height="640"
+                  loading="lazy"
+                  decoding="async"
+                  alt="bubo history screen listing saved chat sessions with message counts and dates"
+                />
+              </a>
               <figcaption>
                 <strong>Every chat is a session</strong>
                 <span>Reopen an old conversation or start a new one.</span>
@@ -378,14 +396,16 @@
             </figure>
 
             <figure class="shot shot-wide">
-              <img
-                src="screenshots/compact.png"
-                width="400"
-                height="280"
-                loading="lazy"
-                decoding="async"
-                alt="bubo compact mode: a wide card with the mascot in the header and a one-line message composer"
-              />
+              <a class="shot-link" href="screenshots/compact.png" data-lightbox>
+                <img
+                  src="screenshots/compact.png"
+                  width="400"
+                  height="280"
+                  loading="lazy"
+                  decoding="async"
+                  alt="bubo compact mode: a wide card with the mascot in the header and a one-line message composer"
+                />
+              </a>
               <figcaption>
                 <strong>Compact when you're busy</strong>
                 <span>
@@ -541,5 +561,75 @@
         </div>
       </div>
     </footer>
+
+    <div
+      class="lightbox"
+      id="lightbox"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-label="Screenshot preview"
+    >
+      <button class="lightbox-close" type="button" aria-label="Close preview">×</button>
+      <img alt="" />
+      <p class="lightbox-caption"></p>
+    </div>
+
+    <script>
+      (() => {
+        const dialog = document.getElementById("lightbox");
+        if (!dialog) return;
+
+        const image = dialog.querySelector("img");
+        const caption = dialog.querySelector(".lightbox-caption");
+        const close = dialog.querySelector(".lightbox-close");
+        let previous = null;
+
+        const open = (link) => {
+          const thumb = link.querySelector("img");
+          const figure = link.closest("figure");
+          const title = figure?.querySelector("figcaption strong")?.textContent?.trim();
+          const detail = figure?.querySelector("figcaption span")?.textContent?.trim();
+
+          previous = document.activeElement;
+          image.src = link.getAttribute("href");
+          image.alt = thumb?.alt ?? "";
+          caption.textContent = [title, detail].filter(Boolean).join(" · ");
+          dialog.hidden = false;
+          document.body.classList.add("lightbox-open");
+          close.focus();
+        };
+
+        const hide = () => {
+          dialog.hidden = true;
+          image.removeAttribute("src");
+          document.body.classList.remove("lightbox-open");
+          if (previous instanceof HTMLElement) previous.focus();
+          previous = null;
+        };
+
+        for (const link of document.querySelectorAll("a[data-lightbox]")) {
+          link.addEventListener("click", (event) => {
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            open(link);
+          });
+        }
+
+        close.addEventListener("click", hide);
+        dialog.addEventListener("click", (event) => {
+          if (event.target === dialog) hide();
+        });
+        dialog.addEventListener("keydown", (event) => {
+          if (event.key === "Tab") {
+            event.preventDefault();
+            close.focus();
+          }
+        });
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape" && !dialog.hidden) hide();
+        });
+      })();
+    </script>
   </body>
 </html>

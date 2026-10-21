@@ -4,7 +4,11 @@ A tiny English tutor that lives in a floating window on your desktop. You chat i
 
 Website: https://lucasinstra.github.io/bubo/
 
-![bubo chat](docs/screenshots/chat.png)
+<p align="center">
+  <a href="docs/assets/bubo.png"><img src="docs/assets/bubo.png" width="132" alt="bubo mascot"></a>
+</p>
+
+[![bubo chat](docs/screenshots/chat.png)](docs/screenshots/chat.png)
 
 <p>
   <img alt="Tauri" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
@@ -21,7 +25,7 @@ Because the useful part of learning a language is the five minutes between real 
 
 - **Always there, never in the way**: frameless popup, global hotkey, tray icon, pin/unpin, hides on `Esc`.
 - **A mascot with a face**: 12 shapes, 9 colors plus a custom picker, 9 eye styles, eye color, spacing and tilt, plus an optional mouth with six shapes and three sizes. Spring physics, drag jelly, idle look-arounds, blinks, pointer gaze and a hop when you click it. The little mascot in the header opens its customization panel.
-- **Ready-made personalities**: nine voices such as Warm Coach, Dry Wit or Hype Friend. Picking one changes only the tutor's tone; the mascot look stays exactly as you customized it. The free-text flavor field stacks on top.
+- **Ready-made personalities**: twelve voices such as Warm Coach, Dry Wit or Hype Friend. Picking one changes only the tutor's tone; the mascot look stays exactly as you customized it. The free-text flavor field stacks on top.
 - **Compact mode**: a 400 x 280 horizontal chat card with the buddy in the header, the current mood under the name and a one-line composer. The full window is one click away.
 - **Bring your own endpoint**: Groq, OpenAI, OpenRouter, Ollama or any OpenAI-compatible URL, with model suggestions and a test connection button.
 - **Conversation first**: replies stream token by token; a separate pass returns corrections as strict JSON, so the card never depends on the model following inline formatting.
@@ -34,13 +38,19 @@ Because the useful part of learning a language is the five minutes between real 
 
 ## Screenshots
 
-| Chat and corrections               | Practice                                   | Progress                                   |
-| ---------------------------------- | ------------------------------------------ | ------------------------------------------ |
-| ![Chat](docs/screenshots/chat.png) | ![Practice](docs/screenshots/practice.png) | ![Progress](docs/screenshots/progress.png) |
+| Chat and corrections                                                                   | Practice                                                                          | Progress                                                                          |
+| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| [![Chat](docs/screenshots/chat.png)](docs/screenshots/chat.png)                         | [![Practice](docs/screenshots/practice.png)](docs/screenshots/practice.png)       | [![Progress](docs/screenshots/progress.png)](docs/screenshots/progress.png)       |
 
-| Buddy panel                                | Compact mode                                  | History                                  |
-| ------------------------------------------ | --------------------------------------------- | ---------------------------------------- |
-| ![Buddy panel](docs/screenshots/buddy.png) | ![Compact mode](docs/screenshots/compact.png) | ![History](docs/screenshots/history.png) |
+| Buddy panel                                                                             | Compact mode                                                                        | History                                                                            |
+| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| [![Buddy panel](docs/screenshots/buddy.png)](docs/screenshots/buddy.png)                 | [![Compact mode](docs/screenshots/compact.png)](docs/screenshots/compact.png)       | [![History](docs/screenshots/history.png)](docs/screenshots/history.png)           |
+
+### Customization
+
+[![bubo customization](docs/screenshots/look.png)](docs/screenshots/look.png)
+
+The default bubo is purple, round, with bars eyes, size L, straight tilt and no mouth. The **Reset look** button restores it, and every part stays editable.
 
 ## Install
 

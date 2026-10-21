@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>bubo brand assets</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1024px;
+        height: 1024px;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      #root {
+        width: 1024px;
+        height: 1024px;
+      }
+
+      .icon {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 1024px;
+        height: 1024px;
+        overflow: hidden;
+        border-radius: 224px;
+        background: radial-gradient(circle at 50% 38%, #1b1729 0%, #12101d 62%, #0d0b14 100%);
+      }
+
+      .mascot-only {
+        display: grid;
+        place-items: center;
+        width: 1024px;
+        height: 1024px;
+      }
+
+      .spark {
+        position: absolute;
+        fill: #fcfcff;
+        filter: drop-shadow(0 0 18px rgba(139, 125, 255, 0.55));
+      }
+
+      .spark-a {
+        top: 108px;
+        right: 118px;
+        width: 138px;
+        height: 138px;
+      }
+
+      .spark-b {
+        bottom: 126px;
+        left: 118px;
+        width: 78px;
+        height: 78px;
+        fill: #cfcaff;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      import React from "react";
+      import { createRoot } from "react-dom/client";
+      import { Mascot } from "/src/components/Mascot.tsx";
+
+      const params = new URLSearchParams(location.search);
+      const mode = params.get("mode") ?? "icon";
+
+      const star = (className) =>
+        React.createElement(
+          "svg",
+          { className, viewBox: "0 0 100 100", "aria-hidden": "true" },
+          React.createElement("path", {
+            d: "M50 0 C55 35 64 45 100 50 C64 55 55 65 50 100 C45 65 36 55 0 50 C36 45 45 35 50 0Z",
+          }),
+        );
+
+      const mascot = React.createElement(Mascot, {
+        state: "idle",
+        size: mode === "icon" ? 660 : 760,
+        shape: "round",
+        color: "#8b7dff",
+        showMouth: false,
+        eyeStyle: "bars",
+        eyeSize: "large",
+        eyeSpacing: "normal",
+        eyeTilt: "straight",
+        eyeColor: "auto",
+        animate: false,
+        canvasPadding: mode === "icon" ? 0.12 : 0.05,
+      });
+
+      const content =
+        mode === "icon"
+          ? React.createElement(
+              "div",
+              { className: "icon" },
+              mascot,
+              star("spark spark-a"),
+              star("spark spark-b"),
+            )
+          : React.createElement("div", { className: "mascot-only" }, mascot);
+
+      createRoot(document.getElementById("root")).render(content);
+    </script>
+  </body>
+</html>
