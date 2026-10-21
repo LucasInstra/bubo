@@ -1,57 +1,91 @@
 import { describe, expect, it } from "vitest";
-import { gripDeformation } from "./grab";
+import { clampAnchor, deformOutline, followTarget, GRAB, gripPhysics, pullTarget } from "./grab";
 
 const radius = 100;
 
-describe("gripDeformation", () => {
-  it("does nothing with a zero pull", () => {
-    const grip = gripDeformation(50, -20, 0, 0, radius);
-    expect(grip.followX).toBe(0);
-    expect(grip.followY).toBe(0);
+describe("grab targets", () => {
+  it("caps the local pull at the configured fraction of the radius", () => {
+    const pull = pullTarget(500, -500, radius);
+    expect(Math.hypot(pull.x, pull.y)).toBeCloseTo(radius * GRAB.maxPull);
+    expect(pull.x).toBeGreaterThan(0);
+    expect(pull.y).toBeLessThan(0);
+  });
+
+  it("keeps the whole-body follow tiny and capped", () => {
+    const follow = followTarget(500, 500, radius);
+    expect(Math.hypot(follow.x, follow.y)).toBeLessThanOrEqual(radius * GRAB.maxFollow);
+    expect(Math.abs(follow.x)).toBeLessThan(radius * 0.1);
+  });
+
+  it("clamps a corner grab back onto the body", () => {
+    const anchor = clampAnchor(radius * 4, 0, radius);
+    expect(anchor.x).toBeCloseTo(radius * GRAB.maxAnchor);
+    expect(anchor.y).toBe(0);
+
+    expect(clampAnchor(0, 0, radius)).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe("deformOutline", () => {
+  const anchor = { x: -radius * 0.7, y: 0 };
+  const nearby = [
+    { x: anchor.x, y: anchor.y },
+    { x: 0, y: 0 },
+    { x: radius, y: 0 },
+    { x: anchor.x, y: radius },
+  ];
+
+  it("returns the same outline when there is no pull", () => {
+    expect(deformOutline(nearby, anchor.x, anchor.y, 0, 0, radius)).toBe(nearby);
+  });
+
+  it("moves the grabbed point exactly by the pull", () => {
+    const moved = deformOutline(nearby, anchor.x, anchor.y, 12, -4, radius);
+    expect(moved[0].x).toBeCloseTo(anchor.x + 12);
+    expect(moved[0].y).toBeCloseTo(-4);
+  });
+
+  it("leaves the far side almost untouched", () => {
+    const moved = deformOutline(nearby, anchor.x, anchor.y, 12, -4, radius);
+    expect(moved[2].x).toBeGreaterThan(radius - 0.5);
+    expect(moved[2].x).toBeLessThan(radius + 0.5);
+    expect(Math.abs(moved[2].y)).toBeLessThan(0.5);
+  });
+
+  it("dents inward when the pointer pushes into the body", () => {
+    const moved = deformOutline(nearby, anchor.x, anchor.y, radius * 0.2, 0, radius);
+    expect(moved[0].x).toBeCloseTo(anchor.x + radius * 0.2, 1);
+    expect(moved[0].x).toBeGreaterThan(anchor.x);
+  });
+
+  it("spreads the falloff on bigger pulls instead of spiking", () => {
+    const small = deformOutline(nearby, anchor.x, anchor.y, -radius * 0.1, 0, radius);
+    const large = deformOutline(nearby, anchor.x, anchor.y, -radius * GRAB.maxPull, 0, radius);
+    const smallWeight = Math.abs(small[1].x) / (radius * 0.1);
+    const largeWeight = Math.abs(large[1].x) / (radius * GRAB.maxPull);
+    expect(largeWeight).toBeGreaterThan(smallWeight);
+    expect(large.every((point) => Number.isFinite(point.x) && Number.isFinite(point.y))).toBe(true);
+  });
+});
+
+describe("gripPhysics", () => {
+  it("does nothing without a pull", () => {
+    const grip = gripPhysics(0, -radius * 0.5, 0, 0, radius);
     expect(grip.scaleAlong).toBe(1);
     expect(grip.scaleCross).toBe(1);
     expect(grip.strength).toBe(0);
   });
 
-  it("stretches the grabbed cheek when pulled further left", () => {
-    const grip = gripDeformation(-radius * 0.7, 0, -radius * 0.3, 0, radius);
+  it("stretches along the axis when pulled outward", () => {
+    const grip = gripPhysics(-radius * 0.7, 0, -radius * GRAB.maxPull, 0, radius);
     expect(grip.axis).toBeCloseTo(Math.PI);
     expect(grip.scaleAlong).toBeGreaterThan(1);
     expect(grip.scaleCross).toBeLessThan(1);
-    expect(grip.strength).toBe(1);
-    expect(grip.followX).toBeCloseTo(-radius * 0.3 * 0.9);
   });
 
-  it("squashes the grabbed side when pushed inward", () => {
-    const grip = gripDeformation(-radius * 0.7, 0, radius * 0.3, 0, radius);
-    expect(grip.axis).toBeCloseTo(Math.PI);
+  it("squashes along the axis when pushed inward", () => {
+    const grip = gripPhysics(-radius * 0.7, 0, radius * GRAB.maxPull, 0, radius);
     expect(grip.scaleAlong).toBeLessThan(1);
     expect(grip.scaleCross).toBeGreaterThan(1);
-    // pressing in should compress the cheek instead of sliding the blob along
-    const outward = gripDeformation(-radius * 0.7, 0, -radius * 0.3, 0, radius);
-    expect(Math.abs(grip.followX)).toBeLessThan(Math.abs(outward.followX));
-  });
-
-  it("stays finite for a near-center vertical pull", () => {
-    const grip = gripDeformation(0, 0, 0, radius * 0.4, radius);
-    for (const value of Object.values(grip)) expect(Number.isFinite(value)).toBe(true);
-    expect(grip.axis).toBeCloseTo(Math.PI / 2);
-    expect(grip.scaleAlong).toBeGreaterThan(1);
-    expect(grip.scaleCross).toBeLessThan(1);
-  });
-
-  it("falls back to the drag direction when the anchor is centered", () => {
-    const grip = gripDeformation(0, 0, radius * 0.3, 0, radius);
-    expect(grip.axis).toBeCloseTo(0);
-    expect(grip.scaleAlong).toBeGreaterThan(1);
-  });
-
-  it("clamps extreme pulls and sideways drags", () => {
-    const grip = gripDeformation(-radius * 0.7, 0, radius * 5, radius * 5, radius);
-    expect(grip.scaleAlong).toBeGreaterThanOrEqual(0.68);
-    expect(grip.scaleAlong).toBeLessThanOrEqual(1.3);
-    expect(grip.scaleCross).toBeGreaterThanOrEqual(0.85);
-    expect(grip.scaleCross).toBeLessThanOrEqual(1.18);
-    expect(grip.strength).toBe(1);
   });
 });

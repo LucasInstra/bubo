@@ -1,5 +1,12 @@
 import { useEffect, useRef } from "react";
-import { gripDeformation } from "../lib/grab";
+import {
+  clampAnchor,
+  deformOutline,
+  followTarget,
+  gripPhysics,
+  pullTarget,
+  type Point,
+} from "../lib/grab";
 import type { Mood, OrbState } from "../lib/types";
 
 export const MASCOT_SHAPES = [
@@ -320,6 +327,66 @@ function bodyPath(shape: string, radius: number): Path2D {
   return path;
 }
 
+let outlineSampler: CanvasRenderingContext2D | null = null;
+const outlineCache = new Map<string, Point[]>();
+
+function samplerContext(): CanvasRenderingContext2D | null {
+  if (outlineSampler) return outlineSampler;
+  if (typeof document === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  outlineSampler = canvas.getContext("2d");
+  return outlineSampler;
+}
+
+/**
+ * Turns a body silhouette into a ring of points by casting rays from the
+ * center. Points are what allow a local, Gaussian deformation; a Path2D alone
+ * can only take global transforms.
+ */
+function bodyOutline(shape: string, radius: number): Point[] {
+  const key = `${shape}:${radius.toFixed(2)}`;
+  const cached = outlineCache.get(key);
+  if (cached) return cached;
+
+  const context = samplerContext();
+  if (!context) return [];
+
+  const path = bodyPath(shape, radius);
+  const count = 256;
+  const max = radius * 1.7;
+  const points: Point[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const angle = (index / count) * TAU;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    let low = 0;
+    let high = max;
+    for (let step = 0; step < 16; step += 1) {
+      const middle = (low + high) / 2;
+      if (context.isPointInPath(path, cos * middle, sin * middle)) low = middle;
+      else high = middle;
+    }
+    points.push({ x: cos * low, y: sin * low });
+  }
+
+  outlineCache.set(key, points);
+  return points;
+}
+
+function pathFromPoints(points: Point[]): Path2D {
+  const path = new Path2D();
+  if (points.length === 0) return path;
+  path.moveTo(points[0].x, points[0].y);
+  for (let index = 1; index < points.length; index += 1) {
+    path.lineTo(points[index].x, points[index].y);
+  }
+  path.closePath();
+  return path;
+}
+
 /**
  * bubo's body: a flat colored shape with two simple capsule eyes. No pupils,
  * no sclera rings, just a solid highlight that blinks and drifts.
@@ -369,6 +436,7 @@ export function Mascot({
 
     const gaze = { x: 0, y: 0, tx: 0, ty: 0, seen: -10 };
     const radius = size * 0.3;
+    const outline = bodyOutline(shape, radius);
     const start = performance.now();
     let frame = 0;
     let smoothed = 0;
@@ -396,6 +464,8 @@ export function Mascot({
     const headRot = { value: 0, velocity: 0 };
     const dragX = { value: 0, velocity: 0, target: 0 };
     const dragY = { value: 0, velocity: 0, target: 0 };
+    const pullX = { value: 0, velocity: 0, target: 0 };
+    const pullY = { value: 0, velocity: 0, target: 0 };
     const drag = {
       active: false,
       startX: 0,
@@ -435,11 +505,14 @@ export function Mascot({
       const dx = event.clientX - drag.startX;
       const dy = event.clientY - drag.startY;
       drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
-      // soft limit: the further you pull, the more resistance, but no wall
-      const limit = radius * 1.0;
-      const pull = (value: number) => Math.sign(value) * limit * Math.tanh(Math.abs(value) / limit);
-      dragX.target = pull(dx);
-      dragY.target = pull(dy);
+      // The body stays mostly planted: a tiny follow keeps contact, and the
+      // capped local pull is what deforms the grabbed area.
+      const follow = followTarget(dx, dy, radius);
+      dragX.target = follow.x;
+      dragY.target = follow.y;
+      const pull = pullTarget(dx, dy, radius);
+      pullX.target = pull.x;
+      pullY.target = pull.y;
     };
 
     const onPointerDown = (event: PointerEvent) => {
@@ -453,11 +526,9 @@ export function Mascot({
       const rect = hit.getBoundingClientRect();
       const offsetX = event.clientX - (rect.left + rect.width / 2);
       const offsetY = event.clientY - (rect.top + rect.height / 2);
-      const offset = Math.hypot(offsetX, offsetY);
-      const maxAnchor = radius * 0.85;
-      const anchorScale = offset > maxAnchor ? maxAnchor / offset : 1;
-      drag.anchorX = offsetX * anchorScale;
-      drag.anchorY = offsetY * anchorScale;
+      const anchor = clampAnchor(offsetX, offsetY, radius);
+      drag.anchorX = anchor.x;
+      drag.anchorY = anchor.y;
       try {
         hit.setPointerCapture(event.pointerId);
       } catch {
@@ -471,6 +542,8 @@ export function Mascot({
       drag.active = false;
       dragX.target = 0;
       dragY.target = 0;
+      pullX.target = 0;
+      pullY.target = 0;
       hit.style.cursor = boopable ? "grab" : "default";
       if (drag.moved < 4) {
         const now2 = (performance.now() - start) / 1000;
@@ -577,8 +650,13 @@ export function Mascot({
         spring(headX, gaze.x * radius * 0.11, 95, 13, halfStep);
         spring(headY, gaze.y * radius * 0.07, 90, 14, halfStep);
         spring(headRot, gaze.x * 0.09, 80, 12, halfStep);
-        spring(dragX, dragX.target, 150, 9, halfStep);
-        spring(dragY, dragY.target, 150, 9, halfStep);
+        // The follow is tiny and settles fast; the local pull is the jelly.
+        // A damping ratio around 0.65 gives one small overshoot on release,
+        // which reads closer to silicone than the reference's looser gelatin.
+        spring(dragX, dragX.target, 150, 13, halfStep);
+        spring(dragY, dragY.target, 150, 13, halfStep);
+        spring(pullX, pullX.target, 210, 20, halfStep);
+        spring(pullY, pullY.target, 210, 20, halfStep);
       }
 
       if (current === "idle" && time > nextHop) {
@@ -612,10 +690,11 @@ export function Mascot({
       eyeOpen *= 1 - 0.18 * (moodSad ? moodBlend : 0);
       eyeOpen *= 1 + 0.08 * (moodSurprised ? moodBlend : 0);
 
-      // point-based grip: the grabbed spot follows the pointer, and the body
-      // deforms around it instead of scaling about its own center
-      const grip = gripDeformation(drag.anchorX, drag.anchorY, dragX.value, dragY.value, radius);
-      const lean = (dragX.value / (radius * 1.2)) * 0.05;
+      // Point-based grip: the silhouette itself deforms around the grabbed
+      // spot, with only a tiny body translation. The blob stays planted while
+      // the cheek does the stretching.
+      const grip = gripPhysics(drag.anchorX, drag.anchorY, pullX.value, pullY.value, radius);
+      const lean = (pullX.value / (radius * 1.2)) * 0.05;
       const moodDrop = moodSad
         ? radius * 0.05 * moodBlend
         : moodSurprised
@@ -634,7 +713,7 @@ export function Mascot({
       // The aura follows the body but stays round: apply only the follow
       // translation, outside the grip deformation, so it never goes elliptical.
       context.save();
-      if (grip.strength > 0.001) context.translate(grip.followX, grip.followY);
+      context.translate(dragX.value, dragY.value);
       const auraRadius = radius * 1.9;
       const aura = context.createRadialGradient(0, 0, radius * 0.4, 0, 0, auraRadius);
       aura.addColorStop(0, `${color}${hovering ? "3a" : "2e"}`);
@@ -646,21 +725,30 @@ export function Mascot({
       context.fill();
       context.restore();
 
-      // Deform around the grabbed spot first, then move the body with the
-      // cursor, so that spot tracks the pointer instead of overshooting it.
+      // A very small affine cohesion on top of the local deformation. It is
+      // what keeps the silhouette reading as one piece; anything bigger starts
+      // to look like the old whole-body stretch.
+      context.translate(dragX.value, dragY.value);
       if (grip.strength > 0.001) {
         context.translate(drag.anchorX, drag.anchorY);
         context.rotate(grip.axis);
         context.scale(grip.scaleAlong, grip.scaleCross);
         context.rotate(-grip.axis);
         context.translate(-drag.anchorX, -drag.anchorY);
-        context.translate(grip.followX, grip.followY);
       }
 
       context.scale(1 / breathe, breathe);
 
-      // body
-      const body = bodyPath(shape, radius);
+      // body: the sampled outline, locally deformed around the grab point
+      const deformed = deformOutline(
+        outline,
+        drag.anchorX,
+        drag.anchorY,
+        pullX.value,
+        pullY.value,
+        radius,
+      );
+      const body = outline.length > 0 ? pathFromPoints(deformed) : bodyPath(shape, radius);
       context.fillStyle = color;
       context.fill(body);
 
@@ -673,6 +761,11 @@ export function Mascot({
       context.fillStyle = sheen;
       context.fillRect(-radius * 1.4, -radius * 1.4, radius * 2.8, radius * 2.8);
       context.restore();
+
+      // Features stay rigid but are clipped by the deformed silhouette, so a
+      // big cheek pull cannot leave an eye floating outside the body.
+      context.save();
+      context.clip(body);
 
       // eyes: one flat shape each, no pupil; style, size, spacing, tilt and
       // color are configurable, and every solid shape folds when it blinks
@@ -822,6 +915,8 @@ export function Mascot({
 
         context.restore();
       }
+
+      context.restore();
 
       if (feeling === "proud" && moodBlend > 0.05) {
         context.fillStyle = `rgba(255,255,255,${0.92 * moodBlend})`;
