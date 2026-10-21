@@ -88,7 +88,7 @@
       const handlers = {
         get_settings: () => settings,
         has_api_key: () => true,
-        history: () => stored,
+        history: () => (mode === "empty" ? [] : stored),
         current_session: () => 1,
         list_sessions: () => [
           {
@@ -116,7 +116,7 @@
             preview: "tell me about yourself",
           },
         ],
-        drill_stats: () => ({ total: 6, due: 2 }),
+        drill_stats: () => (mode === "empty" ? { total: 0, due: 0 } : { total: 6, due: 2 }),
         drill_next: () => drillItem,
         drill_review: () => ({ ...drillItem, streak: 3 }),
         drill_focus: () => drillItem,
