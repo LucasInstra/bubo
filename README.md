@@ -2,7 +2,9 @@
 
 A tiny English tutor that lives in a floating window on your desktop. You chat in English, bubo answers at your level and quietly shows what a native speaker would have said, then turns those corrections into a spaced-repetition practice deck.
 
-![bubo chat](docs/screenshots/chat.svg)
+Website: https://lucasinstra.github.io/bubo/
+
+![bubo chat](docs/screenshots/chat.png)
 
 <p>
   <img alt="Tauri" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
@@ -32,12 +34,12 @@ Because the useful part of learning a language is the five minutes between real 
 
 ## Screenshots
 
-| Chat and corrections | Practice | Progress |
-| --- | --- | --- |
+| Chat and corrections               | Practice                                   | Progress                                   |
+| ---------------------------------- | ------------------------------------------ | ------------------------------------------ |
 | ![Chat](docs/screenshots/chat.png) | ![Practice](docs/screenshots/practice.png) | ![Progress](docs/screenshots/progress.png) |
 
-| Buddy panel | Compact mode | History |
-| --- | --- | --- |
+| Buddy panel                                | Compact mode                                  | History                                  |
+| ------------------------------------------ | --------------------------------------------- | ---------------------------------------- |
 | ![Buddy panel](docs/screenshots/buddy.png) | ![Compact mode](docs/screenshots/compact.png) | ![History](docs/screenshots/history.png) |
 
 ## Install
@@ -59,6 +61,8 @@ npm install
 npm run tauri build     # installer in src-tauri/target/release/bundle
 ```
 
+Updater artifacts are enabled, so a local installer build also needs `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. The release workflow supplies them from GitHub secrets.
+
 ## First run
 
 1. Settings opens automatically. Paste a Groq API key from [console.groq.com/keys](https://console.groq.com/keys). It is stored in the Windows Credential Manager.
@@ -67,14 +71,28 @@ npm run tauri build     # installer in src-tauri/target/release/bundle
 
 The default model is `openai/gpt-oss-120b`. Any OpenAI-compatible base URL works if you prefer another provider.
 
+## Updates
+
+bubo checks GitHub Releases when it starts and shows a small banner when a newer version exists. There is also a manual check under Settings → Updates.
+
+The build is unsigned, so Windows SmartScreen may still warn on first run; update packages are verified with the Tauri updater signing key instead of an Authenticode certificate.
+
+The first updater-enabled release must be installed by hand. After that, later versions can download and install from inside the app.
+
+## Releasing
+
+1. `npm version patch` (or `minor` / `major`). The `version` script syncs the new version into `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.lock`.
+2. Push the commit and the `vX.Y.Z` tag.
+3. The release workflow builds on Windows and publishes the installer, the updater artifacts and `latest.json` to GitHub Releases.
+
 ## Keyboard
 
-| Shortcut | Action |
-| --- | --- |
-| `Enter` | Send |
-| `Shift+Enter` | New line |
-| `Esc` | Close settings/practice, otherwise hide the window |
-| `Ctrl+Alt+B` | Show/hide bubo (configurable in settings) |
+| Shortcut      | Action                                             |
+| ------------- | -------------------------------------------------- |
+| `Enter`       | Send                                               |
+| `Shift+Enter` | New line                                           |
+| `Esc`         | Close settings/practice, otherwise hide the window |
+| `Ctrl+Alt+B`  | Show/hide bubo (configurable in settings)          |
 
 ## Customize
 
@@ -102,12 +120,12 @@ The default model is `openai/gpt-oss-120b`. Any OpenAI-compatible base URL works
 
 ## Data and privacy
 
-| What | Where |
-| --- | --- |
-| API key | Windows Credential Manager (`bubo` / `llm-api-key`) |
-| History and fixes | `%APPDATA%\com.lucas.bubo\bubo.db` |
-| Settings | `%APPDATA%\com.lucas.bubo\settings.json` |
-| Diagnostics | `%APPDATA%\com.lucas.bubo\bubo.log` (rotated, 1 MB cap) |
+| What              | Where                                                   |
+| ----------------- | ------------------------------------------------------- |
+| API key           | Windows Credential Manager (`bubo` / `llm-api-key`)     |
+| History and fixes | `%APPDATA%\com.lucas.bubo\bubo.db`                      |
+| Settings          | `%APPDATA%\com.lucas.bubo\settings.json`                |
+| Diagnostics       | `%APPDATA%\com.lucas.bubo\bubo.log` (rotated, 1 MB cap) |
 
 Only the text you send is forwarded to your provider. There is no analytics and no third-party service besides the model endpoint you configure.
 
@@ -120,6 +138,7 @@ npm run test:unit       # frontend tests (Vitest)
 npm run test:e2e        # Playwright against the web UI with mocked IPC
 npm run lint            # ESLint
 npm run format:check    # Prettier
+npm run version:check   # package.json, Cargo and tauri.conf.json in sync
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 npm run tauri build     # release installer
@@ -164,4 +183,4 @@ e2e/                      Playwright harness and tests
 
 ## License
 
-No license yet. Ask before redistributing.
+bubo is currently **all rights reserved**. See [LICENSE](LICENSE) for the full terms. The source is public for reference and evaluation, and no permission is granted to reuse it without prior written permission. These terms may change later; a permissive license such as MIT could replace them in a future release.
