@@ -135,7 +135,8 @@ export function HistoryPanel({
                 aria-label="Delete conversation"
                 onClick={() => void remove(session.id)}
               >
-                {confirmId === session.id ? "erase" : "×"}
+                <span aria-hidden="true">×</span>
+                {confirmId === session.id && <span className="session-delete-text">erase</span>}
               </button>
             </div>
           ))

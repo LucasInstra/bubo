@@ -31,6 +31,7 @@ pub struct Settings {
     pub eye_spacing: String,
     pub eye_tilt: String,
     pub eye_color: String,
+    pub sad_style: String,
     pub glass: bool,
     pub glass_opacity: u32,
 }
@@ -63,6 +64,7 @@ impl Default for Settings {
             eye_spacing: "normal".to_string(),
             eye_tilt: "straight".to_string(),
             eye_color: "auto".to_string(),
+            sad_style: "brows".to_string(),
             glass: true,
             glass_opacity: 95,
         }

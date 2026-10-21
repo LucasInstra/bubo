@@ -45,6 +45,7 @@ export interface Settings {
   eyeSpacing: string;
   eyeTilt: string;
   eyeColor: string;
+  sadStyle: string;
   noteLanguage: string;
   glass: boolean;
   glassOpacity: number;
@@ -120,6 +121,7 @@ export type LookSettings = Pick<
   | "eyeSpacing"
   | "eyeTilt"
   | "eyeColor"
+  | "sadStyle"
   | "showMouth"
   | "mouthStyle"
   | "mouthSize"
@@ -135,6 +137,7 @@ export const DEFAULT_LOOK: LookSettings = {
   eyeSpacing: "normal",
   eyeTilt: "straight",
   eyeColor: "auto",
+  sadStyle: "brows",
   showMouth: false,
   mouthStyle: "line",
   mouthSize: "medium",

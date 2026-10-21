@@ -4,6 +4,7 @@ import { Composer } from "./components/Composer";
 import { BuddyPanel } from "./components/BuddyPanel";
 import { CompactView } from "./components/CompactView";
 import { Drill } from "./components/Drill";
+import { GlassRefraction } from "./components/GlassRefraction";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { Mascot } from "./components/Mascot";
 import { Message } from "./components/Message";
@@ -218,9 +219,9 @@ export default function App() {
             busyRef.current = false;
             setStatus("idle");
             setEnergy(0);
-            // A requested face keeps the spotlight; the usual happy nod is
-            // only for regular replies.
-            react(requestedMood ?? "happy", requestedMood ? 1800 : 1200);
+            // A requested face gets the stage after the reply; the usual happy
+            // nod is only for regular replies.
+            react(requestedMood ?? "happy", requestedMood ? 4200 : 1200);
             setMessages((current) =>
               current.map((message) =>
                 message.id === botMessage.id
@@ -302,15 +303,14 @@ export default function App() {
         setShowSettings(true);
         return false;
       }
-      // "do a happy face" is handled locally: the popup reacts right away,
-      // and the reply still goes to the model so the chat keeps flowing.
+      // "do a happy face" is handled locally, but the face waits: bubo thinks
+      // and answers first, then holds the requested expression for a moment.
       const requestedMood = moodRequest(text);
-      if (requestedMood) react(requestedMood, 3200);
       busyRef.current = true;
       void runTurn(text, requestedMood);
       return true;
     },
-    [hasKey, react, runTurn],
+    [hasKey, runTurn],
   );
 
   const retry = useCallback(
@@ -490,6 +490,9 @@ export default function App() {
       style={accentVars}
     >
       <div className="panel">
+        {settings.glass && (
+          <GlassRefraction radius={16} band={38} displacement={48} blur={10} saturation={175} />
+        )}
         <header className="head" data-tauri-drag-region>
           <button
             className="brand brand-button"
@@ -520,6 +523,7 @@ export default function App() {
                   eyeSpacing={settings.eyeSpacing}
                   eyeTilt={settings.eyeTilt}
                   eyeColor={settings.eyeColor}
+                  sadStyle={settings.sadStyle}
                 />
               </span>
             )}
@@ -764,6 +768,7 @@ export default function App() {
                 eyeSpacing={settings.eyeSpacing}
                 eyeTilt={settings.eyeTilt}
                 eyeColor={settings.eyeColor}
+                sadStyle={settings.sadStyle}
                 boopable
               />
               {settings.showStatus && status !== "idle" && (

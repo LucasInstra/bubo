@@ -9,6 +9,8 @@ import {
   MASCOT_COLORS,
   MASCOT_SHAPES,
   Mascot,
+  SAD_LABELS,
+  SAD_STYLES,
   SHAPE_LABELS,
 } from "./Mascot";
 
@@ -192,6 +194,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
                 eyeSpacing={draft.eyeSpacing}
                 eyeTilt={draft.eyeTilt}
                 eyeColor={draft.eyeColor}
+                sadStyle={draft.sadStyle}
                 boopable
               />
             </div>
@@ -239,6 +242,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
                       eyeSpacing={draft.eyeSpacing}
                       eyeTilt={draft.eyeTilt}
                       eyeColor={draft.eyeColor}
+                      sadStyle={draft.sadStyle}
                       canvasPadding={0.2}
                       animate={false}
                     />
@@ -349,6 +353,25 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="field">
+          <span>Sad face</span>
+          <div className="option-box">
+            <div className="eye-grid">
+              {SAD_STYLES.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`chip ${draft.sadStyle === value ? "chip-on" : ""}`}
+                  onClick={() => patch({ sadStyle: value })}
+                >
+                  {SAD_LABELS[value]}
+                </button>
+              ))}
+            </div>
+            <span className="hint">How bubo looks when he is sad, mouth or no mouth.</span>
           </div>
         </div>
 

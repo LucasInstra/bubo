@@ -32,6 +32,17 @@ test("compact composer shows wrapped text", async ({ page }) => {
   expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.clientHeight + 1);
 });
 
+test("history delete keeps the X in frame", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=app");
+  await page.getByRole("button", { name: "History" }).click();
+  const del = page.locator(".session-delete").first();
+  await expect(del).toHaveText("×");
+  await del.click();
+  await expect(del).toHaveText("×erase");
+  const overflow = await del.evaluate((element) => element.scrollWidth - element.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+});
+
 test("practice checks a correct answer", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=practice");
   await expect(page.getByText("how would you say this?")).toBeVisible();

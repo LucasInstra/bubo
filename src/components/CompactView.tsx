@@ -1,6 +1,7 @@
 import { stripLegacyFixes } from "../lib/format";
 import type { Mood, Msg, OrbState, Settings } from "../lib/types";
 import { Composer } from "./Composer";
+import { GlassRefraction } from "./GlassRefraction";
 import { Mascot } from "./Mascot";
 
 interface CompactViewProps {
@@ -50,6 +51,9 @@ export function CompactView({
   return (
     <div className="compact-stage">
       <div className="compact-card">
+        {settings.glass && (
+          <GlassRefraction radius={16} band={32} displacement={44} blur={9} saturation={175} />
+        )}
         <header className="compact-head" data-tauri-drag-region>
           <span className="compact-face" aria-hidden="true">
             <Mascot
@@ -67,6 +71,7 @@ export function CompactView({
               eyeSpacing={settings.eyeSpacing}
               eyeTilt={settings.eyeTilt}
               eyeColor={settings.eyeColor}
+              sadStyle={settings.sadStyle}
               boopable={false}
             />
           </span>
