@@ -154,5 +154,5 @@ export const DEFAULT_SETTINGS: Settings = {
   showStatus: true,
   accentFromMascot: true,
   textSize: "normal",
-  noteLanguage: "pt",
+  noteLanguage: "en",
 };

@@ -15,6 +15,7 @@ Website: https://lucasinstra.github.io/bubo/
   <img alt="React" src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white">
   <img alt="Rust" src="https://img.shields.io/badge/Rust-stable-000000?logo=rust&logoColor=white">
   <img alt="Windows" src="https://img.shields.io/badge/platform-Windows-0078D6?logo=windows&logoColor=white">
+  <a href="https://github.com/LucasInstra/bubo/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/LucasInstra/bubo/actions/workflows/ci.yml/badge.svg"></a>
 </p>
 
 ## Why another language app

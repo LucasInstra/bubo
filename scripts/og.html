@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>bubo social card</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: #0b0a11;
+        color: #f4f2ff;
+        font-family:
+          "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+      }
+
+      .card {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+        align-items: center;
+        width: 1200px;
+        height: 630px;
+        padding: 72px 78px;
+        box-sizing: border-box;
+        overflow: hidden;
+      }
+
+      .card::before {
+        content: "";
+        position: absolute;
+        inset: -20% -10% auto auto;
+        width: 720px;
+        height: 720px;
+        border-radius: 50%;
+        background: radial-gradient(closest-side, rgba(139, 125, 255, 0.35), transparent 72%);
+        filter: blur(10px);
+        pointer-events: none;
+      }
+
+      .card::after {
+        content: "";
+        position: absolute;
+        inset: auto auto -30% -12%;
+        width: 520px;
+        height: 520px;
+        border-radius: 50%;
+        background: radial-gradient(closest-side, rgba(73, 54, 180, 0.28), transparent 72%);
+        pointer-events: none;
+      }
+
+      .copy {
+        position: relative;
+        z-index: 1;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 38px;
+        color: #a99fff;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .brand img {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+      }
+
+      h1 {
+        margin: 0 0 22px;
+        font-size: 68px;
+        font-weight: 700;
+        letter-spacing: -0.055em;
+        line-height: 0.98;
+      }
+
+      h1 span {
+        display: block;
+        background: linear-gradient(100deg, #d3ccff 0%, #8b7dff 60%, #a495ff 100%);
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+      }
+
+      p {
+        margin: 0;
+        max-width: 560px;
+        color: #a7a3bb;
+        font-size: 24px;
+        line-height: 1.45;
+      }
+
+      .meta {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 40px;
+        color: #d8d4ec;
+        font-size: 17px;
+        font-weight: 550;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #5ee0a0;
+        box-shadow: 0 0 12px rgba(94, 224, 160, 0.75);
+      }
+
+      .art {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+      }
+
+      .art::before {
+        content: "";
+        position: absolute;
+        width: 420px;
+        height: 420px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: radial-gradient(closest-side, rgba(139, 125, 255, 0.16), transparent 70%);
+      }
+
+      .art img {
+        position: relative;
+        width: 440px;
+        height: 440px;
+        object-fit: contain;
+        filter: drop-shadow(0 30px 55px rgba(0, 0, 0, 0.55));
+      }
+
+      .bubble {
+        position: absolute;
+        right: -16px;
+        bottom: 54px;
+        max-width: 244px;
+        padding: 16px 20px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 22px 22px 6px 22px;
+        background: rgba(21, 18, 34, 0.92);
+        color: #eeeaff;
+        font-size: 17px;
+        line-height: 1.4;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="copy">
+        <div class="brand">
+          <img src="/docs/assets/icon.png" alt="" />
+          bubo
+        </div>
+        <h1>Your English buddy,<span>always a click away</span></h1>
+        <p>
+          A tiny floating tutor for Windows. Chat in English, get quiet corrections, and practice
+          the mistakes that matter.
+        </p>
+        <div class="meta">
+          <span class="dot"></span>
+          Windows 10/11 · bring your own model key
+        </div>
+      </div>
+
+      <div class="art">
+        <img src="/docs/assets/bubo.png" alt="" />
+        <div class="bubble">That sounds like a good weekend. Was the water warm?</div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -389,14 +389,31 @@ pub fn delete(conn: &Connection, id: i64) -> rusqlite::Result<()> {
     Ok(())
 }
 
-/// Deletes a message together with the corrections that point at it.
+/// Deletes a message together with the corrections that point at it. The
+/// correction text is also stripped from every remaining message so the
+/// startup backfill cannot bring a shared card back.
 pub fn delete_message(conn: &Connection, id: i64) -> rusqlite::Result<()> {
-    conn.execute(
+    let tx = conn.unchecked_transaction()?;
+    let pairs = {
+        let mut statement = tx.prepare("SELECT wrong, right FROM fixes WHERE message_id = ?1")?;
+        let rows = statement
+            .query_map([id], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        rows
+    };
+
+    tx.execute(
         "DELETE FROM reviews WHERE fix_id IN (SELECT id FROM fixes WHERE message_id = ?1)",
         [id],
     )?;
-    conn.execute("DELETE FROM fixes WHERE message_id = ?1", [id])?;
-    delete(conn, id)
+    tx.execute("DELETE FROM fixes WHERE message_id = ?1", [id])?;
+    for (wrong, right) in &pairs {
+        remove_fix_from_messages(&tx, wrong, right)?;
+    }
+    tx.execute("DELETE FROM messages WHERE id = ?1", [id])?;
+    tx.commit()
 }
 
 pub fn set_message_fixes(conn: &Connection, id: i64, fixes: Option<&str>) -> rusqlite::Result<()> {
@@ -407,26 +424,8 @@ pub fn set_message_fixes(conn: &Connection, id: i64, fixes: Option<&str>) -> rus
     Ok(())
 }
 
-/// Removes a correction everywhere it can come back from: its reviews, the
-/// fix row itself, and the `fixes` JSON stored on every message. Without the
-/// JSON cleanup the startup backfill would resurrect the card on next launch.
-pub fn delete_fix(
-    conn: &Connection,
-    _message_id: i64,
-    wrong: &str,
-    right: &str,
-) -> rusqlite::Result<()> {
-    conn.execute(
-        "DELETE FROM reviews WHERE fix_id IN (
-            SELECT id FROM fixes WHERE wrong = ?1 AND right = ?2
-        )",
-        params![wrong, right],
-    )?;
-    conn.execute(
-        "DELETE FROM fixes WHERE wrong = ?1 AND right = ?2",
-        params![wrong, right],
-    )?;
-
+/// Removes one correction from the JSON of every stored message.
+fn remove_fix_from_messages(conn: &Connection, wrong: &str, right: &str) -> rusqlite::Result<()> {
     let mut statement = conn.prepare("SELECT id, fixes FROM messages WHERE fixes IS NOT NULL")?;
     let rows = statement
         .query_map([], |row| {
@@ -453,6 +452,30 @@ pub fn delete_fix(
     }
 
     Ok(())
+}
+
+/// Removes a correction everywhere it can come back from: its reviews, the
+/// fix row itself, and the `fixes` JSON stored on every message. Without the
+/// JSON cleanup the startup backfill would resurrect the card on next launch.
+pub fn delete_fix(
+    conn: &Connection,
+    _message_id: i64,
+    wrong: &str,
+    right: &str,
+) -> rusqlite::Result<()> {
+    let tx = conn.unchecked_transaction()?;
+    tx.execute(
+        "DELETE FROM reviews WHERE fix_id IN (
+            SELECT id FROM fixes WHERE wrong = ?1 AND right = ?2
+        )",
+        params![wrong, right],
+    )?;
+    tx.execute(
+        "DELETE FROM fixes WHERE wrong = ?1 AND right = ?2",
+        params![wrong, right],
+    )?;
+    remove_fix_from_messages(&tx, wrong, right)?;
+    tx.commit()
 }
 
 #[cfg(test)]
@@ -667,14 +690,17 @@ pub fn purge_case_only(conn: &Connection) -> rusqlite::Result<usize> {
         .collect::<rusqlite::Result<Vec<_>>>()?;
     drop(statement);
 
+    let tx = conn.unchecked_transaction()?;
     let mut removed = 0;
     for (id, wrong, right) in rows {
         if wrong.trim().to_lowercase() == right.trim().to_lowercase() {
-            conn.execute("DELETE FROM reviews WHERE fix_id = ?1", [id])?;
-            conn.execute("DELETE FROM fixes WHERE id = ?1", [id])?;
+            tx.execute("DELETE FROM reviews WHERE fix_id = ?1", [id])?;
+            tx.execute("DELETE FROM fixes WHERE id = ?1", [id])?;
+            remove_fix_from_messages(&tx, &wrong, &right)?;
             removed += 1;
         }
     }
+    tx.commit()?;
     Ok(removed)
 }
 
@@ -1334,5 +1360,86 @@ mod tests {
             .unwrap()
             .is_none());
         assert_eq!(super::drill_stats(&conn).unwrap().total, 1);
+    }
+
+    #[test]
+    fn deleting_a_message_strips_a_shared_pair_from_other_json() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        let user = insert(&conn, "user", "i go yesterday", None).unwrap();
+        let _bot = insert(
+            &conn,
+            "assistant",
+            "ok",
+            Some(r#"[{"wrong":"i go","right":"I went","note":"past"}]"#),
+        )
+        .unwrap();
+        let other = insert(
+            &conn,
+            "assistant",
+            "ok",
+            Some(r#"[{"wrong":"i go","right":"I went","note":"past"}]"#),
+        )
+        .unwrap();
+        super::save_fixes_for_message(
+            &conn,
+            &[Fix {
+                wrong: "i go".to_string(),
+                right: "I went".to_string(),
+                note: "past".to_string(),
+            }],
+            Some(user),
+        )
+        .unwrap();
+
+        super::delete_message(&conn, user).unwrap();
+        assert_eq!(super::drill_stats(&conn).unwrap().total, 0);
+
+        let stored: Option<String> = conn
+            .query_row("SELECT fixes FROM messages WHERE id = ?1", [other], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert!(stored.is_none());
+
+        // The shared JSON was cleaned, so startup backfill stays empty.
+        super::backfill_fixes(&conn).unwrap();
+        assert_eq!(super::drill_stats(&conn).unwrap().total, 0);
+    }
+
+    #[test]
+    fn purging_case_only_strips_the_message_json() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        let bot = insert(
+            &conn,
+            "assistant",
+            "ok",
+            Some(r#"[{"wrong":"i went out on friday","right":"I went out on Friday","note":""}]"#),
+        )
+        .unwrap();
+        super::save_fixes(
+            &conn,
+            &[Fix {
+                wrong: "i went out on friday".to_string(),
+                right: "I went out on Friday".to_string(),
+                note: String::new(),
+            }],
+        )
+        .unwrap();
+
+        assert_eq!(super::purge_case_only(&conn).unwrap(), 1);
+
+        let stored: Option<String> = conn
+            .query_row("SELECT fixes FROM messages WHERE id = ?1", [bot], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert!(stored.is_none());
+
+        super::backfill_fixes(&conn).unwrap();
+        assert_eq!(super::drill_stats(&conn).unwrap().total, 0);
     }
 }

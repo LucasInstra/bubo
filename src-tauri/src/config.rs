@@ -46,7 +46,7 @@ impl Default for Settings {
             pinned: true,
             compact: false,
             ignore_capitalization: true,
-            note_language: "pt".to_string(),
+            note_language: "en".to_string(),
             shape: "round".to_string(),
             color: "#8b7dff".to_string(),
             show_mouth: false,
