@@ -88,6 +88,7 @@
       const handlers = {
         get_settings: () => settings,
         has_api_key: () => true,
+        "plugin:app|version": () => "0.5.3",
         history: () => (mode === "empty" ? [] : stored),
         current_session: () => 1,
         list_sessions: () => [

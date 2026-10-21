@@ -41,3 +41,13 @@ test("hotkey recorder cancels with Escape without closing settings", async ({ pa
   await expect(recorder).toContainText("Ctrl+Alt+B");
   await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();
 });
+
+test("settings shows the compact update card", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=app");
+  await page.getByRole("button", { name: "Settings" }).click();
+
+  const card = page.locator(".update-card");
+  await card.scrollIntoViewIfNeeded();
+  await expect(card).toContainText("bubo 0.5.3");
+  await expect(card).toContainText("Updates are checked when bubo starts.");
+});

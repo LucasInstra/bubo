@@ -32,6 +32,30 @@ const TEXT_SIZES = [
   ["large", "Large"],
 ];
 
+function updateLabel(
+  status: UpdateStatus,
+  version: string,
+  progress: number,
+  error: string,
+): string {
+  switch (status) {
+    case "checking":
+      return "Checking for updates...";
+    case "available":
+      return version ? `Version ${version} is available.` : "An update is available.";
+    case "downloading":
+      return progress >= 0 ? `Downloading ${progress}%...` : "Downloading...";
+    case "ready":
+      return "Restarting to finish the update...";
+    case "current":
+      return "You are on the latest version.";
+    case "error":
+      return error || "Could not check for updates.";
+    default:
+      return "Ready to check for updates.";
+  }
+}
+
 function modelChoices(source: string[], selected: string): string[] {
   const seen = new Set<string>();
   const options: string[] = [];
@@ -517,41 +541,65 @@ export function SettingsPanel({
 
         <div className="section-title">Updates</div>
 
-        <div className="field">
-          <span>Version {currentVersion || "unknown"}</span>
-          <div className="row-buttons">
-            <button
-              className="ghost"
-              type="button"
-              onClick={() => void onCheckUpdate()}
-              disabled={
-                updateStatus === "checking" ||
-                updateStatus === "downloading" ||
-                updateStatus === "ready"
-              }
+        <div className="update-card">
+          <span className="update-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              {updateStatus === "checking" ? "checking..." : "Check for updates"}
-            </button>
-            {updateStatus === "available" && (
+              <path d="M12 3v11m0 0-4-4m4 4 4-4M5 20h14" />
+            </svg>
+          </span>
+
+          <div className="update-copy">
+            <strong>bubo {currentVersion || "unknown"}</strong>
+            <span
+              className={`update-status ${updateStatus === "error" ? "is-error" : ""}`}
+              role="status"
+              aria-live="polite"
+            >
+              {updateLabel(updateStatus, updateVersion, updateProgress, updateError)}
+            </span>
+            {updateStatus === "downloading" && updateProgress >= 0 && (
+              <div className="update-progress" aria-hidden="true">
+                <span style={{ width: `${updateProgress}%` }} />
+              </div>
+            )}
+            <span className="update-hint">Updates are checked when bubo starts.</span>
+          </div>
+
+          <div className="update-actions">
+            {updateStatus === "available" ? (
               <button className="primary" type="button" onClick={() => void onInstallUpdate()}>
                 Install {updateVersion}
               </button>
+            ) : (
+              <button
+                className="ghost"
+                type="button"
+                onClick={() => void onCheckUpdate()}
+                disabled={
+                  updateStatus === "checking" ||
+                  updateStatus === "downloading" ||
+                  updateStatus === "ready"
+                }
+              >
+                {updateStatus === "checking"
+                  ? "Checking..."
+                  : updateStatus === "error"
+                    ? "Try again"
+                    : updateStatus === "idle"
+                      ? "Check for updates"
+                      : "Check again"}
+              </button>
             )}
           </div>
-          {updateStatus === "downloading" && (
-            <span className="hint">
-              {updateProgress >= 0 ? `Downloading ${updateProgress}%` : "Downloading..."}
-            </span>
-          )}
-          {updateStatus === "ready" && (
-            <span className="hint">Restarting to finish the update...</span>
-          )}
-          {updateStatus === "current" && (
-            <span className="hint">You are on the latest version.</span>
-          )}
-          {updateStatus === "error" && updateError && (
-            <span className="settings-error">{updateError}</span>
-          )}
         </div>
       </div>
 
