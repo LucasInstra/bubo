@@ -15,7 +15,7 @@
     "lint:fix": "eslint src --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
-    "version": "node scripts/sync-version.mjs",
+    "version": "node scripts/sync-version.mjs && git add src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json",
     "version:check": "node scripts/sync-version.mjs --check"
   },
   "dependencies": {
