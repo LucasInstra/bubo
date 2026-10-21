@@ -3,12 +3,13 @@ mod llm;
 mod log;
 mod prompt;
 mod store;
+mod window_state;
 
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -21,6 +22,8 @@ struct AppState {
     shortcut: Mutex<Option<Shortcut>>,
     cancels: Mutex<HashMap<String, Arc<AtomicBool>>>,
     compact_origin: Mutex<Option<(i32, i32)>>,
+    compact: AtomicBool,
+    last_window_save: Mutex<Option<Instant>>,
 }
 
 fn install_hotkey(
@@ -95,6 +98,15 @@ fn set_compact(
     state: State<'_, AppState>,
     compact: bool,
 ) -> Result<(), String> {
+    let was_compact = state.compact.swap(compact, Ordering::Relaxed);
+
+    // The frontend re-applies the saved mode on every startup. When full mode
+    // was already active, keep the geometry restored from window.json instead
+    // of resetting it to the default size.
+    if !compact && !was_compact {
+        return Ok(());
+    }
+
     let origin = window
         .outer_position()
         .ok()
@@ -578,6 +590,34 @@ fn place_bottom_right(window: &tauri::WebviewWindow) {
     ));
 }
 
+/// Persists the full-mode geometry. Compacting never overwrites it, and move or
+/// resize events are throttled to avoid a write per pixel while dragging.
+fn save_window_state(app: &AppHandle, force: bool) {
+    let state = app.state::<AppState>();
+    if state.compact.load(Ordering::Relaxed) {
+        return;
+    }
+
+    if !force {
+        let Ok(mut last) = state.last_window_save.lock() else {
+            return;
+        };
+        if let Some(at) = *last {
+            if at.elapsed() < Duration::from_millis(400) {
+                return;
+            }
+        }
+        *last = Some(Instant::now());
+    }
+
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+    if let Some(captured) = window_state::capture(&window) {
+        window_state::save(app, captured);
+    }
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -590,6 +630,8 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, _shortcut, event| {
@@ -603,6 +645,7 @@ pub fn run() {
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
             let connection = store::open(data_dir.join("bubo.db"))?;
+            let settings = config::load_settings(app.handle()).unwrap_or_default();
 
             app.manage(AppState {
                 db: Mutex::new(connection),
@@ -614,9 +657,9 @@ pub fn run() {
                 shortcut: Mutex::new(None),
                 cancels: Mutex::new(HashMap::new()),
                 compact_origin: Mutex::new(None),
+                compact: AtomicBool::new(settings.compact),
+                last_window_save: Mutex::new(None),
             });
-
-            let settings = config::load_settings(app.handle()).unwrap_or_default();
 
             if settings.ignore_capitalization {
                 if let Ok(db) = app.state::<AppState>().db.lock() {
@@ -626,7 +669,23 @@ pub fn run() {
 
             if let Some(window) = app.get_webview_window("main") {
                 place_bottom_right(&window);
+                // Compact mode owns its own size and origin, so only replay the
+                // saved geometry when the app starts in full mode.
+                if !settings.compact {
+                    window_state::restore(&window);
+                }
                 let _ = window.set_always_on_top(settings.pinned);
+
+                let handle = app.handle().clone();
+                window.on_window_event(move |event| match event {
+                    tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_) => {
+                        save_window_state(&handle, false);
+                    }
+                    tauri::WindowEvent::CloseRequested { .. } => {
+                        save_window_state(&handle, true);
+                    }
+                    _ => {}
+                });
             }
 
             if let Err(error) = install_hotkey(

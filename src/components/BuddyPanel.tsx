@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
+import { useModalFocus } from "../lib/modal";
 import { PERSONALITIES, personality } from "../lib/personalities";
 import { DEFAULT_LOOK, type Settings } from "../lib/types";
 import {
@@ -59,21 +60,13 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
   const [draft, setDraft] = useState<Settings>(settings);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useModalFocus(dialogRef);
 
   const patch = (part: Partial<Settings>) => setDraft((current) => ({ ...current, ...part }));
   const resetLook = () => patch(DEFAULT_LOOK);
   const dirty = JSON.stringify(draft) !== JSON.stringify(settings);
-
-  useEffect(() => {
-    const chat = document.querySelector<HTMLElement>(".chat");
-    const composer = document.querySelector<HTMLElement>(".composer");
-    chat?.setAttribute("inert", "");
-    composer?.setAttribute("inert", "");
-    return () => {
-      chat?.removeAttribute("inert");
-      composer?.removeAttribute("inert");
-    };
-  }, []);
 
   const save = async () => {
     setBusy(true);
@@ -96,7 +89,14 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
   };
 
   return (
-    <div className="settings buddy" role="dialog" aria-modal="true" aria-label="Customize buddy">
+    <div
+      className="settings buddy"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Customize buddy"
+      ref={dialogRef}
+      tabIndex={-1}
+    >
       <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={() => void close()} aria-label="Back">
           ←

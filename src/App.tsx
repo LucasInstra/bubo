@@ -8,10 +8,12 @@ import { Mascot } from "./components/Mascot";
 import { Message } from "./components/Message";
 import { ProgressPanel } from "./components/ProgressPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { UpdateBanner } from "./components/UpdateBanner";
 import { parseStoredFixes } from "./lib/format";
 import { ipc } from "./lib/ipc";
 import type { Fix, Mood, Msg, OrbState, Settings, StoredMessage } from "./lib/types";
 import { DEFAULT_SETTINGS } from "./lib/types";
+import { useUpdater } from "./lib/updater";
 
 const SUGGESTIONS = [
   "Hi bubo! I want to talk about my weekend.",
@@ -61,6 +63,9 @@ export default function App() {
   const [showDrill, setShowDrill] = useState(false);
   const [drillFocus, setDrillFocus] = useState<Fix | null>(null);
   const [stageSize, setStageSize] = useState(76);
+  const [updateDismissed, setUpdateDismissed] = useState(false);
+
+  const updater = useUpdater();
 
   const listRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef(true);
@@ -120,6 +125,10 @@ export default function App() {
     const list = listRef.current;
     if (list && stickRef.current) list.scrollTop = list.scrollHeight;
   }, [messages]);
+
+  useEffect(() => {
+    if (updater.status !== "available") setUpdateDismissed(false);
+  }, [updater.status]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -432,6 +441,10 @@ export default function App() {
 
   const empty = messages.length === 0;
   const accent = settings.accentFromMascot ? settings.color : "#8b7dff";
+  const showUpdateBanner =
+    updater.status === "downloading" ||
+    updater.status === "ready" ||
+    (updater.status === "available" && !updateDismissed);
   const accentVars = {
     "--accent": accent,
     "--accent-soft": withAlpha(accent, 0.16),
@@ -776,6 +789,16 @@ export default function App() {
           )}
         </div>
 
+        {showUpdateBanner && (
+          <UpdateBanner
+            version={updater.version}
+            status={updater.status}
+            progress={updater.progress}
+            onInstall={() => void updater.install()}
+            onLater={() => setUpdateDismissed(true)}
+          />
+        )}
+
         <Composer
           disabled={status !== "idle"}
           busy={status !== "idle"}
@@ -837,6 +860,13 @@ export default function App() {
                 ),
               )
             }
+            currentVersion={updater.currentVersion}
+            updateStatus={updater.status}
+            updateVersion={updater.version}
+            updateProgress={updater.progress}
+            updateError={updater.error}
+            onCheckUpdate={updater.checkNow}
+            onInstallUpdate={updater.install}
           />
         )}
 

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ipc } from "../lib/ipc";
+import { useModalFocus } from "../lib/modal";
 import type { ProgressStats, TopMistake } from "../lib/types";
 
 interface ProgressPanelProps {
@@ -22,6 +23,9 @@ function attemptsLabel(mistake: TopMistake): string {
 export function ProgressPanel({ onClose, onPractice }: ProgressPanelProps) {
   const [stats, setStats] = useState<ProgressStats | null>(null);
   const [error, setError] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useModalFocus(dialogRef);
 
   useEffect(() => {
     let alive = true;
@@ -38,17 +42,6 @@ export function ProgressPanel({ onClose, onPractice }: ProgressPanelProps) {
     };
   }, []);
 
-  useEffect(() => {
-    const chat = document.querySelector<HTMLElement>(".chat");
-    const composer = document.querySelector<HTMLElement>(".composer");
-    chat?.setAttribute("inert", "");
-    composer?.setAttribute("inert", "");
-    return () => {
-      chat?.removeAttribute("inert");
-      composer?.removeAttribute("inert");
-    };
-  }, []);
-
   const peak = stats ? Math.max(1, ...stats.days.map((day) => day.messages + day.reviews)) : 1;
   const accuracy = stats ? Math.round(stats.accuracy * 100) : 0;
   const now = new Date();
@@ -57,7 +50,14 @@ export function ProgressPanel({ onClose, onPractice }: ProgressPanelProps) {
   ).padStart(2, "0")}`;
 
   return (
-    <div className="settings progress" role="dialog" aria-modal="true" aria-label="Progress">
+    <div
+      className="settings progress"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Progress"
+      ref={dialogRef}
+      tabIndex={-1}
+    >
       <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={onClose} aria-label="Back">
           ←

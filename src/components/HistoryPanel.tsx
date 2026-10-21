@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ipc } from "../lib/ipc";
+import { useModalFocus } from "../lib/modal";
 import type { SessionSummary } from "../lib/types";
 
 interface HistoryPanelProps {
@@ -30,6 +31,9 @@ export function HistoryPanel({
   const [error, setError] = useState("");
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useModalFocus(dialogRef);
 
   const load = useCallback(async () => {
     try {
@@ -49,17 +53,6 @@ export function HistoryPanel({
     const timer = setTimeout(() => setConfirmId(null), 4000);
     return () => clearTimeout(timer);
   }, [confirmId]);
-
-  useEffect(() => {
-    const chat = document.querySelector<HTMLElement>(".chat");
-    const composer = document.querySelector<HTMLElement>(".composer");
-    chat?.setAttribute("inert", "");
-    composer?.setAttribute("inert", "");
-    return () => {
-      chat?.removeAttribute("inert");
-      composer?.removeAttribute("inert");
-    };
-  }, []);
 
   const create = async () => {
     if (busy) return;
@@ -94,7 +87,14 @@ export function HistoryPanel({
   };
 
   return (
-    <div className="settings history" role="dialog" aria-modal="true" aria-label="History">
+    <div
+      className="settings history"
+      role="dialog"
+      aria-modal="true"
+      aria-label="History"
+      ref={dialogRef}
+      tabIndex={-1}
+    >
       <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={onClose} aria-label="Back">
           ←

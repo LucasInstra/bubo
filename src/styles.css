@@ -763,6 +763,51 @@ button {
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* update banner */
+
+.update-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 12px 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(139, 125, 255, 0.28);
+  border-radius: 10px;
+  background: var(--accent-soft);
+}
+
+.update-banner p {
+  flex: 1;
+  min-width: 130px;
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.update-banner span {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.update-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.update-banner .primary {
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+.update-banner .ghost {
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
 .msg-actions {
   display: flex;
   gap: 8px;
@@ -811,6 +856,10 @@ button {
   flex-direction: column;
   background: linear-gradient(180deg, rgba(19, 18, 28, 0.99), rgba(10, 10, 16, 0.99));
   animation: fade 0.18s ease-out;
+}
+
+.settings:focus {
+  outline: none;
 }
 
 .settings-head {
@@ -908,6 +957,11 @@ button {
   padding: 7px 10px;
   border-radius: 9px;
   border: 1px solid rgba(255, 255, 255, 0.09);
+  font-size: 11.5px;
+}
+
+.row-buttons .primary {
+  padding: 7px 10px;
   font-size: 11.5px;
 }
 

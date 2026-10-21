@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isCorrectAnswer } from "../lib/answer";
 import { ipc } from "../lib/ipc";
+import { useModalFocus } from "../lib/modal";
 import type { DrillItem, DrillStats, Fix } from "../lib/types";
 
 type Phase = "loading" | "asking" | "answered" | "none" | "empty" | "error";
@@ -19,10 +20,13 @@ export function Drill({ onClose, onMood, focus }: DrillProps) {
   const [result, setResult] = useState<{ correct: boolean; item: DrillItem } | null>(null);
   const [ahead, setAhead] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const allowFuture = useRef(false);
   const lastAnswered = useRef<number | null>(null);
   const busy = useRef(false);
   const focusedKey = useRef<string | null>(null);
+
+  useModalFocus(dialogRef);
 
   const load = useCallback(async (includeFuture = allowFuture.current) => {
     allowFuture.current = includeFuture;
@@ -103,17 +107,6 @@ export function Drill({ onClose, onMood, focus }: DrillProps) {
     void loadFocus(focus);
   }, [focus, load, loadFocus]);
 
-  useEffect(() => {
-    const chat = document.querySelector<HTMLElement>(".chat");
-    const composer = document.querySelector<HTMLElement>(".composer");
-    chat?.setAttribute("inert", "");
-    composer?.setAttribute("inert", "");
-    return () => {
-      chat?.removeAttribute("inert");
-      composer?.removeAttribute("inert");
-    };
-  }, []);
-
   const submit = async (text: string, reveal: boolean) => {
     if (!item || phase !== "asking" || busy.current) return;
     busy.current = true;
@@ -137,7 +130,14 @@ export function Drill({ onClose, onMood, focus }: DrillProps) {
   };
 
   return (
-    <div className="settings" role="dialog" aria-modal="true" aria-label="Practice">
+    <div
+      className="settings"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Practice"
+      ref={dialogRef}
+      tabIndex={-1}
+    >
       <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={onClose} aria-label="Back">
           ←

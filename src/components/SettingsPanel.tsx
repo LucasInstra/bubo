@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ipc } from "../lib/ipc";
+import { useModalFocus } from "../lib/modal";
 import { matchProvider, PROVIDERS, type ProviderPreset } from "../lib/providers";
 import type { DrillStats, Settings } from "../lib/types";
+import type { UpdateStatus } from "../lib/updater";
 import { HotkeyInput } from "./HotkeyInput";
 
 interface SettingsPanelProps {
@@ -14,6 +16,13 @@ interface SettingsPanelProps {
   onNewChat: () => Promise<void>;
   onQueueChanged: () => void;
   onCorrectionsCleared: () => void;
+  currentVersion: string;
+  updateStatus: UpdateStatus;
+  updateVersion: string;
+  updateProgress: number;
+  updateError: string;
+  onCheckUpdate: () => Promise<void>;
+  onInstallUpdate: () => Promise<void>;
 }
 
 const LEVELS = ["A2", "B1", "B2", "C1"];
@@ -46,6 +55,13 @@ export function SettingsPanel({
   onNewChat,
   onQueueChanged,
   onCorrectionsCleared,
+  currentVersion,
+  updateStatus,
+  updateVersion,
+  updateProgress,
+  updateError,
+  onCheckUpdate,
+  onInstallUpdate,
 }: SettingsPanelProps) {
   const [draft, setDraft] = useState<Settings>(settings);
   const [apiKey, setApiKey] = useState("");
@@ -61,7 +77,10 @@ export function SettingsPanel({
   const [testModels, setTestModels] = useState<string[]>([]);
   const [modelOpen, setModelOpen] = useState(false);
   const comboRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const testRun = useRef(0);
+
+  useModalFocus(dialogRef);
 
   const patch = (part: Partial<Settings>) => setDraft((current) => ({ ...current, ...part }));
   const provider =
@@ -89,17 +108,6 @@ export function SettingsPanel({
     const timer = setTimeout(() => setConfirmReset(false), 4000);
     return () => clearTimeout(timer);
   }, [confirmReset]);
-
-  useEffect(() => {
-    const chat = document.querySelector<HTMLElement>(".chat");
-    const composer = document.querySelector<HTMLElement>(".composer");
-    chat?.setAttribute("inert", "");
-    composer?.setAttribute("inert", "");
-    return () => {
-      chat?.removeAttribute("inert");
-      composer?.removeAttribute("inert");
-    };
-  }, []);
 
   useEffect(() => {
     if (!modelOpen) return;
@@ -210,7 +218,14 @@ export function SettingsPanel({
   };
 
   return (
-    <div className="settings" role="dialog" aria-modal="true" aria-label="Settings">
+    <div
+      className="settings"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Settings"
+      ref={dialogRef}
+      tabIndex={-1}
+    >
       <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={onClose} aria-label="Back">
           ←
@@ -499,6 +514,45 @@ export function SettingsPanel({
         >
           Start a new chat
         </button>
+
+        <div className="section-title">Updates</div>
+
+        <div className="field">
+          <span>Version {currentVersion || "unknown"}</span>
+          <div className="row-buttons">
+            <button
+              className="ghost"
+              type="button"
+              onClick={() => void onCheckUpdate()}
+              disabled={
+                updateStatus === "checking" ||
+                updateStatus === "downloading" ||
+                updateStatus === "ready"
+              }
+            >
+              {updateStatus === "checking" ? "checking..." : "Check for updates"}
+            </button>
+            {updateStatus === "available" && (
+              <button className="primary" type="button" onClick={() => void onInstallUpdate()}>
+                Install {updateVersion}
+              </button>
+            )}
+          </div>
+          {updateStatus === "downloading" && (
+            <span className="hint">
+              {updateProgress >= 0 ? `Downloading ${updateProgress}%` : "Downloading..."}
+            </span>
+          )}
+          {updateStatus === "ready" && (
+            <span className="hint">Restarting to finish the update...</span>
+          )}
+          {updateStatus === "current" && (
+            <span className="hint">You are on the latest version.</span>
+          )}
+          {updateStatus === "error" && updateError && (
+            <span className="settings-error">{updateError}</span>
+          )}
+        </div>
       </div>
 
       <div className="settings-footer">
