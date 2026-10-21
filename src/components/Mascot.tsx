@@ -693,6 +693,15 @@ export function Mascot({
       let eyeOpen = Math.max(0.08, openness * squint);
       eyeOpen *= 1 - 0.18 * (moodSad ? moodBlend : 0);
       eyeOpen *= 1 + 0.08 * (moodSurprised ? moodBlend : 0);
+      // Without a mouth, streaming needs its own tell: a small, regular
+      // height pulse in the eyes, like the face is talking.
+      const streamPulse =
+        current === "streaming" ? 1 + 0.16 * Math.sin(time * 8) * Math.max(0.3, smoothed) : 1;
+      const streamBob =
+        current === "streaming" ? Math.sin(time * 8) * radius * 0.025 * Math.max(0.3, smoothed) : 0;
+      const sadEyes = moodSad && moodBlend > 0.4;
+      const surprisedEyes = moodSurprised && moodBlend > 0.4;
+      const surprisedScale = surprisedEyes ? 1.22 : 1;
 
       // Point-based grip: the silhouette itself deforms around the grabbed
       // spot, with only a tiny body translation. The blob stays planted while
@@ -799,7 +808,11 @@ export function Mascot({
         happy > 0.5 && (eyeStyle === "bars" || eyeStyle === "dots" || eyeStyle === "sleepy");
       const happySpread = happyArcs ? radius * 0.06 * Math.min(1, (happy - 0.5) / 0.5) : 0;
       const eyeOffset = Math.max(radius * spacingScale, baseHalf + radius * minGap) + happySpread;
-      const eyeY = radius * 0.05 + gaze.y * radius * 0.15;
+      const eyeY =
+        radius * 0.05 +
+        gaze.y * radius * 0.15 +
+        streamBob +
+        (surprisedEyes ? -radius * 0.03 * moodBlend : 0);
 
       for (const side of [-1, 1]) {
         const style = eyeStyle === "wink" ? (side === -1 ? "arcs" : "bars") : eyeStyle;
@@ -816,7 +829,25 @@ export function Mascot({
         context.translate(eyeX, eyeY);
         context.rotate(style === "angry" ? side * 0.34 : side * tiltAngle);
 
-        if (drawArc) {
+        // Mood and blink must reach every eye style, including the arc-based
+        // ones. Apply the vertical fold to the whole eye drawing first.
+        context.scale(surprisedScale, Math.max(0.08, eyeOpen * streamPulse) * surprisedScale);
+
+        if (sadEyes) {
+          // A sad eye is a downward arc, independent of the chosen style.
+          // It is the clearest read without a mouth, and it keeps the same
+          // spacing-safe width for every eye shape.
+          const sadRadius = Math.min(
+            radius * 0.22 * sizeScale,
+            Math.max(radius * 0.12, eyeOffset - radius * 0.04),
+          );
+          context.strokeStyle = ink;
+          context.lineWidth = Math.max(1.5, radius * 0.055 * sizeScale);
+          context.lineCap = "round";
+          context.beginPath();
+          context.arc(0, -eyeHeight * 0.1, sadRadius, Math.PI * 0.16, Math.PI * 0.84);
+          context.stroke();
+        } else if (drawArc) {
           context.strokeStyle = ink;
           context.lineWidth = Math.max(1.4, eyeWidth * 0.72);
           context.lineCap = "round";
@@ -824,7 +855,6 @@ export function Mascot({
           context.arc(0, eyeHeight * 0.2, eyeWidth * 0.85, Math.PI * 1.14, Math.PI * 1.86);
           context.stroke();
         } else {
-          context.scale(1, Math.max(0.1, eyeOpen));
           if (style === "sparkle") {
             context.fillStyle = ink;
             sparklePath(context, eyeWidth, eyeHeight);
@@ -926,6 +956,29 @@ export function Mascot({
       }
 
       context.restore();
+
+      // Streaming keeps a small audio meter beside the head, so the reaction
+      // reads even with no mouth and whatever eye style is selected.
+      if (current === "streaming") {
+        const meterEnergy = Math.max(0.35, smoothed);
+        const barWidth = Math.max(1.2, radius * 0.045);
+        context.fillStyle = ink;
+        for (let index = 0; index < 3; index += 1) {
+          const wave = 0.35 + 0.65 * Math.abs(Math.sin(time * 8 + index * 0.7));
+          const barHeight = radius * (0.16 + 0.14 * wave) * meterEnergy;
+          context.globalAlpha = 0.3 + 0.5 * wave;
+          context.beginPath();
+          context.roundRect(
+            radius * (1.22 + index * 0.11),
+            -barHeight / 2,
+            barWidth,
+            barHeight,
+            barWidth / 2,
+          );
+          context.fill();
+        }
+        context.globalAlpha = 1;
+      }
 
       if (feeling === "proud" && moodBlend > 0.05) {
         context.fillStyle = `rgba(255,255,255,${0.92 * moodBlend})`;

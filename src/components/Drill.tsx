@@ -2,17 +2,24 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { isCorrectAnswer } from "../lib/answer";
 import { ipc } from "../lib/ipc";
 import { useModalFocus } from "../lib/modal";
-import type { DrillItem, DrillStats, Fix } from "../lib/types";
+import {
+  DEFAULT_SETTINGS,
+  type DrillItem,
+  type DrillStats,
+  type Fix,
+  type Settings,
+} from "../lib/types";
+import { Mascot } from "./Mascot";
 
 type Phase = "loading" | "asking" | "answered" | "none" | "empty" | "error";
 
 interface DrillProps {
   onClose: () => void;
-  onMood?: (correct: boolean) => void;
   focus?: Fix | null;
+  settings?: Settings;
 }
 
-export function Drill({ onClose, onMood, focus }: DrillProps) {
+export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProps) {
   const [stats, setStats] = useState<DrillStats>({ total: 0, due: 0 });
   const [item, setItem] = useState<DrillItem | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
@@ -116,7 +123,6 @@ export function Drill({ onClose, onMood, focus }: DrillProps) {
       lastAnswered.current = item.id;
       setResult({ correct, item: updated ?? item });
       setPhase("answered");
-      onMood?.(correct);
       void ipc
         .drillStats()
         .then(setStats)
@@ -227,10 +233,34 @@ export function Drill({ onClose, onMood, focus }: DrillProps) {
             ) : (
               result && (
                 <div className={`drill-result ${result.correct ? "is-good" : "is-bad"}`}>
-                  <span className="drill-verdict">
-                    {result.correct ? "exactly right" : "not quite"}
-                  </span>
-                  <span className="drill-right">{result.item.right}</span>
+                  <div className="drill-result-head">
+                    <span className="drill-mascot" aria-hidden="true">
+                      <Mascot
+                        state="idle"
+                        mood={result.correct ? "proud" : "sad"}
+                        size={46}
+                        canvasPadding={0.55}
+                        shape={settings.shape}
+                        color={settings.color}
+                        showMouth={settings.showMouth}
+                        mouthStyle={settings.mouthStyle}
+                        mouthSize={settings.mouthSize}
+                        mouthColor={settings.mouthColor}
+                        eyeStyle={settings.eyeStyle}
+                        eyeSize={settings.eyeSize}
+                        eyeSpacing={settings.eyeSpacing}
+                        eyeTilt={settings.eyeTilt}
+                        eyeColor={settings.eyeColor}
+                        boopable={false}
+                      />
+                    </span>
+                    <div className="drill-result-copy">
+                      <span className="drill-verdict">
+                        {result.correct ? "exactly right" : "not quite"}
+                      </span>
+                      <span className="drill-right">{result.item.right}</span>
+                    </div>
+                  </div>
                   {result.item.note && <span className="drill-note">{result.item.note}</span>}
                   <button
                     className="primary"

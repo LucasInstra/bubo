@@ -446,15 +446,21 @@ export default function App() {
     updater.status === "downloading" ||
     updater.status === "ready" ||
     (updater.status === "available" && !updateDismissed);
+  const glassAlpha = Math.min(1, Math.max(0.3, settings.glassOpacity / 100));
   const accentVars = {
     "--accent": accent,
     "--accent-soft": withAlpha(accent, 0.16),
     "--stage-size": `${stageSize}px`,
+    "--glass-alpha": String(glassAlpha),
   } as CSSProperties;
+  const glassClass = settings.glass ? "glass" : "";
 
   if (settings.compact && hasKey) {
     return (
-      <div className={`app size-${settings.textSize} compact-liquid`} style={accentVars}>
+      <div
+        className={`app size-${settings.textSize} compact-liquid ${glassClass}`}
+        style={accentVars}
+      >
         <CompactView
           settings={settings}
           messages={messages}
@@ -473,7 +479,7 @@ export default function App() {
 
   return (
     <div
-      className={`app size-${settings.textSize} ${settings.compact ? "compact" : ""}`}
+      className={`app size-${settings.textSize} ${settings.compact ? "compact" : ""} ${glassClass}`}
       style={accentVars}
     >
       <div className="panel">
@@ -892,8 +898,8 @@ export default function App() {
 
         {showDrill && (
           <Drill
+            settings={settings}
             focus={drillFocus}
-            onMood={(correct) => react(correct ? "proud" : "sad", correct ? 1400 : 1500)}
             onClose={() => {
               setShowDrill(false);
               setDrillFocus(null);

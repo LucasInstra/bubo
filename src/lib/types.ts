@@ -46,6 +46,8 @@ export interface Settings {
   eyeTilt: string;
   eyeColor: string;
   noteLanguage: string;
+  glass: boolean;
+  glassOpacity: number;
 }
 
 export interface DrillItem {
@@ -155,4 +157,6 @@ export const DEFAULT_SETTINGS: Settings = {
   accentFromMascot: true,
   textSize: "normal",
   noteLanguage: "en",
+  glass: true,
+  glassOpacity: 72,
 };

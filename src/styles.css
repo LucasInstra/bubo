@@ -2139,3 +2139,268 @@ button {
   color: var(--bad);
   font-size: 11px;
 }
+
+/* practice result mascot */
+
+.drill-result-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.drill-mascot {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin: -8px 0 -8px -6px;
+}
+
+.drill-result-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* range controls */
+
+.field input[type="range"] {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.field input[type="range"]:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.field input[type="range"]:focus {
+  box-shadow: none;
+}
+
+/* single-surface compact: the window itself is the glass sheet */
+
+.compact-stage {
+  padding: 0;
+  background: transparent;
+}
+
+.compact-stage::before,
+.compact-stage::after {
+  display: none;
+}
+
+.compact-card {
+  height: 100%;
+  padding: 12px 14px;
+  border-radius: 16px;
+}
+
+.app.compact-liquid:not(.glass) .compact-card {
+  background: linear-gradient(180deg, #17161f 0%, #0b0b11 100%);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: none;
+}
+
+/* liquid glass theme: one translucent sheet over the desktop */
+
+.app.glass .panel {
+  background:
+    radial-gradient(120% 90% at 8% -8%, rgba(255, 255, 255, 0.16), transparent 58%),
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.11),
+      rgba(255, 255, 255, 0.025) 46%,
+      rgba(255, 255, 255, 0.06)
+    ),
+    rgba(18, 14, 30, var(--glass-alpha, 0.72));
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(34px) saturate(175%);
+  -webkit-backdrop-filter: blur(34px) saturate(175%);
+}
+
+.app.glass .head {
+  background: transparent;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.app.glass .chat {
+  background: transparent;
+}
+
+.app.glass .composer {
+  background: transparent;
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.app.glass .composer textarea {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.065);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.app.glass .msg-user .bubble {
+  border-color: rgba(255, 255, 255, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02)),
+    var(--accent-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.app.glass .msg-bot .bubble {
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px 14px 14px 4px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app.glass .fixes {
+  border-left-color: rgba(110, 231, 183, 0.55);
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app.glass .chip {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.app.glass .chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.app.glass .chip.chip-on {
+  border-color: rgba(139, 125, 255, 0.5);
+  background: var(--accent-soft);
+}
+
+.app.glass .settings {
+  background:
+    radial-gradient(130% 80% at 0% 0%, rgba(255, 255, 255, 0.11), transparent 56%),
+    rgba(16, 13, 27, calc(var(--glass-alpha, 0.72) * 0.9));
+  backdrop-filter: blur(40px) saturate(170%);
+  -webkit-backdrop-filter: blur(40px) saturate(170%);
+}
+
+.app.glass .settings-head {
+  background: transparent;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.app.glass .settings-footer {
+  background: rgba(10, 8, 18, 0.4);
+  border-top-color: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.app.glass .settings-body {
+  background: transparent;
+}
+
+.app.glass .field input:not([type="checkbox"]):not([type="range"]):not([type="color"]),
+.app.glass .field textarea,
+.app.glass .drill-input {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.app.glass .option-box,
+.app.glass .look,
+.app.glass .progress-tile,
+.app.glass .progress-mistake,
+.app.glass .progress-empty,
+.app.glass .activity,
+.app.glass .session-main,
+.app.glass .drill-card,
+.app.glass .update-card {
+  border-color: rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app.glass .drill-result {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.app.glass .drill-result.is-good {
+  border-left-color: var(--good);
+  background: rgba(110, 231, 183, 0.08);
+}
+
+.app.glass .drill-result.is-bad {
+  border-left-color: var(--bad);
+  background: rgba(253, 164, 175, 0.08);
+}
+
+.app.glass .combo-list {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(20, 16, 33, 0.9);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+}
+
+.app.glass .progress-hero {
+  border-color: rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015)),
+    var(--accent-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.app.glass.compact-liquid .compact-card {
+  background:
+    radial-gradient(260px 190px at 16% 8%, rgba(139, 125, 255, 0.22), transparent 72%),
+    radial-gradient(220px 180px at 94% 100%, rgba(73, 197, 255, 0.1), transparent 72%),
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.15),
+      rgba(255, 255, 255, 0.035) 46%,
+      rgba(255, 255, 255, 0.07)
+    ),
+    rgba(18, 14, 30, var(--glass-alpha, 0.72));
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(34px) saturate(175%);
+  -webkit-backdrop-filter: blur(34px) saturate(175%);
+}

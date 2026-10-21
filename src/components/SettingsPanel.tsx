@@ -539,6 +539,36 @@ export function SettingsPanel({
           Start a new chat
         </button>
 
+        <div className="section-title">Window</div>
+
+        <label className="field row">
+          <span>Liquid glass</span>
+          <input
+            type="checkbox"
+            checked={draft.glass}
+            onChange={(event) => patch({ glass: event.target.checked })}
+          />
+        </label>
+
+        <div className="field">
+          <span>
+            Glass opacity <em className="ok">{draft.glassOpacity}%</em>
+          </span>
+          <input
+            type="range"
+            min={50}
+            max={100}
+            step={1}
+            value={draft.glassOpacity}
+            disabled={!draft.glass}
+            aria-label="Glass opacity"
+            onChange={(event) => patch({ glassOpacity: Number(event.target.value) })}
+          />
+          <span className="hint">
+            Lower values let more of the desktop show through. Text stays opaque either way.
+          </span>
+        </div>
+
         <div className="section-title">Updates</div>
 
         <div className="update-card">
