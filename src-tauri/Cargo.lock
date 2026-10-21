@@ -359,7 +359,7 @@ dependencies = [
 
 [[package]]
 name = "bubo"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "futures-util",
  "keyring",
