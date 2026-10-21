@@ -45,6 +45,7 @@ export interface Settings {
   eyeSpacing: string;
   eyeTilt: string;
   eyeColor: string;
+  noteLanguage: string;
 }
 
 export interface DrillItem {
@@ -53,6 +54,7 @@ export interface DrillItem {
   right: string;
   note: string;
   streak: number;
+  seen: number;
   context: string | null;
 }
 
@@ -73,6 +75,7 @@ export interface TopMistake {
   right: string;
   note: string;
   streak: number;
+  seen: number;
   attempts: number;
   correct: number;
 }
@@ -151,4 +154,5 @@ export const DEFAULT_SETTINGS: Settings = {
   showStatus: true,
   accentFromMascot: true,
   textSize: "normal",
+  noteLanguage: "pt",
 };

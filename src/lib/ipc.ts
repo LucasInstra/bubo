@@ -67,6 +67,10 @@ export const ipc = {
     invoke<DrillItem | null>("drill_next", { includeFuture, excludeId }),
   drillReview: (id: number, correct: boolean) =>
     invoke<DrillItem | null>("drill_review", { id, correct }),
+  drillFocus: (wrong: string, right: string) =>
+    invoke<DrillItem | null>("drill_focus", { wrong, right }),
+  deleteFix: (messageId: number, wrong: string, right: string) =>
+    invoke<void>("delete_fix", { messageId, wrong, right }),
   drillSkipDue: () => invoke<number>("drill_skip_due"),
   drillReset: () => invoke<number>("drill_reset"),
   hideWindow: () => invoke<void>("hide_window"),

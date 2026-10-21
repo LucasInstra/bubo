@@ -55,7 +55,8 @@
           id: 2,
           role: "assistant",
           content: "That sounds like a good weekend. Was the water warm?",
-          fixes: null,
+          fixes:
+            '[{"wrong":"i go to the gym yesterday","right":"I went to the gym yesterday","note":"passado simples"}]',
           createdAt: 2,
         },
       ];
@@ -66,6 +67,7 @@
         right: "I went to the gym yesterday",
         note: "passado simples",
         streak: 2,
+        seen: 3,
         context: "i go to the gym yesterday and i feel good",
       };
 
@@ -87,6 +89,8 @@
         drill_stats: () => ({ total: 1, due: 1 }),
         drill_next: () => drillItem,
         drill_review: () => ({ ...drillItem, streak: 3 }),
+        drill_focus: () => drillItem,
+        delete_fix: () => null,
         set_compact: () => null,
         save_settings: () => null,
         test_connection: () => ({
@@ -95,8 +99,13 @@
         }),
       };
 
+      const calls = [];
+      window.__calls = calls;
       window.__TAURI_INTERNALS__ = {
-        invoke: async (cmd) => (handlers[cmd] ? handlers[cmd]() : null),
+        invoke: async (cmd, args) => {
+          calls.push({ cmd, args });
+          return handlers[cmd] ? handlers[cmd](args) : null;
+        },
         transformCallback: () => 0,
         unregisterCallback: () => {},
       };

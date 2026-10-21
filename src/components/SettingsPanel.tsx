@@ -268,6 +268,27 @@ export function SettingsPanel({
           />
         </label>
 
+        <div className="field">
+          <span>Correction notes</span>
+          <div className="levels">
+            <button
+              type="button"
+              className={`chip ${draft.noteLanguage === "pt" ? "chip-on" : ""}`}
+              onClick={() => patch({ noteLanguage: "pt" })}
+            >
+              PT-BR
+            </button>
+            <button
+              type="button"
+              className={`chip ${draft.noteLanguage === "en" ? "chip-on" : ""}`}
+              onClick={() => patch({ noteLanguage: "en" })}
+            >
+              English
+            </button>
+          </div>
+          <span className="hint">Language of the short note under each new correction.</span>
+        </div>
+
         <div className="section-title">Connection</div>
 
         <div className="field">

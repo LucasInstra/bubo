@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isCorrectAnswer } from "../lib/answer";
 import { ipc } from "../lib/ipc";
-import type { DrillItem, DrillStats } from "../lib/types";
+import type { DrillItem, DrillStats, Fix } from "../lib/types";
 
 type Phase = "loading" | "asking" | "answered" | "none" | "empty" | "error";
 
 interface DrillProps {
   onClose: () => void;
   onMood?: (correct: boolean) => void;
+  focus?: Fix | null;
 }
 
-export function Drill({ onClose, onMood }: DrillProps) {
+export function Drill({ onClose, onMood, focus }: DrillProps) {
   const [stats, setStats] = useState<DrillStats>({ total: 0, due: 0 });
   const [item, setItem] = useState<DrillItem | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
@@ -21,6 +22,7 @@ export function Drill({ onClose, onMood }: DrillProps) {
   const allowFuture = useRef(false);
   const lastAnswered = useRef<number | null>(null);
   const busy = useRef(false);
+  const focusedKey = useRef<string | null>(null);
 
   const load = useCallback(async (includeFuture = allowFuture.current) => {
     allowFuture.current = includeFuture;
@@ -63,9 +65,43 @@ export function Drill({ onClose, onMood }: DrillProps) {
     }
   }, []);
 
+  const loadFocus = useCallback(async (target: Fix) => {
+    setPhase("loading");
+    setResult(null);
+    setAnswer("");
+
+    try {
+      const freshStats = await ipc.drillStats();
+      setStats(freshStats);
+
+      const next = await ipc.drillFocus(target.wrong, target.right);
+      setAhead(false);
+      setItem(next);
+
+      if (next) {
+        setPhase("asking");
+        requestAnimationFrame(() => inputRef.current?.focus());
+      } else {
+        setPhase(freshStats.total > 0 ? "none" : "empty");
+      }
+    } catch (error) {
+      console.error("focused drill failed to load", error);
+      setPhase("error");
+    }
+  }, []);
+
   useEffect(() => {
-    void load(false);
-  }, [load]);
+    if (!focus) {
+      void load(false);
+      return;
+    }
+    // A parent re-render can hand us a fresh object with the same content;
+    // only load once per focused correction.
+    const key = `${focus.wrong}\u0000${focus.right}`;
+    if (focusedKey.current === key) return;
+    focusedKey.current = key;
+    void loadFocus(focus);
+  }, [focus, load, loadFocus]);
 
   useEffect(() => {
     const chat = document.querySelector<HTMLElement>(".chat");
@@ -119,7 +155,10 @@ export function Drill({ onClose, onMood }: DrillProps) {
         {phase === "error" && (
           <div className="drill-empty">
             <p>Something went wrong reading your cards.</p>
-            <button className="primary" onClick={() => void load(false)}>
+            <button
+              className="primary"
+              onClick={() => void (focus ? loadFocus(focus) : load(false))}
+            >
               Try again
             </button>
           </div>
@@ -156,6 +195,7 @@ export function Drill({ onClose, onMood }: DrillProps) {
               {item.context && <span className="drill-context">you wrote: “{item.context}”</span>}
               <span className="drill-wrong">{item.wrong}</span>
               {item.streak > 0 && <span className="drill-streak">streak {item.streak}</span>}
+              {item.seen > 1 && <span className="drill-seen">seen {item.seen} times</span>}
             </div>
 
             {phase === "asking" ? (

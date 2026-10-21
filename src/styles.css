@@ -437,6 +437,42 @@ button {
   margin-top: 3px;
 }
 
+.fix-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.fix-actions button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.fix-actions button:hover {
+  color: var(--text);
+}
+
+.fix-actions button.danger:hover {
+  color: var(--bad);
+}
+
+.fix-actions button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.fix-error {
+  color: var(--bad);
+  font-size: 10.5px;
+}
+
 /* hero */
 
 .hero {
@@ -563,6 +599,15 @@ button {
 .drill-streak {
   font-size: 10px;
   color: var(--good);
+}
+
+.drill-seen {
+  align-self: flex-start;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 9.5px;
+  color: var(--muted);
 }
 
 .drill-input {

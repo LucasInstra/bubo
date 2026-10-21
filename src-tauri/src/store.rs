@@ -1,5 +1,6 @@
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -34,6 +35,7 @@ pub struct DrillItem {
     pub right: String,
     pub note: String,
     pub streak: i64,
+    pub seen: i64,
     pub context: Option<String>,
 }
 
@@ -60,6 +62,7 @@ pub struct TopMistake {
     pub right: String,
     pub note: String,
     pub streak: i64,
+    pub seen: i64,
     pub attempts: i64,
     pub correct: i64,
 }
@@ -143,6 +146,11 @@ fn init(conn: &Connection) -> rusqlite::Result<()> {
     )?;
     // Older databases predate the link between a correction and its message.
     let _ = conn.execute("ALTER TABLE fixes ADD COLUMN message_id INTEGER", []);
+    // ... the number of times a correction was produced again ...
+    let _ = conn.execute(
+        "ALTER TABLE fixes ADD COLUMN seen INTEGER NOT NULL DEFAULT 1",
+        [],
+    );
     // ... and the link between a message and a session.
     let _ = conn.execute("ALTER TABLE messages ADD COLUMN session_id INTEGER", []);
     migrate_sessions(conn)
@@ -399,6 +407,54 @@ pub fn set_message_fixes(conn: &Connection, id: i64, fixes: Option<&str>) -> rus
     Ok(())
 }
 
+/// Removes a correction everywhere it can come back from: its reviews, the
+/// fix row itself, and the `fixes` JSON stored on every message. Without the
+/// JSON cleanup the startup backfill would resurrect the card on next launch.
+pub fn delete_fix(
+    conn: &Connection,
+    _message_id: i64,
+    wrong: &str,
+    right: &str,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "DELETE FROM reviews WHERE fix_id IN (
+            SELECT id FROM fixes WHERE wrong = ?1 AND right = ?2
+        )",
+        params![wrong, right],
+    )?;
+    conn.execute(
+        "DELETE FROM fixes WHERE wrong = ?1 AND right = ?2",
+        params![wrong, right],
+    )?;
+
+    let mut statement = conn.prepare("SELECT id, fixes FROM messages WHERE fixes IS NOT NULL")?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    drop(statement);
+
+    for (id, raw) in rows {
+        let Ok(mut fixes) = serde_json::from_str::<Vec<Fix>>(&raw) else {
+            continue;
+        };
+        let before = fixes.len();
+        fixes.retain(|fix| !(fix.wrong == wrong && fix.right == right));
+        if fixes.len() == before {
+            continue;
+        }
+        let json = if fixes.is_empty() {
+            None
+        } else {
+            serde_json::to_string(&fixes).ok()
+        };
+        set_message_fixes(conn, id, json.as_deref())?;
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 pub fn list(conn: &Connection, limit: i64) -> rusqlite::Result<Vec<StoredMessage>> {
     let mut stmt = conn.prepare(
@@ -430,13 +486,17 @@ fn row_to_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<DrillItem> {
         right: row.get(2)?,
         note: row.get(3)?,
         streak: row.get(4)?,
-        context: row.get(5)?,
+        seen: row.get(5)?,
+        context: row.get(6)?,
     })
 }
 
 /// Corrections are stored once; the drill later schedules them.
+///
+/// This is the non-counting path: it is used by the startup backfill and by
+/// tests, so replaying the same correction never inflates its recurrence.
 pub fn save_fixes(conn: &Connection, fixes: &[Fix]) -> rusqlite::Result<()> {
-    save_fixes_for_message(conn, fixes, None)
+    save_fixes_inner(conn, fixes, None, false)
 }
 
 pub fn save_fixes_for_message(
@@ -444,13 +504,40 @@ pub fn save_fixes_for_message(
     fixes: &[Fix],
     message_id: Option<i64>,
 ) -> rusqlite::Result<()> {
+    save_fixes_inner(conn, fixes, message_id, true)
+}
+
+fn save_fixes_inner(
+    conn: &Connection,
+    fixes: &[Fix],
+    message_id: Option<i64>,
+    count_seen: bool,
+) -> rusqlite::Result<()> {
     let now = now();
+    let mut unique: HashSet<(&str, &str)> = HashSet::new();
     for fix in fixes {
-        conn.execute(
-            "INSERT OR IGNORE INTO fixes (wrong, right, note, created_at, due_at, message_id)
-             VALUES (?1, ?2, ?3, ?4, ?4, ?5)",
-            params![fix.wrong, fix.right, fix.note, now, message_id],
-        )?;
+        // The model occasionally repeats the same pair inside one response;
+        // count a live recurrence once per turn, not once per array entry.
+        if !unique.insert((fix.wrong.as_str(), fix.right.as_str())) {
+            continue;
+        }
+        if count_seen {
+            conn.execute(
+                "INSERT INTO fixes (wrong, right, note, created_at, due_at, message_id, seen)
+                 VALUES (?1, ?2, ?3, ?4, ?4, ?5, 1)
+                 ON CONFLICT(wrong, right) DO UPDATE SET
+                   seen = fixes.seen + 1,
+                   note = CASE WHEN excluded.note != '' THEN excluded.note ELSE fixes.note END,
+                   message_id = COALESCE(fixes.message_id, excluded.message_id)",
+                params![fix.wrong, fix.right, fix.note, now, message_id],
+            )?;
+        } else {
+            conn.execute(
+                "INSERT OR IGNORE INTO fixes (wrong, right, note, created_at, due_at, message_id, seen)
+                 VALUES (?1, ?2, ?3, ?4, ?4, ?5, 1)",
+                params![fix.wrong, fix.right, fix.note, now, message_id],
+            )?;
+        }
     }
     Ok(())
 }
@@ -498,7 +585,7 @@ FROM days
 ORDER BY d";
 
 const TOP_SQL: &str = "
-SELECT f.wrong, f.right, f.note, f.streak, COUNT(r.id), COALESCE(SUM(r.correct), 0)
+SELECT f.wrong, f.right, f.note, f.streak, f.seen, COUNT(r.id), COALESCE(SUM(r.correct), 0)
 FROM fixes f
 LEFT JOIN reviews r ON r.fix_id = f.id
 GROUP BY f.id
@@ -542,8 +629,9 @@ pub fn progress_stats(conn: &Connection) -> rusqlite::Result<ProgressStats> {
                 right: row.get(1)?,
                 note: row.get(2)?,
                 streak: row.get(3)?,
-                attempts: row.get(4)?,
-                correct: row.get(5)?,
+                seen: row.get(4)?,
+                attempts: row.get(5)?,
+                correct: row.get(6)?,
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -616,7 +704,7 @@ pub fn next_drill(
     let now = now();
     if include_future {
         conn.query_row(
-            "SELECT f.id, f.wrong, f.right, f.note, f.streak, m.content
+            "SELECT f.id, f.wrong, f.right, f.note, f.streak, f.seen, m.content
              FROM fixes f LEFT JOIN messages m ON m.id = f.message_id
              WHERE (?1 IS NULL OR f.id != ?1)
              ORDER BY f.due_at ASC, RANDOM() LIMIT 1",
@@ -626,7 +714,7 @@ pub fn next_drill(
         .optional()
     } else {
         conn.query_row(
-            "SELECT f.id, f.wrong, f.right, f.note, f.streak, m.content
+            "SELECT f.id, f.wrong, f.right, f.note, f.streak, f.seen, m.content
              FROM fixes f LEFT JOIN messages m ON m.id = f.message_id
              WHERE f.due_at <= ?1 AND (?2 IS NULL OR f.id != ?2)
              ORDER BY f.due_at ASC, RANDOM() LIMIT 1",
@@ -635,6 +723,23 @@ pub fn next_drill(
         )
         .optional()
     }
+}
+
+/// Looks a card up by its wording, ignoring whether it is due. Used by the
+/// focused practice view, which must show even a scheduled card.
+pub fn focus_drill(
+    conn: &Connection,
+    wrong: &str,
+    right: &str,
+) -> rusqlite::Result<Option<DrillItem>> {
+    conn.query_row(
+        "SELECT f.id, f.wrong, f.right, f.note, f.streak, f.seen, m.content
+         FROM fixes f LEFT JOIN messages m ON m.id = f.message_id
+         WHERE f.wrong = ?1 AND f.right = ?2",
+        params![wrong, right],
+        row_to_item,
+    )
+    .optional()
 }
 
 const INTERVALS_MS: [i64; 5] = [
@@ -652,7 +757,7 @@ pub fn review_drill(
 ) -> rusqlite::Result<Option<DrillItem>> {
     let item = conn
         .query_row(
-            "SELECT f.id, f.wrong, f.right, f.note, f.streak, m.content
+            "SELECT f.id, f.wrong, f.right, f.note, f.streak, f.seen, m.content
              FROM fixes f LEFT JOIN messages m ON m.id = f.message_id
              WHERE f.id = ?1",
             [id],
@@ -1083,5 +1188,151 @@ mod tests {
         let remaining = super::list_sessions(&conn).unwrap();
         assert_eq!(remaining.len(), 1);
         assert_eq!(remaining[0].id, second);
+    }
+
+    #[test]
+    fn seen_increments_on_live_save() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        let user_id = insert(&conn, "user", "i go yesterday", None).unwrap();
+        let fix = Fix {
+            wrong: "i go yesterday".to_string(),
+            right: "I went yesterday".to_string(),
+            note: "passado".to_string(),
+        };
+
+        super::save_fixes_for_message(&conn, std::slice::from_ref(&fix), Some(user_id)).unwrap();
+        super::save_fixes_for_message(&conn, &[fix], Some(user_id)).unwrap();
+
+        let item = super::next_drill(&conn, false, None)
+            .unwrap()
+            .expect("due item");
+        assert_eq!(item.seen, 2);
+
+        let focused = super::focus_drill(&conn, "i go yesterday", "I went yesterday")
+            .unwrap()
+            .expect("focused item");
+        assert_eq!(focused.seen, 2);
+    }
+
+    #[test]
+    fn backfill_does_not_increment_seen() {
+        let conn = memory_db();
+        insert(
+            &conn,
+            "assistant",
+            "ok",
+            Some(r#"[{"wrong":"i go","right":"I went","note":"passado"}]"#),
+        )
+        .unwrap();
+
+        super::backfill_fixes(&conn).unwrap();
+        super::backfill_fixes(&conn).unwrap();
+
+        let item = super::focus_drill(&conn, "i go", "I went")
+            .unwrap()
+            .expect("card from backfill");
+        assert_eq!(item.seen, 1);
+
+        let top = super::progress_stats(&conn).unwrap().top;
+        assert_eq!(top[0].seen, 1);
+    }
+
+    #[test]
+    fn focus_drill_returns_a_card_even_when_not_due() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        super::save_fixes(
+            &conn,
+            &[Fix {
+                wrong: "i go".to_string(),
+                right: "I went".to_string(),
+                note: String::new(),
+            }],
+        )
+        .unwrap();
+
+        assert_eq!(super::skip_due(&conn).unwrap(), 1);
+        assert!(super::next_drill(&conn, false, None).unwrap().is_none());
+
+        let focused = super::focus_drill(&conn, "i go", "I went")
+            .unwrap()
+            .expect("focused card is not limited by due date");
+        assert_eq!(focused.right, "I went");
+        assert!(super::focus_drill(&conn, "missing", "card")
+            .unwrap()
+            .is_none());
+    }
+
+    #[test]
+    fn delete_fix_removes_reviews_rows_and_message_json() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        let fixes = vec![
+            Fix {
+                wrong: "i go".to_string(),
+                right: "I went".to_string(),
+                note: "passado".to_string(),
+            },
+            Fix {
+                wrong: "she don't".to_string(),
+                right: "she doesn't".to_string(),
+                note: String::new(),
+            },
+        ];
+        let bot = insert(
+            &conn,
+            "assistant",
+            "ok",
+            Some(r#"[{"wrong":"i go","right":"I went","note":"passado"},{"wrong":"she don't","right":"she doesn't","note":""}]"#),
+        )
+        .unwrap();
+        super::save_fixes_for_message(&conn, &fixes, Some(bot)).unwrap();
+
+        let item = super::focus_drill(&conn, "i go", "I went")
+            .unwrap()
+            .expect("saved card");
+        super::review_drill(&conn, item.id, true).unwrap();
+
+        super::delete_fix(&conn, bot, "i go", "I went").unwrap();
+
+        let fixes_left: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM fixes WHERE wrong = 'i go' AND right = 'I went'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let reviews_left: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM reviews WHERE fix_id = ?1",
+                [item.id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(fixes_left, 0);
+        assert_eq!(reviews_left, 0);
+        assert!(super::focus_drill(&conn, "i go", "I went")
+            .unwrap()
+            .is_none());
+
+        let stored: Option<String> = conn
+            .query_row("SELECT fixes FROM messages WHERE id = ?1", [bot], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        let stored = stored.expect("the other correction stays on the message");
+        assert!(!stored.contains("i go"));
+        assert!(stored.contains("she don't"));
+
+        // The startup backfill must not bring the deleted card back.
+        super::backfill_fixes(&conn).unwrap();
+        assert!(super::focus_drill(&conn, "i go", "I went")
+            .unwrap()
+            .is_none());
+        assert_eq!(super::drill_stats(&conn).unwrap().total, 1);
     }
 }

@@ -1,10 +1,22 @@
 import { useEffect, useState } from "react";
 import { ipc } from "../lib/ipc";
-import type { ProgressStats } from "../lib/types";
+import type { ProgressStats, TopMistake } from "../lib/types";
 
 interface ProgressPanelProps {
   onClose: () => void;
   onPractice: () => void;
+}
+
+function attemptsLabel(mistake: TopMistake): string {
+  const parts: string[] = [];
+  if (mistake.seen > 1) parts.push(`seen ${mistake.seen} times`);
+  if (mistake.attempts === 0) {
+    parts.push("not practiced yet");
+  } else {
+    const tries = `${mistake.attempts} ${mistake.attempts === 1 ? "try" : "tries"}`;
+    parts.push(`${tries} · ${Math.round((mistake.correct / mistake.attempts) * 100)}% right`);
+  }
+  return parts.join(" · ");
 }
 
 export function ProgressPanel({ onClose, onPractice }: ProgressPanelProps) {
@@ -143,13 +155,7 @@ export function ProgressPanel({ onClose, onPractice }: ProgressPanelProps) {
                         <span className="fix-right">{mistake.right}</span>
                       </div>
                       {mistake.note && <span className="progress-note">{mistake.note}</span>}
-                      <span className="progress-attempts">
-                        {mistake.attempts === 0
-                          ? "not practiced yet"
-                          : `${mistake.attempts} ${mistake.attempts === 1 ? "try" : "tries"} · ${Math.round(
-                              (mistake.correct / mistake.attempts) * 100,
-                            )}% right`}
-                      </span>
+                      <span className="progress-attempts">{attemptsLabel(mistake)}</span>
                     </div>
                   ))}
                 </div>

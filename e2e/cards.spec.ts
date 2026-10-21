@@ -1,0 +1,52 @@
+import { expect, test } from "@playwright/test";
+
+interface HarnessCall {
+  cmd: string;
+  args: unknown;
+}
+
+async function calls(page: import("@playwright/test").Page): Promise<HarnessCall[]> {
+  return page.evaluate(() => (window as unknown as { __calls: HarnessCall[] }).__calls);
+}
+
+test("practice starts from a correction card", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=app");
+  await expect(page.getByText("corrections")).toBeVisible();
+
+  await page.getByRole("button", { name: "Practice this correction" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Practice" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("i go to the gym yesterday", { exact: true })).toBeVisible();
+
+  expect(await calls(page)).toContainEqual({
+    cmd: "drill_focus",
+    args: {
+      wrong: "i go to the gym yesterday",
+      right: "I went to the gym yesterday",
+    },
+  });
+
+  await dialog.getByRole("button", { name: "Back" }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
+test("deletes a correction from the card", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=app");
+  await expect(page.locator(".fixes")).toBeVisible();
+
+  const remove = page.getByRole("button", { name: "Delete this correction" });
+  await remove.click();
+  await expect(remove).toHaveText("erase?");
+  await remove.click();
+
+  await expect(page.locator(".fixes")).toHaveCount(0);
+  expect(await calls(page)).toContainEqual({
+    cmd: "delete_fix",
+    args: {
+      messageId: 2,
+      wrong: "i go to the gym yesterday",
+      right: "I went to the gym yesterday",
+    },
+  });
+});

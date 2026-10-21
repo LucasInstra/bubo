@@ -512,6 +512,27 @@ fn drill_review(
 }
 
 #[tauri::command]
+fn drill_focus(
+    state: State<'_, AppState>,
+    wrong: String,
+    right: String,
+) -> Result<Option<store::DrillItem>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::focus_drill(&db, &wrong, &right).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn delete_fix(
+    state: State<'_, AppState>,
+    message_id: i64,
+    wrong: String,
+    right: String,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::delete_fix(&db, message_id, &wrong, &right).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn hide_window(window: tauri::Window) -> Result<(), String> {
     window.hide().map_err(|e| e.to_string())
 }
@@ -677,6 +698,8 @@ pub fn run() {
             progress_stats,
             drill_next,
             drill_review,
+            drill_focus,
+            delete_fix,
             drill_skip_due,
             drill_reset,
             hide_window,

@@ -1,24 +1,65 @@
 import { memo, useEffect, useState } from "react";
 import { stripLegacyFixes } from "../lib/format";
-import type { Msg } from "../lib/types";
+import type { Fix, Msg } from "../lib/types";
 
 interface MessageProps {
   message: Msg;
   onRetry?: (message: Msg) => void;
   onDelete?: (message: Msg) => void;
+  onPracticeFix?: (message: Msg, fix: Fix) => void;
+  onDeleteFix?: (message: Msg, fix: Fix) => Promise<void>;
 }
 
-export const Message = memo(function Message({ message, onRetry, onDelete }: MessageProps) {
+function fixKey(fix: Fix): string {
+  return `${fix.wrong}|${fix.right}`;
+}
+
+export const Message = memo(function Message({
+  message,
+  onRetry,
+  onDelete,
+  onPracticeFix,
+  onDeleteFix,
+}: MessageProps) {
   const body = stripLegacyFixes(message.content);
   const isUser = message.role === "user";
   const fixes = message.fixes ?? [];
   const [confirming, setConfirming] = useState(false);
+  const [confirmingFix, setConfirmingFix] = useState<string | null>(null);
+  const [busyFix, setBusyFix] = useState<string | null>(null);
+  const [fixError, setFixError] = useState("");
 
   useEffect(() => {
     if (!confirming) return;
     const timer = setTimeout(() => setConfirming(false), 3000);
     return () => clearTimeout(timer);
   }, [confirming]);
+
+  useEffect(() => {
+    if (!confirmingFix) return;
+    const timer = setTimeout(() => setConfirmingFix(null), 3000);
+    return () => clearTimeout(timer);
+  }, [confirmingFix]);
+
+  const removeFix = async (fix: Fix) => {
+    if (!onDeleteFix) return;
+    const key = fixKey(fix);
+    if (confirmingFix !== key) {
+      setFixError("");
+      setConfirmingFix(key);
+      return;
+    }
+    setConfirmingFix(null);
+    setBusyFix(key);
+    try {
+      await onDeleteFix(message, fix);
+    } catch (problem) {
+      console.error("could not delete the correction", problem);
+      setFixError("could not delete this correction");
+    } finally {
+      setBusyFix(null);
+    }
+  };
 
   const copy = async () => {
     try {
@@ -78,16 +119,43 @@ export const Message = memo(function Message({ message, onRetry, onDelete }: Mes
       {!message.streaming && fixes.length > 0 && (
         <div className="fixes">
           <div className="fixes-title">corrections</div>
-          {fixes.map((fix, index) => (
-            <div className="fix" key={`${fix.wrong}-${index}`}>
-              <div className="fix-row">
-                <span className="fix-wrong">{fix.wrong}</span>
-                <span className="fix-arrow">→</span>
-                <span className="fix-right">{fix.right}</span>
+          {fixes.map((fix, index) => {
+            const key = fixKey(fix);
+            return (
+              <div className="fix" key={`${fix.wrong}-${index}`}>
+                <div className="fix-row">
+                  <span className="fix-wrong">{fix.wrong}</span>
+                  <span className="fix-arrow">→</span>
+                  <span className="fix-right">{fix.right}</span>
+                </div>
+                {fix.note && <div className="fix-note">{fix.note}</div>}
+                {(onPracticeFix || onDeleteFix) && (
+                  <div className="fix-actions">
+                    {onPracticeFix && (
+                      <button
+                        aria-label="Practice this correction"
+                        disabled={!message.dbId}
+                        onClick={() => onPracticeFix(message, fix)}
+                      >
+                        practice
+                      </button>
+                    )}
+                    {onDeleteFix && (
+                      <button
+                        className="danger"
+                        aria-label="Delete this correction"
+                        disabled={!message.dbId || busyFix === key}
+                        onClick={() => void removeFix(fix)}
+                      >
+                        {confirmingFix === key ? "erase?" : busyFix === key ? "…" : "delete"}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
-              {fix.note && <div className="fix-note">{fix.note}</div>}
-            </div>
-          ))}
+            );
+          })}
+          {fixError && <div className="fix-error">{fixError}</div>}
         </div>
       )}
     </div>

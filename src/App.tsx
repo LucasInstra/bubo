@@ -10,7 +10,7 @@ import { ProgressPanel } from "./components/ProgressPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { parseStoredFixes } from "./lib/format";
 import { ipc } from "./lib/ipc";
-import type { Mood, Msg, OrbState, Settings, StoredMessage } from "./lib/types";
+import type { Fix, Mood, Msg, OrbState, Settings, StoredMessage } from "./lib/types";
 import { DEFAULT_SETTINGS } from "./lib/types";
 
 const SUGGESTIONS = [
@@ -59,6 +59,7 @@ export default function App() {
   const [pinned, setPinned] = useState(true);
   const [due, setDue] = useState(0);
   const [showDrill, setShowDrill] = useState(false);
+  const [drillFocus, setDrillFocus] = useState<Fix | null>(null);
   const [stageSize, setStageSize] = useState(76);
 
   const listRef = useRef<HTMLDivElement>(null);
@@ -123,8 +124,10 @@ export default function App() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (showDrill) setShowDrill(false);
-        else if (showProgress) setShowProgress(false);
+        if (showDrill) {
+          setShowDrill(false);
+          setDrillFocus(null);
+        } else if (showProgress) setShowProgress(false);
         else if (showHistory) setShowHistory(false);
         else if (showBuddy) setShowBuddy(false);
         else if (showSettings) setShowSettings(false);
@@ -401,6 +404,32 @@ export default function App() {
     setMessages((current) => current.filter((item) => item.id !== message.id));
   }, []);
 
+  const practiceFix = useCallback((_message: Msg, fix: Fix) => {
+    setShowSettings(false);
+    setShowBuddy(false);
+    setShowProgress(false);
+    setShowHistory(false);
+    setDrillFocus(fix);
+    setShowDrill(true);
+  }, []);
+
+  const deleteFix = useCallback(async (message: Msg, fix: Fix) => {
+    if (!message.dbId) return;
+    await ipc.deleteFix(message.dbId, fix.wrong, fix.right);
+    // The backend removes the pair from every stored message, so mirror that
+    // locally instead of leaving a duplicate card on another bubble.
+    setMessages((current) =>
+      current.map((item) => ({
+        ...item,
+        fixes: item.fixes.filter((entry) => entry.wrong !== fix.wrong || entry.right !== fix.right),
+      })),
+    );
+    void ipc
+      .drillStats()
+      .then((stats) => setDue(stats.due))
+      .catch(() => {});
+  }, []);
+
   const empty = messages.length === 0;
   const accent = settings.accentFromMascot ? settings.color : "#8b7dff";
   const accentVars = {
@@ -545,7 +574,10 @@ export default function App() {
                   className="ghost icon"
                   title={due > 0 ? `Practice ${due} corrections` : "Practice corrections"}
                   aria-label="Practice"
-                  onClick={() => setShowDrill(true)}
+                  onClick={() => {
+                    setDrillFocus(null);
+                    setShowDrill(true);
+                  }}
                 >
                   <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
                     <circle
@@ -703,7 +735,13 @@ export default function App() {
               </p>
               <div className="suggestions">
                 {due > 0 && (
-                  <button className="chip chip-practice" onClick={() => setShowDrill(true)}>
+                  <button
+                    className="chip chip-practice"
+                    onClick={() => {
+                      setDrillFocus(null);
+                      setShowDrill(true);
+                    }}
+                  >
                     Practice {due} {due === 1 ? "correction" : "corrections"} from our chats
                   </button>
                 )}
@@ -730,6 +768,8 @@ export default function App() {
                   message={message}
                   onRetry={message.error ? retry : undefined}
                   onDelete={removeMessage}
+                  onPracticeFix={practiceFix}
+                  onDeleteFix={deleteFix}
                 />
               ))}
             </div>
@@ -764,6 +804,7 @@ export default function App() {
             onClose={() => setShowProgress(false)}
             onPractice={() => {
               setShowProgress(false);
+              setDrillFocus(null);
               setShowDrill(true);
             }}
           />
@@ -801,9 +842,11 @@ export default function App() {
 
         {showDrill && (
           <Drill
+            focus={drillFocus}
             onMood={(correct) => react(correct ? "proud" : "sad", correct ? 1400 : 1500)}
             onClose={() => {
               setShowDrill(false);
+              setDrillFocus(null);
               void ipc.drillStats().then((stats) => setDue(stats.due));
             }}
           />

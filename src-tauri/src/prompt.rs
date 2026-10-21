@@ -134,6 +134,14 @@ pub fn reply_body(settings: &Settings, messages: &[ChatMsg]) -> Value {
     body
 }
 
+fn note_rule(language: &str) -> &'static str {
+    if language.trim().eq_ignore_ascii_case("en") {
+        "- The \"note\" is always in English, short and clear, with no final period, and never uses em dashes or en dashes."
+    } else {
+        "- The \"note\" is always in Brazilian Portuguese, short and clear, with no final period, and never uses em dashes or en dashes."
+    }
+}
+
 fn corrections_system(settings: &Settings) -> String {
     let case_rule = if settings.ignore_capitalization {
         "- Ignore capitalization completely. A lowercase \"i\", \"friday\" or a missing capital letter is NOT a mistake."
@@ -146,18 +154,19 @@ fn corrections_system(settings: &Settings) -> String {
 Look ONLY at the last message written by the learner (role "user") in the conversation.
 
 Reply with a JSON array and nothing else. One object per real mistake, at most 4:
-[{{"wrong": "exact fragment the learner wrote", "right": "how a native speaker would say it", "note": "explicação curta em português, no máximo 12 palavras"}}]
+[{{"wrong": "exact fragment the learner wrote", "right": "how a native speaker would say it", "note": "short explanation in the requested language"}}]
 
 Rules:
 - Include grammar, word choice, missing words, and phrasing a native would not use.
 {case_rule}
 - Keep "wrong" and "right" as short fragments, never whole paragraphs.
-- The "note" is always in Brazilian Portuguese, no final period, and never uses em dashes (—) or en dashes (–).
+{note_rule}
 - Correct the learner's message only, never your own replies.
 - If there is nothing to fix, reply exactly [].
 - No markdown, no code fences, no comments, no text outside the JSON array."#,
         level = settings.level,
         case_rule = case_rule,
+        note_rule = note_rule(&settings.note_language),
     )
 }
 
@@ -250,5 +259,64 @@ mod tests {
         let prompt = reply_system(&settings);
         assert!(prompt.contains("unhurried mentor"));
         assert!(!prompt.contains("personality, tone and interests"));
+    }
+
+    fn correction_system_prompt(settings: &Settings) -> String {
+        let body = corrections_body(settings, &[]);
+        body["messages"][0]["content"]
+            .as_str()
+            .expect("system message content")
+            .to_string()
+    }
+
+    #[test]
+    fn note_language_switches_the_correction_note() {
+        let english = Settings {
+            note_language: "en".to_string(),
+            ..Settings::default()
+        };
+        let english_prompt = correction_system_prompt(&english);
+        assert!(english_prompt.contains("always in English"));
+        assert!(!english_prompt.contains("Brazilian Portuguese"));
+
+        let portuguese = Settings {
+            note_language: "pt".to_string(),
+            ..Settings::default()
+        };
+        let portuguese_prompt = correction_system_prompt(&portuguese);
+        assert!(portuguese_prompt.contains("Brazilian Portuguese"));
+        assert!(!portuguese_prompt.contains("always in English"));
+
+        for prompt in [&english_prompt, &portuguese_prompt] {
+            assert!(!prompt.contains('\u{2014}'));
+            assert!(!prompt.contains('\u{2013}'));
+        }
+    }
+
+    #[test]
+    fn note_language_is_case_insensitive() {
+        let settings = Settings {
+            note_language: "EN".to_string(),
+            ..Settings::default()
+        };
+        let prompt = correction_system_prompt(&settings);
+        assert!(prompt.contains("always in English"));
+        assert!(!prompt.contains("Brazilian Portuguese"));
+    }
+
+    #[test]
+    fn unknown_or_empty_note_language_falls_back_to_portuguese() {
+        for language in ["", "fr", "nonsense"] {
+            let settings = Settings {
+                note_language: language.to_string(),
+                ..Settings::default()
+            };
+            let prompt = correction_system_prompt(&settings);
+            assert!(
+                prompt.contains("Brazilian Portuguese"),
+                "language {language:?} should fall back to Portuguese"
+            );
+            assert!(!prompt.contains("always in English"));
+        }
     }
 }
