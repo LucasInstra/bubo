@@ -2210,11 +2210,11 @@ button {
   backdrop-filter: none;
 }
 
-/* liquid glass theme: one translucent sheet over the desktop */
+/* liquid glass theme: the window background stays a plain translucent sheet;
+   the glass treatment belongs to the controls and cards on top of it */
 
 .app.glass .panel {
-  --glass-edge: 18px;
-  --glass-tint:
+  background:
     radial-gradient(120% 90% at 8% -8%, rgba(255, 255, 255, 0.16), transparent 58%),
     linear-gradient(
       135deg,
@@ -2223,57 +2223,11 @@ button {
       rgba(255, 255, 255, 0.06)
     ),
     rgba(18, 14, 30, var(--glass-alpha, 0.72));
-  background: transparent;
   border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
-}
-
-/* The tint sits above the refraction, never below it: a background painted on
-   the surface itself would be the only thing the backdrop filter sees. The
-   mask leaves the rim clear, so the refracted edge stays visible even when the
-   glass is almost opaque. */
-
-.app.glass .panel::after,
-.app.glass .compact-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: inherit;
-  background: var(--glass-tint, rgba(18, 14, 30, var(--glass-alpha, 0.72)));
-  pointer-events: none;
-  -webkit-mask-image:
-    linear-gradient(
-      to right,
-      rgba(0, 0, 0, 0.32) 0,
-      #000 var(--glass-edge, 30px),
-      #000 calc(100% - var(--glass-edge, 30px)),
-      transparent 100%
-    ),
-    linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.32) 0,
-      #000 var(--glass-edge, 30px),
-      #000 calc(100% - var(--glass-edge, 30px)),
-      transparent 100%
-    );
-  -webkit-mask-composite: source-in;
-  mask-image:
-    linear-gradient(
-      to right,
-      rgba(0, 0, 0, 0.32) 0,
-      #000 var(--glass-edge, 30px),
-      #000 calc(100% - var(--glass-edge, 30px)),
-      transparent 100%
-    ),
-    linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.32) 0,
-      #000 var(--glass-edge, 30px),
-      #000 calc(100% - var(--glass-edge, 30px)),
-      transparent 100%
-    );
-  mask-composite: intersect;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
 }
 
 /* A sheet covers the chat, not the desktop: it gets a flat frosted tint
@@ -2437,14 +2391,6 @@ button {
   z-index: 1;
 }
 
-/* A filtered sibling makes Chrome skip the sheet's backdrop blur, so the
-   panel refraction steps aside while a sheet covers it. */
-
-.app:has(.settings) .panel > .glass-refraction,
-.app:has(.settings) .panel > .glass-specular {
-  display: none;
-}
-
 .app.glass .settings-head {
   background: transparent;
   border-bottom-color: rgba(255, 255, 255, 0.08);
@@ -2527,8 +2473,7 @@ button {
 }
 
 .app.glass.compact-liquid .compact-card {
-  --glass-edge: 16px;
-  --glass-tint:
+  background:
     radial-gradient(260px 190px at 16% 8%, rgba(139, 125, 255, 0.22), transparent 72%),
     radial-gradient(220px 180px at 94% 100%, rgba(73, 197, 255, 0.1), transparent 72%),
     linear-gradient(
@@ -2538,11 +2483,10 @@ button {
       rgba(255, 255, 255, 0.07)
     ),
     rgba(18, 14, 30, var(--glass-alpha, 0.72));
-  background: transparent;
   border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
 }
 
 /* glass identity for the controls, not just the background */
@@ -2709,7 +2653,18 @@ button {
 .app.glass .status-pill,
 .app.glass .msg-user .bubble,
 .app.glass .msg-bot .bubble,
-.app.glass .compact-bubble {
+.app.glass .compact-bubble,
+.app.glass .fixes,
+.app.glass .option-box,
+.app.glass .look,
+.app.glass .progress-hero,
+.app.glass .progress-tile,
+.app.glass .progress-mistake,
+.app.glass .progress-empty,
+.app.glass .activity,
+.app.glass .session-main,
+.app.glass .drill-card,
+.app.glass .update-card {
   position: relative;
 }
 
@@ -2723,7 +2678,18 @@ button {
 .app.glass .status-pill::after,
 .app.glass .msg-user .bubble::after,
 .app.glass .msg-bot .bubble::after,
-.app.glass .compact-bubble::after {
+.app.glass .compact-bubble::after,
+.app.glass .fixes::after,
+.app.glass .option-box::after,
+.app.glass .look::after,
+.app.glass .progress-hero::after,
+.app.glass .progress-tile::after,
+.app.glass .progress-mistake::after,
+.app.glass .progress-empty::after,
+.app.glass .activity::after,
+.app.glass .session-main::after,
+.app.glass .drill-card::after,
+.app.glass .update-card::after {
   content: "";
   position: absolute;
   inset: 0;

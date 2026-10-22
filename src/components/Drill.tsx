@@ -253,7 +253,6 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
                         eyeSpacing={settings.eyeSpacing}
                         eyeTilt={settings.eyeTilt}
                         eyeColor={settings.eyeColor}
-                        sadStyle={settings.sadStyle}
                         boopable={false}
                       />
                     </span>

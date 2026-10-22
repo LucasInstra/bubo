@@ -4,7 +4,6 @@ import { Composer } from "./components/Composer";
 import { BuddyPanel } from "./components/BuddyPanel";
 import { CompactView } from "./components/CompactView";
 import { Drill } from "./components/Drill";
-import { GlassRefraction } from "./components/GlassRefraction";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { Mascot } from "./components/Mascot";
 import { Message } from "./components/Message";
@@ -490,9 +489,6 @@ export default function App() {
       style={accentVars}
     >
       <div className="panel">
-        {settings.glass && (
-          <GlassRefraction radius={16} band={34} displacement={76} blur={5} saturation={175} />
-        )}
         <header className="head" data-tauri-drag-region>
           <button
             className="brand brand-button"
@@ -523,7 +519,6 @@ export default function App() {
                   eyeSpacing={settings.eyeSpacing}
                   eyeTilt={settings.eyeTilt}
                   eyeColor={settings.eyeColor}
-                  sadStyle={settings.sadStyle}
                 />
               </span>
             )}
@@ -768,7 +763,6 @@ export default function App() {
                 eyeSpacing={settings.eyeSpacing}
                 eyeTilt={settings.eyeTilt}
                 eyeColor={settings.eyeColor}
-                sadStyle={settings.sadStyle}
                 boopable
               />
               {settings.showStatus && status !== "idle" && (
