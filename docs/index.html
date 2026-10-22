@@ -75,13 +75,13 @@
       <section class="hero" aria-labelledby="hero-title">
         <div class="wrap hero-grid">
           <div class="hero-copy">
-            <img
-              class="hero-mascot"
-              src="assets/bubo.png"
-              width="132"
-              height="132"
-              alt="bubo, a small purple round mascot with two vertical bar eyes"
-            />
+            <div
+              class="hero-mascot hero-mascot-live"
+              id="bubo-demo"
+              role="img"
+              aria-label="bubo, an interactive purple mascot. Click to boop it or drag a cheek."
+            ></div>
+            <p class="hero-demo-hint">click to boop · drag a cheek</p>
 
             <p class="eyebrow">
               <span class="dot" aria-hidden="true"></span>
@@ -341,7 +341,10 @@
               </a>
               <figcaption>
                 <strong>Ready-made voices</strong>
-                <span>Twelve personalities, from Warm Coach to Night Owl. Picking one changes only the tone.</span>
+                <span
+                  >Twelve personalities, from Warm Coach to Night Owl. Picking one changes only the
+                  tone.</span
+                >
               </figcaption>
             </figure>
 
@@ -358,7 +361,10 @@
               </a>
               <figcaption>
                 <strong>The default bubo</strong>
-                <span>Purple, round, bars eyes, size L, straight tilt and no mouth. Every part is editable.</span>
+                <span
+                  >Purple, round, bars eyes, size L, straight tilt and no mouth. Every part is
+                  editable.</span
+                >
               </figcaption>
             </figure>
 
@@ -610,6 +616,7 @@
       <p class="lightbox-caption"></p>
     </div>
 
+    <script type="module" src="demo/bubo-demo.js"></script>
     <script>
       (() => {
         const dialog = document.getElementById("lightbox");
