@@ -23,6 +23,8 @@ struct AppState {
     cancels: Mutex<HashMap<String, Arc<AtomicBool>>>,
     compact_origin: Mutex<Option<(i32, i32)>>,
     compact: AtomicBool,
+    popup: AtomicBool,
+    popup_origin: Mutex<Option<(i32, i32)>>,
     last_window_save: Mutex<Option<Instant>>,
 }
 
@@ -159,6 +161,145 @@ fn set_compact(
     } else if let Some((x, y)) = restore {
         let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
     }
+
+    Ok(())
+}
+
+const POPUP_SIZE: f64 = 132.0;
+const POPUP_OPEN_WIDTH: f64 = 360.0;
+const POPUP_OPEN_HEIGHT: f64 = 380.0;
+
+fn clamp_to_monitor(
+    window: &tauri::WebviewWindow,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+) -> (i32, i32) {
+    if let Ok(Some(monitor)) = window.current_monitor() {
+        let area = monitor.work_area();
+        let max_x = area.position.x + area.size.width as i32 - width;
+        let max_y = area.position.y + area.size.height as i32 - height;
+        (
+            x.min(max_x).max(area.position.x),
+            y.min(max_y).max(area.position.y),
+        )
+    } else {
+        (x, y)
+    }
+}
+
+#[tauri::command]
+fn set_popup(
+    window: tauri::WebviewWindow,
+    state: State<'_, AppState>,
+    popup: bool,
+) -> Result<(), String> {
+    if state.popup.load(Ordering::Relaxed) == popup {
+        return Ok(());
+    }
+
+    let scale = window.scale_factor().unwrap_or(1.0);
+
+    if popup {
+        let origin = window
+            .outer_position()
+            .ok()
+            .map(|position| (position.x, position.y));
+        if let Ok(mut slot) = state.popup_origin.lock() {
+            *slot = origin;
+        }
+        // Popup owns the geometry; compact must not restore its old origin
+        // when the window comes back.
+        state.compact.store(false, Ordering::Relaxed);
+        if let Ok(mut slot) = state.compact_origin.lock() {
+            *slot = None;
+        }
+        state.popup.store(true, Ordering::Relaxed);
+
+        window
+            .set_min_size(Some(tauri::Size::Logical(tauri::LogicalSize::new(
+                96.0, 96.0,
+            ))))
+            .map_err(|error| error.to_string())?;
+        let size = (POPUP_SIZE * scale).round() as i32;
+        let (origin_x, origin_y) = origin.unwrap_or((0, 0));
+        let margin = (24.0 * scale).round() as i32;
+        let outer = window.outer_size().map_err(|error| error.to_string())?;
+        let x = origin_x + outer.width as i32 - size - margin;
+        let y = origin_y + outer.height as i32 - size - margin;
+        let (x, y) = clamp_to_monitor(&window, x, y, size, size);
+        window
+            .set_size(tauri::Size::Logical(tauri::LogicalSize::new(
+                POPUP_SIZE, POPUP_SIZE,
+            )))
+            .map_err(|error| error.to_string())?;
+        window
+            .set_position(tauri::PhysicalPosition::new(x, y))
+            .map_err(|error| error.to_string())?;
+    } else {
+        state.popup.store(false, Ordering::Relaxed);
+        window
+            .set_min_size(Some(tauri::Size::Logical(tauri::LogicalSize::new(
+                360.0, 260.0,
+            ))))
+            .map_err(|error| error.to_string())?;
+        window
+            .set_size(tauri::Size::Logical(tauri::LogicalSize::new(420.0, 640.0)))
+            .map_err(|error| error.to_string())?;
+        let origin = state
+            .popup_origin
+            .lock()
+            .ok()
+            .and_then(|mut slot| slot.take());
+        if let Some((x, y)) = origin {
+            let (x, y) = clamp_to_monitor(&window, x, y, 420, 640);
+            let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
+        } else {
+            place_bottom_right(&window);
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+fn set_popup_layout(
+    window: tauri::WebviewWindow,
+    state: State<'_, AppState>,
+    open: bool,
+) -> Result<(), String> {
+    if !state.popup.load(Ordering::Relaxed) {
+        return Ok(());
+    }
+
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let position = window.outer_position().map_err(|error| error.to_string())?;
+    let size = window.outer_size().map_err(|error| error.to_string())?;
+    let center_x = position.x + size.width as i32 / 2;
+    let center_y = position.y + size.height as i32 / 2;
+
+    let (width, height) = if open {
+        (POPUP_OPEN_WIDTH, POPUP_OPEN_HEIGHT)
+    } else {
+        (POPUP_SIZE, POPUP_SIZE)
+    };
+    let physical_width = (width * scale).round() as i32;
+    let physical_height = (height * scale).round() as i32;
+    let (x, y) = clamp_to_monitor(
+        &window,
+        center_x - physical_width / 2,
+        center_y - physical_height / 2,
+        physical_width,
+        physical_height,
+    );
+
+    window
+        .set_size(tauri::Size::Logical(tauri::LogicalSize::new(width, height)))
+        .map_err(|error| error.to_string())?;
+    window
+        .set_position(tauri::PhysicalPosition::new(x, y))
+        .map_err(|error| error.to_string())?;
 
     Ok(())
 }
@@ -624,7 +765,7 @@ fn place_bottom_right(window: &tauri::WebviewWindow) {
 /// resize events are throttled to avoid a write per pixel while dragging.
 fn save_window_state(app: &AppHandle, force: bool) {
     let state = app.state::<AppState>();
-    if state.compact.load(Ordering::Relaxed) {
+    if state.compact.load(Ordering::Relaxed) || state.popup.load(Ordering::Relaxed) {
         return;
     }
 
@@ -688,6 +829,8 @@ pub fn run() {
                 cancels: Mutex::new(HashMap::new()),
                 compact_origin: Mutex::new(None),
                 compact: AtomicBool::new(settings.compact),
+                popup: AtomicBool::new(settings.popup),
+                popup_origin: Mutex::new(None),
                 last_window_save: Mutex::new(None),
             });
 
@@ -701,7 +844,15 @@ pub fn run() {
                 place_bottom_right(&window);
                 // Compact mode owns its own size and origin, so only replay the
                 // saved geometry when the app starts in full mode.
-                if !settings.compact {
+                if settings.popup {
+                    let _ = window.set_min_size(Some(tauri::Size::Logical(
+                        tauri::LogicalSize::new(96.0, 96.0),
+                    )));
+                    let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize::new(
+                        POPUP_SIZE, POPUP_SIZE,
+                    )));
+                    place_bottom_right(&window);
+                } else if !settings.compact {
                     window_state::restore(&window);
                 }
                 let _ = window.set_always_on_top(settings.pinned);
@@ -710,6 +861,9 @@ pub fn run() {
                 window.on_window_event(move |event| match event {
                     tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_) => {
                         save_window_state(&handle, false);
+                    }
+                    tauri::WindowEvent::Focused(false) => {
+                        let _ = handle.emit("bubo-blur", ());
                     }
                     tauri::WindowEvent::CloseRequested { .. } => {
                         save_window_state(&handle, true);
@@ -773,6 +927,8 @@ pub fn run() {
             set_autostart,
             set_pinned,
             set_compact,
+            set_popup,
+            set_popup_layout,
             cancel_reply,
             delete_message,
             chat,

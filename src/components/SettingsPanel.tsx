@@ -571,6 +571,22 @@ export function SettingsPanel({
           </span>
         </div>
 
+        <label className="field row">
+          <span>Popup mode</span>
+          <input
+            type="checkbox"
+            checked={draft.popup}
+            onChange={(event) => patch({ popup: event.target.checked, compact: false })}
+          />
+        </label>
+
+        <div className="field note">
+          <span>
+            Leaves only bubo on the desktop. Double-click the face to open the composer; Esc
+            collapses it again.
+          </span>
+        </div>
+
         <div className="section-title">Updates</div>
 
         <div className="update-card">

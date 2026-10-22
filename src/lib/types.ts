@@ -30,6 +30,7 @@ export interface Settings {
   autostart: boolean;
   pinned: boolean;
   compact: boolean;
+  popup: boolean;
   ignoreCapitalization: boolean;
   shape: string;
   color: string;
@@ -151,12 +152,13 @@ export const DEFAULT_SETTINGS: Settings = {
   autostart: false,
   pinned: true,
   compact: false,
+  popup: false,
   ignoreCapitalization: true,
   ...DEFAULT_LOOK,
   showStatus: true,
   accentFromMascot: true,
   textSize: "normal",
   noteLanguage: "en",
-  glass: true,
+  glass: false,
   glassOpacity: 95,
 };

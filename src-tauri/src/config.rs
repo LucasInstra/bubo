@@ -15,6 +15,7 @@ pub struct Settings {
     pub autostart: bool,
     pub pinned: bool,
     pub compact: bool,
+    pub popup: bool,
     pub ignore_capitalization: bool,
     pub note_language: String,
     pub shape: String,
@@ -47,6 +48,7 @@ impl Default for Settings {
             autostart: false,
             pinned: true,
             compact: false,
+            popup: false,
             ignore_capitalization: true,
             note_language: "en".to_string(),
             shape: "round".to_string(),
@@ -63,7 +65,7 @@ impl Default for Settings {
             eye_spacing: "normal".to_string(),
             eye_tilt: "straight".to_string(),
             eye_color: "auto".to_string(),
-            glass: true,
+            glass: false,
             glass_opacity: 95,
         }
     }

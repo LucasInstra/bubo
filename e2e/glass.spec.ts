@@ -8,7 +8,7 @@ test("the window background stays glass-free", async ({ page }) => {
 });
 
 test("a sheet brings its own glass layer", async ({ page }) => {
-  await page.goto("/e2e/harness.html?case=app");
+  await page.goto("/e2e/harness.html?case=app&glass=1");
   await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();
 
@@ -29,7 +29,7 @@ test("a sheet brings its own glass layer", async ({ page }) => {
 });
 
 test("the compact composer is one glass pill", async ({ page }) => {
-  await page.goto("/e2e/harness.html?case=compact");
+  await page.goto("/e2e/harness.html?case=compact&glass=1");
   const area = page.locator(".compact-card .composer textarea");
   const style = await area.evaluate((element) => {
     const computed = getComputedStyle(element);

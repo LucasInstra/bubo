@@ -33,8 +33,10 @@
       const params = new URLSearchParams(location.search);
       const mode = params.get("case") ?? "app";
       const compact = mode === "compact";
-      const width = compact ? 400 : 420;
-      const height = compact ? 280 : 640;
+      const popup = mode === "popup";
+      const glass = params.get("glass") === "1";
+      const width = popup ? 380 : compact ? 400 : 420;
+      const height = popup ? 380 : compact ? 280 : 640;
 
       Object.defineProperty(window, "innerWidth", { configurable: true, get: () => width });
       const rootElement = document.getElementById("root");
@@ -42,7 +44,14 @@
       rootElement.style.height = `${height}px`;
       rootElement.style.overflow = "hidden";
 
-      const settings = { ...DEFAULT_SETTINGS, compact, hotkey: "Ctrl+Alt+B", noteLanguage: "en" };
+      const settings = {
+        ...DEFAULT_SETTINGS,
+        compact,
+        popup,
+        glass,
+        hotkey: "Ctrl+Alt+B",
+        noteLanguage: "en",
+      };
       const stored = [
         {
           id: 1,

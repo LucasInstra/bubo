@@ -7,6 +7,7 @@ import { Drill } from "./components/Drill";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { Mascot } from "./components/Mascot";
 import { Message } from "./components/Message";
+import { PopupView } from "./components/PopupView";
 import { ProgressPanel } from "./components/ProgressPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { UpdateBanner } from "./components/UpdateBanner";
@@ -64,6 +65,7 @@ export default function App() {
   const [due, setDue] = useState(0);
   const [showDrill, setShowDrill] = useState(false);
   const [drillFocus, setDrillFocus] = useState<Fix | null>(null);
+  const [popupOpen, setPopupOpen] = useState(false);
   const [stageSize, setStageSize] = useState(76);
   const [updateDismissed, setUpdateDismissed] = useState(false);
 
@@ -77,6 +79,18 @@ export default function App() {
   const moodTimer = useRef<number | null>(null);
   const statusRef = useRef<OrbState>(status);
   statusRef.current = status;
+  const popupOpenRef = useRef(popupOpen);
+  popupOpenRef.current = popupOpen;
+
+  const openPopup = useCallback(() => {
+    setPopupOpen(true);
+    void ipc.setPopupLayout(true);
+  }, []);
+
+  const collapsePopup = useCallback(() => {
+    setPopupOpen(false);
+    void ipc.setPopupLayout(false);
+  }, []);
 
   const react = useCallback((next: Mood, ms = 1500) => {
     setMood(next);
@@ -100,7 +114,12 @@ export default function App() {
         setHasKey(loadedKey);
         setSessionId(loadedSession);
         setMessages(stored.map(fromStored));
-        void ipc.setCompact(loadedSettings.compact);
+        if (loadedSettings.popup) {
+          if (loadedKey) void ipc.setPopup(true);
+          else void ipc.setPopup(false);
+        } else {
+          void ipc.setCompact(loadedSettings.compact);
+        }
         if (!loadedKey) setShowSettings(true);
         const stats = await ipc.drillStats();
         if (alive) setDue(stats.due);
@@ -135,7 +154,11 @@ export default function App() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (showDrill) {
+        if (settings.popup && popupOpen) {
+          collapsePopup();
+        } else if (settings.popup) {
+          void ipc.hideWindow();
+        } else if (showDrill) {
           setShowDrill(false);
           setDrillFocus(null);
         } else if (showProgress) setShowProgress(false);
@@ -147,7 +170,34 @@ export default function App() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [showSettings, showBuddy, showProgress, showHistory, showDrill]);
+  }, [
+    showSettings,
+    showBuddy,
+    showProgress,
+    showHistory,
+    showDrill,
+    settings.popup,
+    popupOpen,
+    collapsePopup,
+  ]);
+
+  useEffect(() => {
+    let alive = true;
+    let unlisten: (() => void) | undefined;
+    void ipc
+      .onWindowBlur(() => {
+        if (popupOpenRef.current) collapsePopup();
+      })
+      .then((stop) => {
+        if (alive) unlisten = stop;
+        else stop();
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+      unlisten?.();
+    };
+  }, [collapsePopup]);
 
   useEffect(
     () => () => {
@@ -338,7 +388,8 @@ export default function App() {
   );
 
   const saveSettings = useCallback(
-    async (next: Settings, apiKey: string) => {
+    async (nextSettings: Settings, apiKey: string) => {
+      const next = nextSettings.popup ? { ...nextSettings, compact: false } : nextSettings;
       await ipc.saveSettings(next);
       if (apiKey.trim()) {
         await ipc.saveApiKey(apiKey.trim());
@@ -347,15 +398,57 @@ export default function App() {
       if (next.autostart !== settings.autostart) {
         await ipc.setAutostart(next.autostart);
       }
+      if (next.popup && !settings.popup) {
+        setPopupOpen(false);
+        await ipc.setPopup(true);
+      } else if (!next.popup && settings.popup) {
+        await ipc.setPopup(false);
+        setPopupOpen(false);
+        if (next.compact) await ipc.setCompact(true);
+      } else if (!next.popup && next.compact !== settings.compact) {
+        await ipc.setCompact(next.compact);
+      }
       setSettings(next);
       setPinned(next.pinned);
       setShowSettings(false);
       setShowBuddy(false);
     },
-    [settings.autostart],
+    [settings.autostart, settings.compact, settings.popup],
   );
 
+  const enterPopup = useCallback(() => {
+    const updated = { ...settings, popup: true, compact: false };
+    setSettings(updated);
+    setPopupOpen(false);
+    setShowSettings(false);
+    setShowBuddy(false);
+    setShowProgress(false);
+    setShowHistory(false);
+    setShowDrill(false);
+    void ipc.saveSettings(updated);
+    void ipc.setPopup(true);
+  }, [settings]);
+
+  const exitPopup = useCallback(() => {
+    const updated = { ...settings, popup: false, compact: false };
+    setSettings(updated);
+    setPopupOpen(false);
+    void ipc.saveSettings(updated);
+    void ipc.setPopup(false);
+  }, [settings]);
+
   const toggleCompact = useCallback(() => {
+    if (settings.popup) {
+      const updated = { ...settings, popup: false, compact: true };
+      setSettings(updated);
+      setPopupOpen(false);
+      void ipc.saveSettings(updated);
+      void (async () => {
+        await ipc.setPopup(false);
+        await ipc.setCompact(true);
+      })();
+      return;
+    }
     const next = !settings.compact;
     const updated = { ...settings, compact: next };
     setSettings(updated);
@@ -460,6 +553,25 @@ export default function App() {
     "--glass-alpha": String(glassAlpha),
   } as CSSProperties;
   const glassClass = settings.glass ? "glass" : "";
+
+  if (settings.popup && hasKey) {
+    return (
+      <div className={`app size-${settings.textSize} popup ${glassClass}`} style={accentVars}>
+        <PopupView
+          settings={settings}
+          messages={messages}
+          status={status}
+          mood={mood}
+          open={popupOpen}
+          onOpen={openPopup}
+          onCollapse={collapsePopup}
+          onOpenChat={exitPopup}
+          onSend={send}
+          onStop={stop}
+        />
+      </div>
+    );
+  }
 
   if (settings.compact && hasKey) {
     return (
@@ -683,6 +795,27 @@ export default function App() {
                 ) : (
                   <path d="M9 4v5H4M15 20v-5h5" />
                 )}
+              </svg>
+            </button>
+            <button
+              className="ghost icon"
+              title="Popup mode"
+              aria-label="Popup mode"
+              disabled={!hasKey}
+              onClick={enterPopup}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="15"
+                height="15"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-7l-4 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
               </svg>
             </button>
             {!settings.compact && (

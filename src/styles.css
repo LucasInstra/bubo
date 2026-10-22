@@ -2624,9 +2624,336 @@ button {
   white-space: nowrap;
 }
 
-.session-delete-text {
-  font-size: 9px;
-  letter-spacing: 0.3px;
+.app.popup {
+  background: transparent;
+}
+
+/* popup mode: the face alone, then a reply thread above and the composer below
+   once it is opened; the window is grown around the face center by Rust */
+
+.popup-stage {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  overflow: hidden;
+}
+
+.popup-face {
+  display: grid;
+  width: 96px;
+  height: 96px;
+  place-items: center;
+  border-radius: 50%;
+  outline: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.popup-face:active {
+  cursor: grabbing;
+}
+
+.popup-face:focus-visible {
+  box-shadow: 0 0 0 2px rgba(196, 187, 255, 0.85);
+}
+
+.popup-stage.open .popup-face {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+}
+
+.popup-thread {
+  position: absolute;
+  top: 38px;
+  right: 12px;
+  left: 12px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 100px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.popup-thread::-webkit-scrollbar {
+  display: none;
+}
+
+.popup-bubble {
+  max-width: 88%;
+  padding: 8px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 15px;
+  background: rgba(20, 16, 33, 0.84);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.45;
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+.popup-bubble.assistant {
+  align-self: flex-start;
+  border-bottom-left-radius: 5px;
+}
+
+.popup-bubble.user {
+  align-self: flex-end;
+  border-color: rgba(191, 181, 255, 0.32);
+  border-bottom-right-radius: 5px;
+  background: var(--accent-soft);
+}
+
+.popup-bubble.error {
+  border-color: rgba(253, 164, 175, 0.35);
+  color: #fecdd3;
+}
+
+.popup-typing {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.popup-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.popup-fixes {
+  align-self: flex-start;
+  padding: 4px 9px;
+  border: 1px solid rgba(110, 231, 183, 0.35);
+  border-radius: 999px;
+  background: rgba(110, 231, 183, 0.1);
+  color: var(--good);
+  font: inherit;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+
+.popup-fixes:hover {
+  background: rgba(110, 231, 183, 0.18);
+}
+
+.popup-open-chat,
+.popup-close {
+  position: absolute;
+  top: 8px;
+  z-index: 4;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  background: rgba(20, 16, 33, 0.72);
+  color: var(--muted);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.popup-open-chat {
+  right: 8px;
+}
+
+.popup-close {
+  left: 8px;
+}
+
+.popup-open-chat:hover,
+.popup-close:hover {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+}
+
+.popup-stage .composer {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  left: 12px;
+  z-index: 3;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.popup-stage .composer-inner {
+  gap: 6px;
+  padding: 5px 5px 5px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(20, 16, 33, 0.84);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+.popup-stage .composer textarea {
+  max-height: 56px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 12px;
+}
+
+.popup-stage .composer textarea:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+.popup-stage .composer .send {
+  width: 30px;
+  height: 30px;
+}
+
+/* prettier option controls in the settings sheets */
+
+.settings .section-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.settings .section-title::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  opacity: 0.8;
+}
+
+.settings .levels {
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.16);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22);
+}
+
+.settings .levels .chip {
+  flex: 1;
+  min-height: 30px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  box-shadow: none;
+  font-size: 11.5px;
+  text-align: center;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.settings .levels .chip:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: transparent;
+}
+
+.settings .levels .chip.chip-on {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 60%), var(--accent);
+  box-shadow:
+    0 2px 10px rgba(80, 60, 200, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+
+.settings .levels.wrap {
+  gap: 4px;
+}
+
+.settings .levels.wrap .chip {
+  flex: 1 1 30%;
+}
+
+.settings .option-box {
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  border-color: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.025);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.settings .eye-grid {
+  gap: 5px;
+}
+
+.settings .eye-grid .chip {
+  padding: 7px 4px;
+  font-size: 10.5px;
+}
+
+.settings input[type="checkbox"] {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex: none;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.settings input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1),
+    background 0.16s ease;
+}
+
+.settings input[type="checkbox"]:checked {
+  border-color: transparent;
+  background: var(--accent);
+}
+
+.settings input[type="checkbox"]:checked::after {
+  transform: translateX(16px);
+  background: #fff;
+}
+
+.settings input[type="checkbox"]:focus-visible {
+  outline: 2px solid rgba(196, 187, 255, 0.85);
+  outline-offset: 2px;
 }
 
 /* the compact pill is one piece of glass: the textarea must not paint its own
@@ -2715,4 +3042,9 @@ button {
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
   mask-composite: exclude;
+}
+
+.session-delete-text {
+  font-size: 9px;
+  letter-spacing: 0.3px;
 }

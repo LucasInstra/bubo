@@ -1,15 +1,20 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface ComposerProps {
   disabled: boolean;
   busy: boolean;
+  autoFocus?: boolean;
   onSend: (text: string) => boolean;
   onStop: () => void;
 }
 
-export function Composer({ disabled, busy, onSend, onStop }: ComposerProps) {
+export function Composer({ disabled, busy, autoFocus = false, onSend, onStop }: ComposerProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (autoFocus) textareaRef.current?.focus();
+  }, [autoFocus]);
 
   const resize = () => {
     const element = textareaRef.current;
