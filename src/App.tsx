@@ -1145,7 +1145,6 @@ export default function App() {
             onTogglePin={togglePin}
             onClose={() => setShowSettings(false)}
             onSave={saveSettings}
-            onNewChat={newChat}
             onQueueChanged={() => void ipc.drillStats().then((stats) => setDue(stats.due))}
             onCorrectionsCleared={() =>
               setMessages((current) =>

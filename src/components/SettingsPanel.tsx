@@ -14,7 +14,6 @@ interface SettingsPanelProps {
   onTogglePin: () => void;
   onClose: () => void;
   onSave: (next: Settings, apiKey: string) => Promise<void>;
-  onNewChat: () => Promise<void>;
   onQueueChanged: () => void;
   onCorrectionsCleared: () => void;
   currentVersion: string;
@@ -83,7 +82,6 @@ export function SettingsPanel({
   onTogglePin,
   onClose,
   onSave,
-  onNewChat,
   onQueueChanged,
   onCorrectionsCleared,
   currentVersion,
@@ -713,38 +711,6 @@ export function SettingsPanel({
               </button>
             ))}
           </div>
-        </div>
-
-        <div className="section-title">Janela</div>
-
-        <label className="field row">
-          <span>Modo popup</span>
-          <input
-            type="checkbox"
-            checked={draft.popup}
-            onChange={(event) => patch({ popup: event.target.checked, compact: false })}
-          />
-        </label>
-
-        <div className="field note">
-          <span>
-            Deixa apenas o bubo na área de trabalho. Clique duas vezes no rosto para abrir o
-            compositor; Esc recolhe de novo.
-          </span>
-        </div>
-
-        <div className="section-title">Conversa</div>
-
-        <div className="settings-card">
-          <button
-            className="action-button danger"
-            onClick={async () => {
-              await onNewChat();
-              onClose();
-            }}
-          >
-            Começar uma nova conversa
-          </button>
         </div>
 
         <div className="section-title">Dados</div>

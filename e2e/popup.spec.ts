@@ -93,10 +93,7 @@ test("dragging the face grabs it and moves the window", async ({ page }) => {
   await expect(page.locator(".popup-face")).not.toHaveClass(/dragging/);
 });
 
-test("the settings sheet exposes the popup mode", async ({ page }) => {
+test("the header exposes the popup mode", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
-  await page.getByRole("button", { name: "Configurações" }).click();
-  const popupMode = page.getByText("Modo popup", { exact: true });
-  await popupMode.scrollIntoViewIfNeeded();
-  await expect(popupMode).toBeVisible();
+  await expect(page.getByRole("button", { name: "Modo popup" })).toBeVisible();
 });
