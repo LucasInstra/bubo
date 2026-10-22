@@ -34,7 +34,6 @@
       const mode = params.get("case") ?? "app";
       const compact = mode === "compact";
       const popup = mode === "popup";
-      const glass = params.get("glass") === "1";
       const width = popup ? 380 : compact ? 400 : 420;
       const height = popup ? 380 : compact ? 280 : 640;
 
@@ -48,7 +47,6 @@
         ...DEFAULT_SETTINGS,
         compact,
         popup,
-        glass,
         hotkey: "Ctrl+Alt+B",
         noteLanguage: "en",
       };
@@ -134,6 +132,10 @@
         explain_fix: () =>
           "Use the past simple for a finished action. Add a time marker when it helps.\n\nI went to the gym yesterday. She called me last night.",
         set_compact: () => null,
+        set_popup: () => null,
+        set_popup_stage: () => null,
+        "plugin:window|outer_position": () => ({ x: 0, y: 0 }),
+        "plugin:window|set_position": () => null,
         save_settings: () => null,
         progress_stats: () => ({
           streak: 4,

@@ -18,7 +18,7 @@ interface CompactViewProps {
 
 /**
  * Minimal compact card: a static mascot, three window actions, the last
- * exchange and a glass composer. The mascot is intentionally not boopable or
+ * exchange and a composer. The mascot is intentionally not boopable or
  * draggable here; customization and the full conversation live in full mode.
  */
 export function CompactView({

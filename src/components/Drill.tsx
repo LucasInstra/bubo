@@ -10,7 +10,6 @@ import {
   type Settings,
 } from "../lib/types";
 import { Mascot } from "./Mascot";
-import { SheetGlass } from "./SheetGlass";
 
 type Phase = "loading" | "asking" | "answered" | "none" | "empty" | "error";
 
@@ -145,7 +144,6 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
       ref={dialogRef}
       tabIndex={-1}
     >
-      <SheetGlass enabled={settings.glass} />
       <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={onClose} aria-label="Back">
           ←

@@ -549,18 +549,15 @@ export default function App() {
     updater.status === "downloading" ||
     updater.status === "ready" ||
     (updater.status === "available" && !updateDismissed);
-  const glassAlpha = Math.min(1, Math.max(0.3, settings.glassOpacity / 100));
   const accentVars = {
     "--accent": accent,
     "--accent-soft": withAlpha(accent, 0.16),
     "--stage-size": `${stageSize}px`,
-    "--glass-alpha": String(glassAlpha),
   } as CSSProperties;
-  const glassClass = settings.glass ? "glass" : "";
 
   if (settings.popup && hasKey) {
     return (
-      <div className={`app size-${settings.textSize} popup ${glassClass}`} style={accentVars}>
+      <div className={`app size-${settings.textSize} popup`} style={accentVars}>
         <PopupView
           settings={settings}
           messages={messages}
@@ -578,10 +575,7 @@ export default function App() {
 
   if (settings.compact && hasKey) {
     return (
-      <div
-        className={`app size-${settings.textSize} compact-liquid ${glassClass}`}
-        style={accentVars}
-      >
+      <div className={`app size-${settings.textSize} compact-liquid`} style={accentVars}>
         <CompactView
           settings={settings}
           messages={messages}
@@ -600,7 +594,7 @@ export default function App() {
 
   return (
     <div
-      className={`app size-${settings.textSize} ${settings.compact ? "compact" : ""} ${glassClass}`}
+      className={`app size-${settings.textSize} ${settings.compact ? "compact" : ""}`}
       style={accentVars}
     >
       <div className="panel">
@@ -977,7 +971,6 @@ export default function App() {
         {showHistory && (
           <HistoryPanel
             currentSession={sessionId}
-            glass={settings.glass}
             onClose={() => setShowHistory(false)}
             onOpen={openSession}
             onNew={async (id) => {
@@ -993,7 +986,6 @@ export default function App() {
 
         {showProgress && (
           <ProgressPanel
-            glass={settings.glass}
             onClose={() => setShowProgress(false)}
             onPractice={() => {
               setShowProgress(false);

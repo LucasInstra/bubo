@@ -42,6 +42,7 @@ export function PopupView({
   const frame = useRef<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const drag = useRef({
+    active: false,
     startX: 0,
     startY: 0,
     windowX: null as number | null,
@@ -70,25 +71,29 @@ export function PopupView({
   const beginDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    drag.current = {
+    const session = {
+      active: true,
       startX: event.screenX,
       startY: event.screenY,
-      windowX: null,
-      windowY: null,
+      windowX: null as number | null,
+      windowY: null as number | null,
       moved: false,
     };
+    drag.current = session;
     const scale = window.devicePixelRatio || 1;
     void getCurrentWindow()
       .outerPosition()
       .then((position) => {
-        drag.current.windowX = position.x / scale;
-        drag.current.windowY = position.y / scale;
+        if (drag.current !== session) return;
+        session.windowX = position.x / scale;
+        session.windowY = position.y / scale;
       })
       .catch(() => {});
   };
 
   const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
     const current = drag.current;
+    if (!current.active) return;
     if (current.windowX === null || current.windowY === null) return;
     const startWindowX = current.windowX;
     const startWindowY = current.windowY;
@@ -114,11 +119,29 @@ export function PopupView({
     });
   };
 
+  const cancelDrag = () => {
+    if (!drag.current.active) return;
+    drag.current.active = false;
+    drag.current.moved = false;
+    drag.current.windowX = null;
+    drag.current.windowY = null;
+    if (frame.current !== null) {
+      cancelAnimationFrame(frame.current);
+      frame.current = null;
+    }
+    setDragging(false);
+    if (innerRef.current) innerRef.current.style.transform = "";
+  };
+
   const endDrag = () => {
     if (frame.current !== null) {
       cancelAnimationFrame(frame.current);
       frame.current = null;
     }
+    if (!drag.current.active) return;
+    drag.current.active = false;
+    drag.current.windowX = null;
+    drag.current.windowY = null;
     if (drag.current.moved) {
       drag.current.moved = false;
       setDragging(false);
@@ -164,7 +187,8 @@ export function PopupView({
         onPointerDown={beginDrag}
         onPointerMove={moveDrag}
         onPointerUp={endDrag}
-        onPointerCancel={endDrag}
+        onPointerCancel={cancelDrag}
+        onLostPointerCapture={cancelDrag}
         onContextMenu={(event) => {
           event.preventDefault();
           onOpenChat();

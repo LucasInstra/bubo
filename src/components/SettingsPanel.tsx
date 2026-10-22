@@ -5,7 +5,6 @@ import { matchProvider, PROVIDERS, type ProviderPreset } from "../lib/providers"
 import type { DrillStats, Settings } from "../lib/types";
 import type { UpdateStatus } from "../lib/updater";
 import { HotkeyInput } from "./HotkeyInput";
-import { SheetGlass } from "./SheetGlass";
 
 interface SettingsPanelProps {
   settings: Settings;
@@ -251,7 +250,6 @@ export function SettingsPanel({
       ref={dialogRef}
       tabIndex={-1}
     >
-      <SheetGlass enabled={settings.glass} />
       <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={onClose} aria-label="Back">
           ←
@@ -542,34 +540,6 @@ export function SettingsPanel({
         </button>
 
         <div className="section-title">Window</div>
-
-        <label className="field row">
-          <span>Liquid glass</span>
-          <input
-            type="checkbox"
-            checked={draft.glass}
-            onChange={(event) => patch({ glass: event.target.checked })}
-          />
-        </label>
-
-        <div className="field">
-          <span>
-            Glass opacity <em className="ok">{draft.glassOpacity}%</em>
-          </span>
-          <input
-            type="range"
-            min={50}
-            max={100}
-            step={1}
-            value={draft.glassOpacity}
-            disabled={!draft.glass}
-            aria-label="Glass opacity"
-            onChange={(event) => patch({ glassOpacity: Number(event.target.value) })}
-          />
-          <span className="hint">
-            Lower values let more of the desktop show through. Text stays opaque either way.
-          </span>
-        </div>
 
         <label className="field row">
           <span>Popup mode</span>

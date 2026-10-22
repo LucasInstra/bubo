@@ -1600,7 +1600,7 @@ button {
   height: 30px;
 }
 
-/* minimalist liquid glass compact */
+/* minimalist compact */
 
 .app.compact-liquid {
   height: 100%;
@@ -2185,7 +2185,7 @@ button {
   box-shadow: none;
 }
 
-/* single-surface compact: the window itself is the glass sheet */
+/* single-surface compact */
 
 .compact-stage {
   padding: 0;
@@ -2203,404 +2203,11 @@ button {
   border-radius: 16px;
 }
 
-.app.compact-liquid:not(.glass) .compact-card {
+.app.compact-liquid .compact-card {
   background: linear-gradient(180deg, #17161f 0%, #0b0b11 100%);
   border-color: rgba(255, 255, 255, 0.1);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   backdrop-filter: none;
-}
-
-/* liquid glass theme: the window background stays a plain translucent sheet;
-   the glass treatment belongs to the controls and cards on top of it */
-
-.app.glass .panel {
-  background:
-    radial-gradient(120% 90% at 8% -8%, rgba(255, 255, 255, 0.16), transparent 58%),
-    linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.11),
-      rgba(255, 255, 255, 0.025) 46%,
-      rgba(255, 255, 255, 0.06)
-    ),
-    rgba(18, 14, 30, var(--glass-alpha, 0.72));
-  border-color: rgba(255, 255, 255, 0.26);
-  box-shadow:
-    0 24px 64px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.36),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(26px) saturate(160%);
-  -webkit-backdrop-filter: blur(26px) saturate(160%);
-}
-
-/* A sheet covers the chat, not the desktop: it gets a flat frosted tint
-   instead of the clear rim, otherwise the conversation underneath would show
-   through the edges. */
-
-.app.glass .settings::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: inherit;
-  background: var(--glass-tint, rgba(18, 14, 30, var(--glass-alpha, 0.72)));
-  pointer-events: none;
-}
-
-/* the refraction layer must sit under the sharp content */
-
-.glass-refraction-defs {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-/* the lit rim from the liquid-glass reference: two 1.5px rings, one screened
-   and one overlaid, so the edge picks up the light behind it */
-
-.glass-specular {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  padding: 1.5px;
-  border-radius: 16px;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.16) 33%,
-    rgba(255, 255, 255, 0.52) 68%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  box-shadow:
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.45),
-    inset 0 1px 3px rgba(255, 255, 255, 0.22),
-    0 1px 4px rgba(0, 0, 0, 0.3);
-  pointer-events: none;
-  mix-blend-mode: screen;
-  opacity: 0.28;
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask-composite: exclude;
-}
-
-.glass-specular-overlay {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.32) 33%,
-    rgba(255, 255, 255, 0.62) 68%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  mix-blend-mode: overlay;
-  opacity: 0.22;
-}
-
-.app.glass .head,
-.app.glass .chat,
-.app.glass .composer,
-.app.glass .update-banner,
-.app.glass .compact-card .compact-chat {
-  position: relative;
-  z-index: 1;
-}
-
-.app.glass .head {
-  background: transparent;
-  border-bottom-color: rgba(255, 255, 255, 0.08);
-}
-
-.app.glass .chat {
-  background: transparent;
-}
-
-.app.glass .composer {
-  background: transparent;
-  border-top-color: rgba(255, 255, 255, 0.08);
-}
-
-.app.glass .composer textarea {
-  border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 8px 20px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-}
-
-.app.glass .msg-user .bubble {
-  border-color: rgba(214, 204, 255, 0.34);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.04) 58%),
-    var(--accent-soft);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 10px 26px rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-}
-
-.app.glass .msg-bot .bubble {
-  padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 14px 14px 14px 4px;
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 10px 26px rgba(0, 0, 0, 0.18);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-}
-
-.app.glass .fixes {
-  border-left-color: rgba(110, 231, 183, 0.55);
-  background: rgba(255, 255, 255, 0.075);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-.app.glass .chip {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(14px) saturate(170%);
-  -webkit-backdrop-filter: blur(14px) saturate(170%);
-}
-
-.app.glass .chip:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.app.glass .chip.chip-on {
-  border-color: rgba(139, 125, 255, 0.5);
-  background: var(--accent-soft);
-}
-
-.app.glass .settings {
-  --glass-tint:
-    radial-gradient(130% 80% at 0% 0%, rgba(255, 255, 255, 0.11), transparent 56%),
-    rgba(16, 13, 27, calc(var(--glass-alpha, 0.72) * 0.95));
-  background: transparent;
-  backdrop-filter: blur(40px) saturate(170%);
-  -webkit-backdrop-filter: blur(40px) saturate(170%);
-}
-
-.app.glass .settings-head,
-.app.glass .settings-body,
-.app.glass .settings-footer {
-  position: relative;
-  z-index: 1;
-}
-
-.app.glass .settings-head {
-  background: transparent;
-  border-bottom-color: rgba(255, 255, 255, 0.08);
-}
-
-.app.glass .settings-footer {
-  background: rgba(10, 8, 18, 0.4);
-  border-top-color: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-}
-
-.app.glass .settings-body {
-  background: transparent;
-}
-
-.app.glass .field input:not([type="checkbox"]):not([type="range"]):not([type="color"]),
-.app.glass .field textarea,
-.app.glass .drill-input {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.07);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.app.glass .option-box,
-.app.glass .look,
-.app.glass .progress-tile,
-.app.glass .progress-mistake,
-.app.glass .progress-empty,
-.app.glass .activity,
-.app.glass .session-main,
-.app.glass .drill-card,
-.app.glass .update-card {
-  border-color: rgba(255, 255, 255, 0.09);
-  background: rgba(255, 255, 255, 0.045);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.app.glass .drill-result {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  border-left: 2px solid transparent;
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-.app.glass .drill-result.is-good {
-  border-left-color: var(--good);
-  background: rgba(110, 231, 183, 0.08);
-}
-
-.app.glass .drill-result.is-bad {
-  border-left-color: var(--bad);
-  background: rgba(253, 164, 175, 0.08);
-}
-
-.app.glass .combo-list {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(20, 16, 33, 0.9);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-}
-
-.app.glass .progress-hero {
-  border-color: rgba(255, 255, 255, 0.1);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015)),
-    var(--accent-soft);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-.app.glass.compact-liquid .compact-card {
-  background:
-    radial-gradient(260px 190px at 16% 8%, rgba(139, 125, 255, 0.22), transparent 72%),
-    radial-gradient(220px 180px at 94% 100%, rgba(73, 197, 255, 0.1), transparent 72%),
-    linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.15),
-      rgba(255, 255, 255, 0.035) 46%,
-      rgba(255, 255, 255, 0.07)
-    ),
-    rgba(18, 14, 30, var(--glass-alpha, 0.72));
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
-}
-
-/* glass identity for the controls, not just the background */
-
-.app.glass .ghost {
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 4px 12px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(16px) saturate(170%);
-  -webkit-backdrop-filter: blur(16px) saturate(170%);
-}
-
-.app.glass .ghost:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.app.glass .ghost.icon {
-  border-radius: 50%;
-}
-
-.app.glass .ghost.icon.on {
-  border-color: rgba(139, 125, 255, 0.5);
-  background: var(--accent-soft);
-}
-
-.app.glass .primary {
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.06)), var(--accent);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    0 8px 20px rgba(0, 0, 0, 0.22);
-}
-
-.app.glass .primary:disabled {
-  box-shadow: none;
-}
-
-.app.glass .send {
-  border: 1px solid rgba(255, 255, 255, 0.26);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.07)), var(--accent);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    0 8px 18px rgba(0, 0, 0, 0.22);
-}
-
-.app.glass .send:hover:not(:disabled) {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.1)), #a396ff;
-}
-
-.app.glass .send:disabled {
-  border-color: rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.07);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.app.glass .send.stop {
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
-}
-
-.app.glass .status-pill {
-  padding: 2px 9px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.app.glass .retry {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.app.glass .drill-seen {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.07);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.app.glass .combo-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.app.glass .brand-face {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.07);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.app.glass .brand strong,
-.app.glass .hero h1,
-.app.glass .settings-head > span {
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }
 
 /* two lines fit in the compact pill before it starts to scroll */
@@ -2716,17 +2323,15 @@ button {
 .popup-bubble {
   position: relative;
   padding: 9px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 16px 16px 16px 6px;
-  background: rgba(255, 255, 255, 0.11);
+  background: rgba(23, 19, 34, 0.97);
   box-shadow:
-    0 12px 30px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+    0 12px 30px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
   color: var(--text);
   font-size: 12.5px;
   line-height: 1.45;
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
 .popup-bubble::after {
@@ -2736,9 +2341,9 @@ button {
   left: 50%;
   width: 10px;
   height: 10px;
-  border-right: 1px solid rgba(255, 255, 255, 0.24);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.11);
+  border-right: 1px solid rgba(255, 255, 255, 0.18);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(23, 19, 34, 0.97);
   border-bottom-right-radius: 2px;
   transform: translateX(-50%) rotate(45deg);
 }
@@ -2767,14 +2372,12 @@ button {
 .popup-stage .composer-inner {
   gap: 6px;
   padding: 5px 5px 5px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.11);
+  background: rgba(23, 19, 34, 0.97);
   box-shadow:
     0 10px 28px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .popup-stage .composer textarea {
@@ -2927,110 +2530,7 @@ button {
   outline-offset: 2px;
 }
 
-/* the compact pill is one piece of glass: the textarea must not paint its own
-   inset box inside the refraction */
-
-.app.glass .compact-card .composer textarea {
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-/* a thin lit rim keeps every control reading as glass, even without its own
-   displacement layer */
-
-.app.glass .ghost,
-.app.glass .chip,
-.app.glass .send,
-.app.glass .compact-icon,
-.app.glass .composer-inner,
-.app.glass .brand-face,
-.app.glass .compact-face,
-.app.glass .status-pill,
-.app.glass .msg-user .bubble,
-.app.glass .msg-bot .bubble,
-.app.glass .compact-bubble,
-.app.glass .fixes,
-.app.glass .option-box,
-.app.glass .look,
-.app.glass .progress-hero,
-.app.glass .progress-tile,
-.app.glass .progress-mistake,
-.app.glass .progress-empty,
-.app.glass .activity,
-.app.glass .session-main,
-.app.glass .drill-card,
-.app.glass .update-card {
-  position: relative;
-}
-
-.app.glass .ghost::after,
-.app.glass .chip::after,
-.app.glass .send::after,
-.app.glass .compact-icon::after,
-.app.glass .composer-inner::after,
-.app.glass .brand-face::after,
-.app.glass .compact-face::after,
-.app.glass .status-pill::after,
-.app.glass .msg-user .bubble::after,
-.app.glass .msg-bot .bubble::after,
-.app.glass .compact-bubble::after,
-.app.glass .fixes::after,
-.app.glass .option-box::after,
-.app.glass .look::after,
-.app.glass .progress-hero::after,
-.app.glass .progress-tile::after,
-.app.glass .progress-mistake::after,
-.app.glass .progress-empty::after,
-.app.glass .activity::after,
-.app.glass .session-main::after,
-.app.glass .drill-card::after,
-.app.glass .update-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  padding: 1.5px;
-  border-radius: inherit;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.68) 0%,
-    rgba(255, 255, 255, 0.08) 38%,
-    rgba(255, 255, 255, 0.34) 72%,
-    rgba(255, 255, 255, 0.05) 100%
-  );
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
-  pointer-events: none;
-  mix-blend-mode: screen;
-  opacity: 0.62;
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask-composite: exclude;
-}
-
 .session-delete-text {
   font-size: 9px;
   letter-spacing: 0.3px;
-}
-
-.app.glass .compact-bubble {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(18px) saturate(180%);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
-}
-
-.app.glass .compact-bubble.user {
-  border-color: rgba(214, 204, 255, 0.34);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04)),
-    var(--accent-soft);
 }

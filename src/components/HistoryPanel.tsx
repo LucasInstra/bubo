@@ -2,11 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ipc } from "../lib/ipc";
 import { useModalFocus } from "../lib/modal";
 import type { SessionSummary } from "../lib/types";
-import { SheetGlass } from "./SheetGlass";
 
 interface HistoryPanelProps {
   currentSession: number | null;
-  glass: boolean;
   onClose: () => void;
   onOpen: (id: number) => Promise<void>;
   onNew: (id: number) => Promise<void>;
@@ -24,7 +22,6 @@ function formatDate(ms: number): string {
 
 export function HistoryPanel({
   currentSession,
-  glass,
   onClose,
   onOpen,
   onNew,
@@ -98,7 +95,6 @@ export function HistoryPanel({
       ref={dialogRef}
       tabIndex={-1}
     >
-      <SheetGlass enabled={glass} />
       <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={onClose} aria-label="Back">
           ←

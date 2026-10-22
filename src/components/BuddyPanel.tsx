@@ -11,7 +11,6 @@ import {
   Mascot,
   SHAPE_LABELS,
 } from "./Mascot";
-import { SheetGlass } from "./SheetGlass";
 
 interface BuddyPanelProps {
   settings: Settings;
@@ -98,7 +97,6 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
       ref={dialogRef}
       tabIndex={-1}
     >
-      <SheetGlass enabled={settings.glass} />
       <div className="settings-head" data-tauri-drag-region>
         <button className="ghost" onClick={() => void close()} aria-label="Back">
           ←

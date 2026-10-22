@@ -11,12 +11,35 @@ test("a single click opens the composer under the face", async ({ page }) => {
 
   await expect(stage).toHaveClass(/stage-input/);
   await expect(page.locator(".popup-stage .composer textarea")).toBeVisible();
+  await page.locator(".popup-stage .composer textarea").fill("hello bubo");
+  await expect(page.locator(".popup-stage .composer textarea")).toHaveValue("hello bubo");
   expect(
     await page.evaluate(() => (window as unknown as { __calls: unknown[] }).__calls),
   ).toContainEqual({
     cmd: "set_popup_stage",
     args: { stage: "input" },
   });
+});
+
+test("hovering near the face after a click does not drag the window", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=popup");
+  const face = page.locator(".popup-face");
+  await face.click();
+  await expect(page.locator(".popup-stage")).toHaveClass(/stage-input/);
+
+  const before = await page.evaluate(
+    () => (window as unknown as { __calls: unknown[] }).__calls.length,
+  );
+  const box = await face.boundingBox();
+  if (!box) throw new Error("face not found");
+  await page.mouse.move(box.x + box.width / 2 + 30, box.y + box.height / 2 + 12);
+  await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2 + 24);
+
+  const calls = await page.evaluate(
+    (start) => (window as unknown as { __calls: Array<{ cmd: string }> }).__calls.slice(start),
+    before,
+  );
+  expect(calls.filter((call) => call.cmd.includes("set_position"))).toHaveLength(0);
 });
 
 test("escape collapses the composer back to the face", async ({ page }) => {
