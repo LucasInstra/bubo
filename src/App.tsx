@@ -7,7 +7,7 @@ import { Drill } from "./components/Drill";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { Mascot } from "./components/Mascot";
 import { Message } from "./components/Message";
-import { PopupView } from "./components/PopupView";
+import { PopupView, type PopupStage } from "./components/PopupView";
 import { ProgressPanel } from "./components/ProgressPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { UpdateBanner } from "./components/UpdateBanner";
@@ -65,7 +65,7 @@ export default function App() {
   const [due, setDue] = useState(0);
   const [showDrill, setShowDrill] = useState(false);
   const [drillFocus, setDrillFocus] = useState<Fix | null>(null);
-  const [popupOpen, setPopupOpen] = useState(false);
+  const [popupStage, setPopupStage] = useState<PopupStage>("face");
   const [stageSize, setStageSize] = useState(76);
   const [updateDismissed, setUpdateDismissed] = useState(false);
 
@@ -79,17 +79,12 @@ export default function App() {
   const moodTimer = useRef<number | null>(null);
   const statusRef = useRef<OrbState>(status);
   statusRef.current = status;
-  const popupOpenRef = useRef(popupOpen);
-  popupOpenRef.current = popupOpen;
+  const popupStageRef = useRef(popupStage);
+  popupStageRef.current = popupStage;
 
-  const openPopup = useCallback(() => {
-    setPopupOpen(true);
-    void ipc.setPopupLayout(true);
-  }, []);
-
-  const collapsePopup = useCallback(() => {
-    setPopupOpen(false);
-    void ipc.setPopupLayout(false);
+  const changePopupStage = useCallback((next: PopupStage) => {
+    setPopupStage(next);
+    void ipc.setPopupStage(next);
   }, []);
 
   const react = useCallback((next: Mood, ms = 1500) => {
@@ -154,8 +149,8 @@ export default function App() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (settings.popup && popupOpen) {
-          collapsePopup();
+        if (settings.popup && popupStage !== "face") {
+          changePopupStage("face");
         } else if (settings.popup) {
           void ipc.hideWindow();
         } else if (showDrill) {
@@ -177,8 +172,8 @@ export default function App() {
     showHistory,
     showDrill,
     settings.popup,
-    popupOpen,
-    collapsePopup,
+    popupStage,
+    changePopupStage,
   ]);
 
   useEffect(() => {
@@ -186,7 +181,7 @@ export default function App() {
     let unlisten: (() => void) | undefined;
     void ipc
       .onWindowBlur(() => {
-        if (popupOpenRef.current) collapsePopup();
+        if (popupStageRef.current !== "face") changePopupStage("face");
       })
       .then((stop) => {
         if (alive) unlisten = stop;
@@ -197,7 +192,7 @@ export default function App() {
       alive = false;
       unlisten?.();
     };
-  }, [collapsePopup]);
+  }, [changePopupStage]);
 
   useEffect(
     () => () => {
@@ -362,6 +357,15 @@ export default function App() {
     [hasKey, runTurn],
   );
 
+  const sendFromPopup = useCallback(
+    (text: string): boolean => {
+      const sent = send(text);
+      if (sent) changePopupStage("reply");
+      return sent;
+    },
+    [send, changePopupStage],
+  );
+
   const retry = useCallback(
     (botMessage: Msg) => {
       if (statusRef.current !== "idle" || busyRef.current) return;
@@ -399,11 +403,11 @@ export default function App() {
         await ipc.setAutostart(next.autostart);
       }
       if (next.popup && !settings.popup) {
-        setPopupOpen(false);
+        setPopupStage("face");
         await ipc.setPopup(true);
       } else if (!next.popup && settings.popup) {
         await ipc.setPopup(false);
-        setPopupOpen(false);
+        setPopupStage("face");
         if (next.compact) await ipc.setCompact(true);
       } else if (!next.popup && next.compact !== settings.compact) {
         await ipc.setCompact(next.compact);
@@ -419,7 +423,7 @@ export default function App() {
   const enterPopup = useCallback(() => {
     const updated = { ...settings, popup: true, compact: false };
     setSettings(updated);
-    setPopupOpen(false);
+    setPopupStage("face");
     setShowSettings(false);
     setShowBuddy(false);
     setShowProgress(false);
@@ -432,7 +436,7 @@ export default function App() {
   const exitPopup = useCallback(() => {
     const updated = { ...settings, popup: false, compact: false };
     setSettings(updated);
-    setPopupOpen(false);
+    setPopupStage("face");
     void ipc.saveSettings(updated);
     void ipc.setPopup(false);
   }, [settings]);
@@ -441,7 +445,7 @@ export default function App() {
     if (settings.popup) {
       const updated = { ...settings, popup: false, compact: true };
       setSettings(updated);
-      setPopupOpen(false);
+      setPopupStage("face");
       void ipc.saveSettings(updated);
       void (async () => {
         await ipc.setPopup(false);
@@ -562,11 +566,10 @@ export default function App() {
           messages={messages}
           status={status}
           mood={mood}
-          open={popupOpen}
-          onOpen={openPopup}
-          onCollapse={collapsePopup}
+          stage={popupStage}
+          onShowInput={() => changePopupStage("input")}
           onOpenChat={exitPopup}
-          onSend={send}
+          onSend={sendFromPopup}
           onStop={stop}
         />
       </div>

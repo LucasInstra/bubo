@@ -54,7 +54,7 @@ export const ipc = {
   setPinned: (pinned: boolean) => invoke<void>("set_pinned", { pinned }),
   setCompact: (compact: boolean) => invoke<void>("set_compact", { compact }),
   setPopup: (popup: boolean) => invoke<void>("set_popup", { popup }),
-  setPopupLayout: (open: boolean) => invoke<void>("set_popup_layout", { open }),
+  setPopupStage: (stage: "face" | "input" | "reply") => invoke<void>("set_popup_stage", { stage }),
   onWindowBlur: (handler: () => void) => listen("bubo-blur", handler),
   history: () => invoke<StoredMessage[]>("history"),
   currentSession: () => invoke<number>("current_session"),

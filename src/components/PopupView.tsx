@@ -1,170 +1,210 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
+import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { stripLegacyFixes } from "../lib/format";
 import type { Mood, Msg, OrbState, Settings } from "../lib/types";
 import { Composer } from "./Composer";
 import { Mascot } from "./Mascot";
 
+export type PopupStage = "face" | "input" | "reply";
+
 interface PopupViewProps {
   settings: Settings;
   messages: Msg[];
   status: OrbState;
   mood: Mood;
-  open: boolean;
-  onOpen: () => void;
-  onCollapse: () => void;
-  onOpenChat: () => void;
+  stage: PopupStage;
+  onShowInput: () => void;
   onSend: (text: string) => boolean;
   onStop: () => void;
+  onOpenChat: () => void;
 }
 
 /**
- * Mascot-only mode. Collapsed it is the face alone; opening it grows the
- * window around the same center point, with the reply above and the composer
- * below. The window geometry is handled by the Rust side.
+ * Mascot-only mode. The face stays put; a click opens a small composer under
+ * it, and the reply appears above it when bubo speaks. There is no thread and
+ * no toolbar: the window itself is only as big as the current stage.
  */
 export function PopupView({
   settings,
   messages,
   status,
   mood,
-  open,
-  onOpen,
-  onCollapse,
-  onOpenChat,
+  stage,
+  onShowInput,
   onSend,
   onStop,
+  onOpenChat,
 }: PopupViewProps) {
-  const drag = useRef({ x: 0, y: 0, moved: false });
+  const innerRef = useRef<HTMLDivElement>(null);
+  const clickTimer = useRef<number | null>(null);
+  const frame = useRef<number | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const drag = useRef({
+    startX: 0,
+    startY: 0,
+    windowX: null as number | null,
+    windowY: null as number | null,
+    moved: false,
+  });
 
-  const lastUser = [...messages]
-    .reverse()
-    .find((message) => message.role === "user" && message.content.trim());
+  useEffect(
+    () => () => {
+      if (clickTimer.current !== null) window.clearTimeout(clickTimer.current);
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+    },
+    [],
+  );
+
   const lastAssistant = [...messages]
     .reverse()
     .find((message) => message.role === "assistant" && message.content.trim());
-  const last = messages[messages.length - 1];
   const pending =
     status !== "idle" &&
-    (!last || last.role === "user" || (last.role === "assistant" && !last.content.trim()));
-  const exchange = [lastUser, pending ? null : lastAssistant]
-    .filter((message): message is Msg => Boolean(message))
-    .sort((a, b) => messages.indexOf(a) - messages.indexOf(b));
+    (!messages.length ||
+      messages[messages.length - 1].role === "user" ||
+      (messages[messages.length - 1].role === "assistant" &&
+        !messages[messages.length - 1].content.trim()));
 
-  const fixes = lastAssistant?.fixes.length ?? 0;
-
-  const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const beginDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
-    drag.current = { x: event.clientX, y: event.clientY, moved: false };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drag.current = {
+      startX: event.screenX,
+      startY: event.screenY,
+      windowX: null,
+      windowY: null,
+      moved: false,
+    };
+    const scale = window.devicePixelRatio || 1;
+    void getCurrentWindow()
+      .outerPosition()
+      .then((position) => {
+        drag.current.windowX = position.x / scale;
+        drag.current.windowY = position.y / scale;
+      })
+      .catch(() => {});
   };
 
   const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (drag.current.moved) return;
-    if (Math.hypot(event.clientX - drag.current.x, event.clientY - drag.current.y) < 6) return;
-    drag.current.moved = true;
-    void getCurrentWindow().startDragging();
+    const current = drag.current;
+    if (current.windowX === null || current.windowY === null) return;
+    const startWindowX = current.windowX;
+    const startWindowY = current.windowY;
+    const dx = event.screenX - current.startX;
+    const dy = event.screenY - current.startY;
+    if (!current.moved && Math.hypot(dx, dy) < 6) return;
+    current.moved = true;
+    if (!dragging) setDragging(true);
+    if (innerRef.current) {
+      const tilt = Math.max(-7, Math.min(7, dx * 0.1));
+      const shiftX = Math.max(-5, Math.min(5, dx * 0.03));
+      const shiftY = Math.max(-5, Math.min(5, dy * 0.03));
+      innerRef.current.style.transform = `translate(${shiftX}px, ${shiftY}px) rotate(${tilt}deg) scale(1.04)`;
+    }
+    if (frame.current !== null) cancelAnimationFrame(frame.current);
+    frame.current = requestAnimationFrame(() => {
+      frame.current = null;
+      void getCurrentWindow()
+        .setPosition(
+          new LogicalPosition(Math.round(startWindowX + dx), Math.round(startWindowY + dy)),
+        )
+        .catch(() => {});
+    });
   };
 
-  return (
-    <div className={`popup-stage ${open ? "open" : ""}`}>
-      {open && (
-        <>
-          <div className="popup-thread">
-            {exchange.length === 0 && !pending && <p className="popup-empty">Say hi in English.</p>}
-            {exchange.map((message) => (
-              <div className={`popup-bubble ${message.role}`} key={message.id}>
-                {stripLegacyFixes(message.content)}
-                {message.streaming && <span className="caret" />}
-              </div>
-            ))}
-            {pending && <div className="popup-bubble assistant popup-typing">thinking...</div>}
-            {fixes > 0 && (
-              <button className="popup-fixes" type="button" onClick={onOpenChat}>
-                {fixes} {fixes === 1 ? "fix" : "fixes"} · open chat
-              </button>
-            )}
-          </div>
+  const endDrag = () => {
+    if (frame.current !== null) {
+      cancelAnimationFrame(frame.current);
+      frame.current = null;
+    }
+    if (drag.current.moved) {
+      drag.current.moved = false;
+      setDragging(false);
+      if (innerRef.current) innerRef.current.style.transform = "";
+      return;
+    }
+    if (clickTimer.current !== null) {
+      window.clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+      onOpenChat();
+      return;
+    }
+    if (stage === "input") return;
+    clickTimer.current = window.setTimeout(() => {
+      clickTimer.current = null;
+      onShowInput();
+    }, 240);
+  };
 
-          <button
-            className="popup-close"
-            type="button"
-            title="Close"
-            aria-label="Close popup"
-            onClick={onCollapse}
-          >
-            ×
-          </button>
-        </>
+  const reply = lastAssistant ? stripLegacyFixes(lastAssistant.content) : "";
+
+  return (
+    <div className={`popup-stage stage-${stage}`}>
+      {stage === "reply" && (
+        <div className="popup-reply">
+          {lastAssistant && !pending ? (
+            <div className={`popup-bubble assistant ${lastAssistant.error ? "error" : ""}`}>
+              {reply}
+              {lastAssistant.streaming && <span className="caret" />}
+            </div>
+          ) : (
+            <div className="popup-bubble assistant popup-typing">thinking...</div>
+          )}
+        </div>
       )}
 
       <div
-        className="popup-face"
+        className={`popup-face ${dragging ? "dragging" : ""}`}
         role="button"
         tabIndex={0}
-        aria-label={open ? "Close the popup" : "Chat with bubo"}
-        title={open ? "Double-click to close" : "Double-click to chat"}
-        onPointerDown={startDrag}
+        aria-label="Chat with bubo"
+        title="Click to talk · drag to move · double-click for the chat"
+        onPointerDown={beginDrag}
         onPointerMove={moveDrag}
-        onDoubleClick={() => (open ? onCollapse() : onOpen())}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          onOpenChat();
+        }}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            if (open) onCollapse();
-            else onOpen();
+            onShowInput();
           }
         }}
       >
-        <Mascot
-          state={status}
-          mood={mood}
-          size={96}
-          shape={settings.shape}
-          color={settings.color}
-          showMouth={settings.showMouth}
-          mouthStyle={settings.mouthStyle}
-          mouthSize={settings.mouthSize}
-          mouthColor={settings.mouthColor}
-          eyeStyle={settings.eyeStyle}
-          eyeSize={settings.eyeSize}
-          eyeSpacing={settings.eyeSpacing}
-          eyeTilt={settings.eyeTilt}
-          eyeColor={settings.eyeColor}
-          boopable={false}
-        />
+        <div className="popup-face-inner" ref={innerRef}>
+          <Mascot
+            state={status}
+            mood={mood}
+            size={96}
+            shape={settings.shape}
+            color={settings.color}
+            showMouth={settings.showMouth}
+            mouthStyle={settings.mouthStyle}
+            mouthSize={settings.mouthSize}
+            mouthColor={settings.mouthColor}
+            eyeStyle={settings.eyeStyle}
+            eyeSize={settings.eyeSize}
+            eyeSpacing={settings.eyeSpacing}
+            eyeTilt={settings.eyeTilt}
+            eyeColor={settings.eyeColor}
+            boopable={false}
+          />
+        </div>
       </div>
 
-      {open && (
-        <>
-          <Composer
-            disabled={status !== "idle"}
-            busy={status !== "idle"}
-            autoFocus
-            onSend={onSend}
-            onStop={onStop}
-          />
-          <button
-            className="popup-open-chat"
-            type="button"
-            title="Open the full chat"
-            aria-label="Open the full chat"
-            onClick={onOpenChat}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="14"
-              height="14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M4 9h5V4M20 15h-5v5" />
-            </svg>
-          </button>
-        </>
+      {stage === "input" && (
+        <Composer
+          disabled={status !== "idle"}
+          busy={status !== "idle"}
+          autoFocus
+          onSend={onSend}
+          onStop={onStop}
+        />
       )}
     </div>
   );

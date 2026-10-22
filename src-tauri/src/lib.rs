@@ -25,6 +25,7 @@ struct AppState {
     compact: AtomicBool,
     popup: AtomicBool,
     popup_origin: Mutex<Option<(i32, i32)>>,
+    popup_stage: Mutex<PopupStage>,
     last_window_save: Mutex<Option<Instant>>,
 }
 
@@ -166,8 +167,6 @@ fn set_compact(
 }
 
 const POPUP_SIZE: f64 = 132.0;
-const POPUP_OPEN_WIDTH: f64 = 360.0;
-const POPUP_OPEN_HEIGHT: f64 = 380.0;
 
 fn clamp_to_monitor(
     window: &tauri::WebviewWindow,
@@ -216,6 +215,9 @@ fn set_popup(
             *slot = None;
         }
         state.popup.store(true, Ordering::Relaxed);
+        if let Ok(mut slot) = state.popup_stage.lock() {
+            *slot = PopupStage::Face;
+        }
 
         window
             .set_min_size(Some(tauri::Size::Logical(tauri::LogicalSize::new(
@@ -239,6 +241,9 @@ fn set_popup(
             .map_err(|error| error.to_string())?;
     } else {
         state.popup.store(false, Ordering::Relaxed);
+        if let Ok(mut slot) = state.popup_stage.lock() {
+            *slot = PopupStage::Face;
+        }
         window
             .set_min_size(Some(tauri::Size::Logical(tauri::LogicalSize::new(
                 360.0, 260.0,
@@ -263,33 +268,67 @@ fn set_popup(
     Ok(())
 }
 
+#[derive(Clone, Copy, PartialEq)]
+enum PopupStage {
+    Face,
+    Input,
+    Reply,
+}
+
+fn popup_size(stage: PopupStage) -> (f64, f64) {
+    match stage {
+        PopupStage::Face => (132.0, 132.0),
+        PopupStage::Input => (320.0, 168.0),
+        PopupStage::Reply => (320.0, 260.0),
+    }
+}
+
+/// Where the face's center sits inside each popup layout, in logical pixels.
+fn popup_face_offset(stage: PopupStage) -> (f64, f64) {
+    match stage {
+        PopupStage::Face => (66.0, 66.0),
+        PopupStage::Input => (160.0, 56.0),
+        PopupStage::Reply => (160.0, 200.0),
+    }
+}
+
 #[tauri::command]
-fn set_popup_layout(
+fn set_popup_stage(
     window: tauri::WebviewWindow,
     state: State<'_, AppState>,
-    open: bool,
+    stage: String,
 ) -> Result<(), String> {
     if !state.popup.load(Ordering::Relaxed) {
         return Ok(());
     }
 
+    let next = match stage.as_str() {
+        "input" => PopupStage::Input,
+        "reply" => PopupStage::Reply,
+        _ => PopupStage::Face,
+    };
+    let previous = *state
+        .popup_stage
+        .lock()
+        .map_err(|_| "popup stage lock".to_string())?;
+    if previous == next {
+        return Ok(());
+    }
+
     let scale = window.scale_factor().unwrap_or(1.0);
     let position = window.outer_position().map_err(|error| error.to_string())?;
-    let size = window.outer_size().map_err(|error| error.to_string())?;
-    let center_x = position.x + size.width as i32 / 2;
-    let center_y = position.y + size.height as i32 / 2;
+    let (old_x, old_y) = popup_face_offset(previous);
+    let face_x = position.x + (old_x * scale).round() as i32;
+    let face_y = position.y + (old_y * scale).round() as i32;
 
-    let (width, height) = if open {
-        (POPUP_OPEN_WIDTH, POPUP_OPEN_HEIGHT)
-    } else {
-        (POPUP_SIZE, POPUP_SIZE)
-    };
+    let (width, height) = popup_size(next);
+    let (face_offset_x, face_offset_y) = popup_face_offset(next);
     let physical_width = (width * scale).round() as i32;
     let physical_height = (height * scale).round() as i32;
     let (x, y) = clamp_to_monitor(
         &window,
-        center_x - physical_width / 2,
-        center_y - physical_height / 2,
+        face_x - (face_offset_x * scale).round() as i32,
+        face_y - (face_offset_y * scale).round() as i32,
         physical_width,
         physical_height,
     );
@@ -301,6 +340,9 @@ fn set_popup_layout(
         .set_position(tauri::PhysicalPosition::new(x, y))
         .map_err(|error| error.to_string())?;
 
+    if let Ok(mut slot) = state.popup_stage.lock() {
+        *slot = next;
+    }
     Ok(())
 }
 
@@ -831,6 +873,7 @@ pub fn run() {
                 compact: AtomicBool::new(settings.compact),
                 popup: AtomicBool::new(settings.popup),
                 popup_origin: Mutex::new(None),
+                popup_stage: Mutex::new(PopupStage::Face),
                 last_window_save: Mutex::new(None),
             });
 
@@ -928,7 +971,7 @@ pub fn run() {
             set_pinned,
             set_compact,
             set_popup,
-            set_popup_layout,
+            set_popup_stage,
             cancel_reply,
             delete_message,
             chat,

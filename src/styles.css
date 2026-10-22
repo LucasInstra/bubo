@@ -2223,11 +2223,13 @@ button {
       rgba(255, 255, 255, 0.06)
     ),
     rgba(18, 14, 30, var(--glass-alpha, 0.72));
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.26);
   box-shadow:
     0 24px 64px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
     inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(26px) saturate(160%);
+  -webkit-backdrop-filter: blur(26px) saturate(160%);
 }
 
 /* A sheet covers the chat, not the desktop: it gets a flat frosted tint
@@ -2323,47 +2325,53 @@ button {
 }
 
 .app.glass .composer textarea {
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.065);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 8px 20px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .app.glass .msg-user .bubble {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: rgba(214, 204, 255, 0.34);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.04) 58%),
     var(--accent-soft);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 10px 26px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .app.glass .msg-bot .bubble {
   padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 14px 14px 14px 4px;
-  background: rgba(255, 255, 255, 0.045);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 10px 26px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .app.glass .fixes {
   border-left-color: rgba(110, 231, 183, 0.55);
-  background: rgba(255, 255, 255, 0.045);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.075);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .app.glass .chip {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.055);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px) saturate(170%);
+  -webkit-backdrop-filter: blur(14px) saturate(170%);
 }
 
 .app.glass .chip:hover {
@@ -2492,13 +2500,13 @@ button {
 /* glass identity for the controls, not just the background */
 
 .app.glass .ghost {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
     0 4px 12px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(16px) saturate(170%);
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
 }
 
 .app.glass .ghost:hover {
@@ -2628,19 +2636,18 @@ button {
   background: transparent;
 }
 
-/* popup mode: the face alone, then a reply thread above and the composer below
-   once it is opened; the window is grown around the face center by Rust */
+/* popup mode: the face alone, a composer under it, and the reply above */
 
 .popup-stage {
   position: relative;
-  display: grid;
   width: 100%;
   height: 100%;
-  place-items: center;
   overflow: hidden;
 }
 
 .popup-face {
+  position: absolute;
+  z-index: 2;
   display: grid;
   width: 96px;
   height: 96px;
@@ -2648,6 +2655,7 @@ button {
   border-radius: 50%;
   outline: none;
   cursor: grab;
+  touch-action: none;
   user-select: none;
 }
 
@@ -2659,58 +2667,80 @@ button {
   box-shadow: 0 0 0 2px rgba(196, 187, 255, 0.85);
 }
 
-.popup-stage.open .popup-face {
-  position: absolute;
+.popup-face-inner {
+  display: grid;
+  place-items: center;
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+}
+
+.popup-face.dragging .popup-face-inner {
+  transition: none;
+}
+
+.popup-stage.stage-face .popup-face {
   top: 50%;
   left: 50%;
-  z-index: 2;
   transform: translate(-50%, -50%);
 }
 
-.popup-thread {
+.popup-stage.stage-input .popup-face {
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.popup-stage.stage-reply .popup-face {
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.popup-reply {
   position: absolute;
-  top: 38px;
-  right: 12px;
-  left: 12px;
+  top: 8px;
+  right: 10px;
+  left: 10px;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: 100px;
+  max-height: 140px;
   overflow-y: auto;
   scrollbar-width: none;
 }
 
-.popup-thread::-webkit-scrollbar {
+.popup-reply::-webkit-scrollbar {
   display: none;
 }
 
 .popup-bubble {
-  max-width: 88%;
-  padding: 8px 11px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 15px;
-  background: rgba(20, 16, 33, 0.84);
+  position: relative;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 16px 16px 16px 6px;
+  background: rgba(255, 255, 255, 0.11);
   box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    0 12px 30px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
   color: var(--text);
   font-size: 12.5px;
   line-height: 1.45;
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
-.popup-bubble.assistant {
-  align-self: flex-start;
-  border-bottom-left-radius: 5px;
-}
-
-.popup-bubble.user {
-  align-self: flex-end;
-  border-color: rgba(191, 181, 255, 0.32);
-  border-bottom-right-radius: 5px;
-  background: var(--accent-soft);
+.popup-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-right: 1px solid rgba(255, 255, 255, 0.24);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.11);
+  border-bottom-right-radius: 2px;
+  transform: translateX(-50%) rotate(45deg);
 }
 
 .popup-bubble.error {
@@ -2723,69 +2753,10 @@ button {
   font-style: italic;
 }
 
-.popup-empty {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  text-align: center;
-}
-
-.popup-fixes {
-  align-self: flex-start;
-  padding: 4px 9px;
-  border: 1px solid rgba(110, 231, 183, 0.35);
-  border-radius: 999px;
-  background: rgba(110, 231, 183, 0.1);
-  color: var(--good);
-  font: inherit;
-  font-size: 10.5px;
-  cursor: pointer;
-}
-
-.popup-fixes:hover {
-  background: rgba(110, 231, 183, 0.18);
-}
-
-.popup-open-chat,
-.popup-close {
-  position: absolute;
-  top: 8px;
-  z-index: 4;
-  display: grid;
-  width: 24px;
-  height: 24px;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 50%;
-  background: rgba(20, 16, 33, 0.72);
-  color: var(--muted);
-  font: inherit;
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.popup-open-chat {
-  right: 8px;
-}
-
-.popup-close {
-  left: 8px;
-}
-
-.popup-open-chat:hover,
-.popup-close:hover {
-  border-color: rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--text);
-}
-
 .popup-stage .composer {
   position: absolute;
   right: 12px;
-  bottom: 10px;
+  bottom: 12px;
   left: 12px;
   z-index: 3;
   padding: 0;
@@ -2796,14 +2767,14 @@ button {
 .popup-stage .composer-inner {
   gap: 6px;
   padding: 5px 5px 5px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 999px;
-  background: rgba(20, 16, 33, 0.84);
+  background: rgba(255, 255, 255, 0.11);
   box-shadow:
     0 10px 28px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
 .popup-stage .composer textarea {
@@ -3021,19 +2992,19 @@ button {
   position: absolute;
   inset: 0;
   z-index: 2;
-  padding: 1px;
+  padding: 1.5px;
   border-radius: inherit;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.5) 0%,
-    rgba(255, 255, 255, 0.06) 38%,
-    rgba(255, 255, 255, 0.24) 72%,
-    rgba(255, 255, 255, 0.04) 100%
+    rgba(255, 255, 255, 0.68) 0%,
+    rgba(255, 255, 255, 0.08) 38%,
+    rgba(255, 255, 255, 0.34) 72%,
+    rgba(255, 255, 255, 0.05) 100%
   );
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
   pointer-events: none;
   mix-blend-mode: screen;
-  opacity: 0.45;
+  opacity: 0.62;
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
@@ -3047,4 +3018,19 @@ button {
 .session-delete-text {
   font-size: 9px;
   letter-spacing: 0.3px;
+}
+
+.app.glass .compact-bubble {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+}
+
+.app.glass .compact-bubble.user {
+  border-color: rgba(214, 204, 255, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04)),
+    var(--accent-soft);
 }
