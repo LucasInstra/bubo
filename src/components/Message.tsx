@@ -61,7 +61,7 @@ export const Message = memo(function Message({
       await onDeleteFix(message, fix);
     } catch (problem) {
       console.error("could not delete the correction", problem);
-      setFixError("could not delete this correction");
+      setFixError("não foi possível excluir esta correção");
     } finally {
       setBusyFix(null);
     }
@@ -82,7 +82,7 @@ export const Message = memo(function Message({
       setExplanation({ key, text });
     } catch (problem) {
       console.error("could not explain the correction", problem);
-      setExplainError("could not explain this correction");
+      setExplainError("não foi possível explicar esta correção");
       setExplainErrorKey(key);
     } finally {
       setExplaining(null);
@@ -103,7 +103,7 @@ export const Message = memo(function Message({
     document.body.appendChild(area);
     area.select();
     try {
-      document.execCommand("copy");
+      document.execCommand("copiar");
     } catch (error) {
       console.error("clipboard unavailable", error);
     }
@@ -131,13 +131,13 @@ export const Message = memo(function Message({
 
       {message.error && onRetry && (
         <button className="retry" onClick={() => onRetry(message)}>
-          try again
+          tentar de novo
         </button>
       )}
 
       {!message.streaming && (
         <div className="msg-actions">
-          <button onClick={() => void copy()}>copy</button>
+          <button onClick={() => void copy()}>copiar</button>
           {onDelete && (
             <button
               className="danger"
@@ -150,7 +150,7 @@ export const Message = memo(function Message({
                 }
               }}
             >
-              {confirming ? "erase?" : "delete"}
+              {confirming ? "apagar?" : "excluir"}
             </button>
           )}
         </div>
@@ -158,7 +158,7 @@ export const Message = memo(function Message({
 
       {!message.streaming && fixes.length > 0 && (
         <div className="fixes">
-          <div className="fixes-title">corrections</div>
+          <div className="fixes-title">correções</div>
           {fixes.map((fix, index) => {
             const key = fixKey(fix);
             return (
@@ -179,29 +179,29 @@ export const Message = memo(function Message({
                 )}
                 <div className="fix-actions">
                   <button
-                    aria-label="Explain this correction"
+                    aria-label="Explicar esta correção"
                     disabled={explaining === key}
                     onClick={() => void explain(fix)}
                   >
-                    {explaining === key ? "explaining..." : "explain"}
+                    {explaining === key ? "explicando..." : "explicar"}
                   </button>
                   {onPracticeFix && (
                     <button
-                      aria-label="Practice this correction"
+                      aria-label="Praticar esta correção"
                       disabled={!message.dbId}
                       onClick={() => onPracticeFix(message, fix)}
                     >
-                      practice
+                      praticar
                     </button>
                   )}
                   {onDeleteFix && (
                     <button
                       className="danger"
-                      aria-label="Delete this correction"
+                      aria-label="Excluir esta correção"
                       disabled={!message.dbId || busyFix === key}
                       onClick={() => void removeFix(fix)}
                     >
-                      {confirmingFix === key ? "erase?" : busyFix === key ? "…" : "delete"}
+                      {confirmingFix === key ? "apagar?" : busyFix === key ? "…" : "excluir"}
                     </button>
                   )}
                 </div>

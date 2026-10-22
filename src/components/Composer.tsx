@@ -6,9 +6,17 @@ interface ComposerProps {
   autoFocus?: boolean;
   onSend: (text: string) => boolean;
   onStop: () => void;
+  onSearch?: () => void;
 }
 
-export function Composer({ disabled, busy, autoFocus = false, onSend, onStop }: ComposerProps) {
+export function Composer({
+  disabled,
+  busy,
+  autoFocus = false,
+  onSend,
+  onStop,
+  onSearch,
+}: ComposerProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -34,11 +42,38 @@ export function Composer({ disabled, busy, autoFocus = false, onSend, onStop }: 
   return (
     <div className="composer">
       <div className="composer-inner">
+        {onSearch && (
+          <button
+            type="button"
+            className="composer-search ghost"
+            title="Buscar mensagens"
+            aria-label="Buscar mensagens"
+            onClick={onSearch}
+          >
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+              <circle
+                cx="10.5"
+                cy="10.5"
+                r="6.2"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+              />
+              <path
+                d="m15 15 5 5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        )}
         <textarea
           ref={textareaRef}
           rows={1}
           value={value}
-          placeholder={disabled ? "bubo is writing..." : "Type in English..."}
+          placeholder={disabled ? "o bubo está escrevendo..." : "Digite em inglês..."}
           onChange={(event) => {
             setValue(event.target.value);
             resize();
@@ -51,7 +86,7 @@ export function Composer({ disabled, busy, autoFocus = false, onSend, onStop }: 
           }}
         />
         {busy ? (
-          <button className="send stop" onClick={onStop} title="Stop" aria-label="Stop">
+          <button className="send stop" onClick={onStop} title="Parar" aria-label="Parar">
             <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
               <rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" />
             </svg>
@@ -61,8 +96,8 @@ export function Composer({ disabled, busy, autoFocus = false, onSend, onStop }: 
             className="send"
             onClick={submit}
             disabled={value.trim().length === 0}
-            title="Send"
-            aria-label="Send"
+            title="Enviar"
+            aria-label="Enviar"
           >
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
               <path

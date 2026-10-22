@@ -56,7 +56,7 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
       }
 
       // The only saved card was just answered: allow it back instead of
-      // leaving "Practice anyway" pointing at an excluded card.
+      // leaving "Praticar mesmo assim" pointing at an excluded card.
       if (!next && includeFuture && lastAnswered.current !== null) {
         next = await ipc.drillNext(true, null);
       }
@@ -157,56 +157,56 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
       className="settings"
       role="dialog"
       aria-modal="true"
-      aria-label="Practice"
+      aria-label="Prática"
       ref={dialogRef}
       tabIndex={-1}
     >
       <div className="settings-head" data-tauri-drag-region>
-        <button className="ghost" onClick={onClose} aria-label="Back">
+        <button className="ghost" onClick={onClose} aria-label="Voltar">
           ←
         </button>
-        <span>practice</span>
+        <span>prática</span>
         <span className="drill-count">
-          {ahead && phase !== "empty" ? "practicing ahead · " : ""}
-          {stats.due} due · {stats.total} saved
+          {ahead && phase !== "empty" ? "praticando adiantado · " : ""}
+          {stats.due} pendentes · {stats.total} salvos
         </span>
       </div>
 
       <div className="settings-body drill-body">
-        {phase === "loading" && <p className="drill-hint">getting a card ready…</p>}
+        {phase === "loading" && <p className="drill-hint">preparando um card…</p>}
 
         {phase === "error" && (
           <div className="drill-empty">
-            <p>Something went wrong reading your cards.</p>
+            <p>Algo deu errado ao ler seus cards.</p>
             <button
               className="primary"
               onClick={() => void (focus ? loadFocus(focus) : load(false))}
             >
-              Try again
+              Tentar de novo
             </button>
           </div>
         )}
 
         {phase === "empty" && (
           <div className="drill-empty">
-            <p>Nothing to practice yet.</p>
+            <p>Nada para praticar ainda.</p>
             <p className="drill-hint">
-              Corrections from your chats land here automatically, and come back for review.
+              As correções das suas conversas aparecem aqui automaticamente e voltam para revisão.
             </p>
             <button className="primary" onClick={onClose}>
-              Back to the chat
+              Voltar para a conversa
             </button>
           </div>
         )}
 
         {phase === "none" && (
           <div className="drill-empty">
-            <p>All caught up.</p>
+            <p>Tudo em dia.</p>
             <p className="drill-hint">
-              You have {stats.total} corrections saved. None are due right now.
+              Você tem {stats.total} correções salvas. Nenhuma está pendente agora.
             </p>
             <button className="primary" onClick={() => void load(true)}>
-              Practice anyway
+              Praticar mesmo assim
             </button>
           </div>
         )}
@@ -214,11 +214,13 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
         {(phase === "asking" || phase === "answered") && item && (
           <>
             <div className="drill-card">
-              <span className="drill-label">how would you say this?</span>
-              {item.context && <span className="drill-context">you wrote: “{item.context}”</span>}
+              <span className="drill-label">como você diria isto?</span>
+              {item.context && (
+                <span className="drill-context">você escreveu: “{item.context}”</span>
+              )}
               <span className="drill-wrong">{item.wrong}</span>
-              {item.streak > 0 && <span className="drill-streak">streak {item.streak}</span>}
-              {item.seen > 1 && <span className="drill-seen">seen {item.seen} times</span>}
+              {item.streak > 0 && <span className="drill-streak">sequência {item.streak}</span>}
+              {item.seen > 1 && <span className="drill-seen">visto {item.seen} vezes</span>}
             </div>
 
             {phase === "asking" ? (
@@ -227,7 +229,7 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
                   ref={inputRef}
                   className="drill-input"
                   value={answer}
-                  placeholder="type the corrected sentence"
+                  placeholder="digite a frase corrigida"
                   onChange={(event) => setAnswer(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
@@ -240,10 +242,10 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
                 />
                 <div className="drill-actions">
                   <button className="primary" onClick={() => void submit(answer, false)}>
-                    Check
+                    Conferir
                   </button>
                   <button className="ghost" onClick={() => void submit("", true)}>
-                    Show answer
+                    Mostrar resposta
                   </button>
                 </div>
               </>
@@ -273,7 +275,7 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
                     </span>
                     <div className="drill-result-copy">
                       <span className="drill-verdict">
-                        {result.correct ? "exactly right" : "not quite"}
+                        {result.correct ? "exatamente certo" : "quase"}
                       </span>
                       <span className="drill-right">{result.item.right}</span>
                     </div>
@@ -281,7 +283,7 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
                   {result.item.note && <span className="drill-note">{result.item.note}</span>}
                   {!result.correct && (
                     <button className="ghost" type="button" onClick={() => void overrideCorrect()}>
-                      I was right
+                      eu estava certo
                     </button>
                   )}
                   <button
@@ -291,7 +293,7 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
                       if (event.key === "Enter") void load();
                     }}
                   >
-                    Next card
+                    Próximo card
                   </button>
                 </div>
               )

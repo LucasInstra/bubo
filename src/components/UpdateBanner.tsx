@@ -10,10 +10,10 @@ interface UpdateBannerProps {
 
 function label(status: UpdateStatus, version: string, progress: number): string {
   if (status === "downloading") {
-    return progress >= 0 ? `Downloading ${progress}%...` : "Downloading...";
+    return progress >= 0 ? `Baixando ${progress}%...` : "Baixando...";
   }
-  if (status === "ready") return "Restarting to finish the update...";
-  return `bubo ${version} is available.`;
+  if (status === "ready") return "Reiniciando para concluir a atualização...";
+  return `A versão ${version} do bubo está disponível.`;
 }
 
 export function UpdateBanner({ version, status, progress, onInstall, onLater }: UpdateBannerProps) {
@@ -23,10 +23,10 @@ export function UpdateBanner({ version, status, progress, onInstall, onLater }: 
       {status === "available" && (
         <div className="update-banner-actions">
           <button className="primary" type="button" onClick={onInstall}>
-            Install and restart
+            Instalar e reiniciar
           </button>
           <button className="ghost" type="button" onClick={onLater}>
-            Later
+            Depois
           </button>
         </div>
       )}

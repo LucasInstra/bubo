@@ -29,14 +29,14 @@ interface SettingsPanelProps {
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 const TEXT_SIZES = [
-  ["small", "Small"],
+  ["small", "Pequeno"],
   ["normal", "Normal"],
-  ["large", "Large"],
+  ["large", "Grande"],
 ];
 const THEMES = [
-  ["dark", "Dark"],
-  ["light", "Light"],
-  ["system", "System"],
+  ["dark", "Escuro"],
+  ["light", "Claro"],
+  ["system", "Sistema"],
 ];
 
 function updateLabel(
@@ -47,19 +47,19 @@ function updateLabel(
 ): string {
   switch (status) {
     case "checking":
-      return "Checking for updates...";
+      return "Verificando atualizações...";
     case "available":
-      return version ? `Version ${version} is available.` : "An update is available.";
+      return version ? `A versão ${version} está disponível.` : "Uma atualização está disponível.";
     case "downloading":
-      return progress >= 0 ? `Downloading ${progress}%...` : "Downloading...";
+      return progress >= 0 ? `Baixando ${progress}%...` : "Baixando...";
     case "ready":
-      return "Restarting to finish the update...";
+      return "Reiniciando para concluir a atualização...";
     case "current":
-      return "You are on the latest version.";
+      return "Você está na versão mais recente.";
     case "error":
-      return error || "Could not check for updates.";
+      return error || "Não foi possível verificar atualizações.";
     default:
-      return "Ready to check for updates.";
+      return "Pronto para verificar atualizações.";
   }
 }
 
@@ -195,11 +195,11 @@ export function SettingsPanel({
       const path = await openDialog({
         multiple: false,
         directory: false,
-        filters: [{ name: "Certificate", extensions: ["pem", "crt", "cer"] }],
+        filters: [{ name: "Certificado", extensions: ["pem", "crt", "cer"] }],
       });
       if (path && !Array.isArray(path)) patch({ caCertPath: path });
     } catch (problem) {
-      setError(typeof problem === "string" ? problem : "Could not open the certificate.");
+      setError(typeof problem === "string" ? problem : "Não foi possível abrir o certificado.");
     }
   };
 
@@ -219,7 +219,7 @@ export function SettingsPanel({
     } catch (problem) {
       if (run !== testRun.current) return;
       setTestOk(false);
-      setTestResult(typeof problem === "string" ? problem : "Could not connect.");
+      setTestResult(typeof problem === "string" ? problem : "Não foi possível conectar.");
       setTestModels([]);
     } finally {
       if (run === testRun.current) setTesting(false);
@@ -233,7 +233,7 @@ export function SettingsPanel({
       await onSave(draft, apiKey);
       setApiKey("");
     } catch (problem) {
-      setError(typeof problem === "string" ? problem : "Could not save the settings.");
+      setError(typeof problem === "string" ? problem : "Não foi possível salvar as configurações.");
     } finally {
       setBusy(false);
     }
@@ -245,7 +245,9 @@ export function SettingsPanel({
       const moved = await ipc.drillSkipDue();
       await refreshQueue();
       onQueueChanged();
-      setNotice(moved > 0 ? `${moved} card(s) moved to tomorrow.` : "Nothing was due right now.");
+      setNotice(
+        moved > 0 ? `${moved} card(s) movido(s) para amanhã.` : "Nada estava pendente agora.",
+      );
     } catch (problem) {
       setError(String(problem));
     }
@@ -254,7 +256,7 @@ export function SettingsPanel({
   const resetFixes = async () => {
     if (!confirmReset) {
       setConfirmReset(true);
-      setNotice("Click again to erase every saved correction.");
+      setNotice("Clique de novo para apagar todas as correções salvas.");
       return;
     }
     setNotice("");
@@ -264,7 +266,7 @@ export function SettingsPanel({
       await refreshQueue();
       onQueueChanged();
       onCorrectionsCleared();
-      setNotice(`${removed} correction(s) cleared.`);
+      setNotice(`${removed} correção(ões) apagada(s).`);
     } catch (problem) {
       setError(String(problem));
     }
@@ -278,13 +280,13 @@ export function SettingsPanel({
     try {
       const path = await saveDialog({
         defaultPath: `bubo-backup-${new Date().toISOString().slice(0, 10)}.db`,
-        filters: [{ name: "bubo backup", extensions: ["db"] }],
+        filters: [{ name: "backup do bubo", extensions: ["db"] }],
       });
       if (!path) return;
       await ipc.backupData(path);
-      setNotice(`Backup saved to ${path}`);
+      setNotice(`Backup salvo em ${path}`);
     } catch (problem) {
-      setError(typeof problem === "string" ? problem : "Could not write the backup.");
+      setError(typeof problem === "string" ? problem : "Não foi possível gravar o backup.");
     } finally {
       setDataBusy(false);
     }
@@ -294,7 +296,7 @@ export function SettingsPanel({
     if (dataBusy) return;
     if (!confirmRestore) {
       setConfirmRestore(true);
-      setNotice("Restoring replaces the current history. Click again to choose a backup.");
+      setNotice("Restaurar substitui o histórico atual. Clique de novo para escolher um backup.");
       return;
     }
     setConfirmRestore(false);
@@ -305,13 +307,13 @@ export function SettingsPanel({
       const path = await openDialog({
         multiple: false,
         directory: false,
-        filters: [{ name: "bubo backup", extensions: ["db"] }],
+        filters: [{ name: "backup do bubo", extensions: ["db"] }],
       });
       if (!path || Array.isArray(path)) return;
       await ipc.restoreData(path);
       window.location.reload();
     } catch (problem) {
-      setError(typeof problem === "string" ? problem : "Could not restore that backup.");
+      setError(typeof problem === "string" ? problem : "Não foi possível restaurar esse backup.");
     } finally {
       setDataBusy(false);
     }
@@ -323,9 +325,9 @@ export function SettingsPanel({
     try {
       const text = await ipc.diagnostics();
       await navigator.clipboard.writeText(text);
-      setNotice("Diagnostics copied to the clipboard.");
+      setNotice("Diagnóstico copiado para a área de transferência.");
     } catch (problem) {
-      setError(typeof problem === "string" ? problem : "Could not copy diagnostics.");
+      setError(typeof problem === "string" ? problem : "Não foi possível copiar o diagnóstico.");
     }
   };
 
@@ -335,7 +337,7 @@ export function SettingsPanel({
     try {
       await ipc.openDataFolder();
     } catch (problem) {
-      setError(typeof problem === "string" ? problem : "Could not open the data folder.");
+      setError(typeof problem === "string" ? problem : "Não foi possível abrir a pasta de dados.");
     }
   };
 
@@ -344,20 +346,22 @@ export function SettingsPanel({
       className="settings"
       role="dialog"
       aria-modal="true"
-      aria-label="Settings"
+      aria-label="Configurações"
       ref={dialogRef}
       tabIndex={-1}
     >
       <div className="settings-head" data-tauri-drag-region>
-        <button className="ghost" onClick={onClose} aria-label="Back">
+        <button className="ghost" onClick={onClose} aria-label="Voltar">
           ←
         </button>
-        <span>settings</span>
+        <span>configurações</span>
         <button
           type="button"
           className={`ghost icon settings-pin ${pinned ? "on" : ""}`}
-          title={pinned ? "Unpin (let other windows cover bubo)" : "Keep bubo on top"}
-          aria-label="Pin window"
+          title={
+            pinned ? "Desafixar (deixar outras janelas cobrirem o bubo)" : "Manter o bubo no topo"
+          }
+          aria-label="Fixar janela"
           aria-pressed={pinned}
           onClick={onTogglePin}
         >
@@ -378,10 +382,10 @@ export function SettingsPanel({
       </div>
 
       <div className="settings-body">
-        <div className="section-title">Learning</div>
+        <div className="section-title">Aprendizado</div>
 
         <div className="field">
-          <span>My English level</span>
+          <span>Meu nível de inglês</span>
           <div className="levels">
             {LEVELS.map((level) => (
               <button
@@ -397,7 +401,7 @@ export function SettingsPanel({
         </div>
 
         <label className="field row">
-          <span>Ignore capitalization</span>
+          <span>Ignorar maiúsculas</span>
           <input
             type="checkbox"
             checked={draft.ignoreCapitalization}
@@ -406,7 +410,7 @@ export function SettingsPanel({
         </label>
 
         <div className="field">
-          <span>Correction notes</span>
+          <span>Notas das correções</span>
           <div className="levels">
             <button
               type="button"
@@ -423,13 +427,13 @@ export function SettingsPanel({
               English
             </button>
           </div>
-          <span className="hint">Language of the short note under each new correction.</span>
+          <span className="hint">Idioma da nota curta em cada nova correção.</span>
         </div>
 
-        <div className="section-title">Connection</div>
+        <div className="section-title">Conexão</div>
 
         <div className="field">
-          <span>Provider</span>
+          <span>Provedor</span>
           <div className="levels wrap">
             {PROVIDERS.map((preset) => (
               <button
@@ -445,7 +449,7 @@ export function SettingsPanel({
         </div>
 
         <label className="field">
-          <span>Base URL</span>
+          <span>URL base</span>
           <input
             value={draft.baseUrl}
             onChange={(event) => updateBaseUrl(event.target.value)}
@@ -455,18 +459,18 @@ export function SettingsPanel({
         </label>
 
         <label className="field">
-          <span>Proxy URL (optional)</span>
+          <span>URL do proxy (opcional)</span>
           <input
             value={draft.proxyUrl}
             onChange={(event) => patch({ proxyUrl: event.target.value })}
             spellCheck={false}
             placeholder="http://proxy.company.com:8080"
           />
-          <span className="hint">HTTP or HTTPS proxy for company networks.</span>
+          <span className="hint">Proxy HTTP ou HTTPS para redes corporativas.</span>
         </label>
 
         <div className="field">
-          <span>Custom CA certificate (optional)</span>
+          <span>Certificado CA personalizado (opcional)</span>
           <div className="row-buttons">
             <input
               className="path-input"
@@ -476,14 +480,14 @@ export function SettingsPanel({
               placeholder="C:\path\to\company-ca.pem"
             />
             <button className="ghost" type="button" onClick={() => void chooseCa()}>
-              Choose...
+              Escolher...
             </button>
           </div>
-          <span className="hint">PEM root certificate for corporate SSL inspection.</span>
+          <span className="hint">Certificado raiz PEM para inspeção SSL corporativa.</span>
         </div>
 
         <div className="field">
-          <label htmlFor="bubo-model">Model</label>
+          <label htmlFor="bubo-model">Modelo</label>
           <div
             className="combo"
             ref={comboRef}
@@ -498,7 +502,7 @@ export function SettingsPanel({
               value={draft.model}
               onChange={(event) => patch({ model: event.target.value })}
               spellCheck={false}
-              placeholder="model id"
+              placeholder="id do modelo"
               autoComplete="off"
               aria-haspopup="listbox"
               aria-expanded={modelOpen}
@@ -507,7 +511,7 @@ export function SettingsPanel({
             <button
               type="button"
               className={`combo-toggle ${modelOpen ? "open" : ""}`}
-              aria-label="Choose model"
+              aria-label="Escolher modelo"
               aria-expanded={modelOpen}
               aria-controls="bubo-model-options"
               onClick={() => setModelOpen((open) => !open)}
@@ -531,11 +535,11 @@ export function SettingsPanel({
                 className="combo-list"
                 id="bubo-model-options"
                 role="listbox"
-                aria-label="Model options"
+                aria-label="Opções de modelo"
               >
                 {modelOptions.length === 0 ? (
                   <span className="combo-empty">
-                    No suggestions yet. Type a model id or test the connection.
+                    Sem sugestões ainda. Digite um id de modelo ou teste a conexão.
                   </span>
                 ) : (
                   modelOptions.map((model) => (
@@ -565,44 +569,46 @@ export function SettingsPanel({
           </div>
           <span className="hint">
             {testModels.length > 0
-              ? `${testModels.length} model${testModels.length === 1 ? "" : "s"} from the endpoint.`
-              : `Type any model id, or pick a suggestion from ${provider.label}.`}
+              ? `${testModels.length} modelo${testModels.length === 1 ? "" : "s"} do endpoint.`
+              : `Digite qualquer id de modelo ou escolha uma sugestão de ${provider.label}.`}
           </span>
         </div>
 
         <label className="field">
-          <span>API key {hasKey && <em className="ok">saved</em>}</span>
+          <span>Chave de API {hasKey && <em className="ok">salva</em>}</span>
           <input
             type="password"
             value={apiKey}
-            placeholder={hasKey ? "•••••••• (keep current)" : provider.keyHint}
+            placeholder={hasKey ? "•••••••• (manter atual)" : provider.keyHint}
             onChange={(event) => {
               setApiKey(event.target.value);
               resetTest();
             }}
             spellCheck={false}
           />
-          <span className="hint">Stored in the Windows Credential Manager. {provider.keySite}</span>
+          <span className="hint">
+            Armazenada no Gerenciador de Credenciais do Windows. {provider.keySite}
+          </span>
         </label>
 
         <div className="row-buttons">
           <button className="ghost" type="button" onClick={() => void test()} disabled={testing}>
-            {testing ? "testing..." : "Test connection"}
+            {testing ? "testando..." : "Testar conexão"}
           </button>
           {testResult && (
             <span className={`hint ${testOk ? "test-ok" : "test-err"}`}>{testResult}</span>
           )}
         </div>
 
-        <div className="section-title">Behavior</div>
+        <div className="section-title">Comportamento</div>
 
         <div className="field">
-          <span>Show/hide hotkey</span>
+          <span>Atalho para mostrar/ocultar</span>
           <HotkeyInput value={draft.hotkey} onChange={(hotkey) => patch({ hotkey })} />
         </div>
 
         <label className="field row">
-          <span>Start with Windows</span>
+          <span>Iniciar com o Windows</span>
           <input
             type="checkbox"
             checked={draft.autostart}
@@ -611,7 +617,7 @@ export function SettingsPanel({
         </label>
 
         <label className="field row">
-          <span>Start hidden</span>
+          <span>Iniciar oculto</span>
           <input
             type="checkbox"
             checked={draft.startHidden}
@@ -621,15 +627,15 @@ export function SettingsPanel({
 
         <div className="field note">
           <span>
-            Combine Ctrl, Alt or Super (Win) with a key, like <code>Ctrl+Alt+B</code>. ESC hides the
-            window.
+            Combine Ctrl, Alt ou Super (Win) com uma tecla, como <code>Ctrl+Alt+B</code>. ESC oculta
+            a janela.
           </span>
         </div>
 
-        <div className="section-title">Practice</div>
+        <div className="section-title">Prática</div>
 
         <div className="field">
-          <span>Daily review goal</span>
+          <span>Meta diária de revisões</span>
           <input
             type="number"
             min={0}
@@ -639,11 +645,11 @@ export function SettingsPanel({
               patch({ dailyGoal: Math.max(0, Math.min(200, Number(event.target.value) || 0)) })
             }
           />
-          <span className="hint">Reviews per day. Set 0 to turn the goal off.</span>
+          <span className="hint">Revisões por dia. Use 0 para desativar a meta.</span>
         </div>
 
         <label className="field row">
-          <span>Daily reminder</span>
+          <span>Lembrete diário</span>
           <input
             type="checkbox"
             checked={draft.reminders}
@@ -653,50 +659,50 @@ export function SettingsPanel({
 
         <div className="field">
           <span>
-            {queue.due} due · {queue.total} saved
+            {queue.due} pendentes · {queue.total} salvos
           </span>
           <div className="row-buttons">
             <button className="ghost" onClick={() => void skipDue()}>
-              Skip due cards
+              Adiar cards pendentes
             </button>
             <button className="ghost danger" onClick={() => void resetFixes()}>
-              {confirmReset ? "Click again to erase" : "Reset corrections"}
+              {confirmReset ? "Clique de novo para apagar" : "Apagar correções"}
             </button>
           </div>
           <span className="hint">
-            Skipping moves the cards to tomorrow. Resetting deletes every saved correction,
-            including the ones in old messages.
+            Adiar move os cards para amanhã. Apagar remove todas as correções salvas, inclusive as
+            de mensagens antigas.
           </span>
         </div>
 
-        <div className="section-title">Data</div>
+        <div className="section-title">Dados</div>
 
         <div className="field">
-          <span>Backup and diagnostics</span>
+          <span>Backup e diagnóstico</span>
           <div className="row-buttons data-actions">
             <button className="ghost" onClick={() => void backupData()} disabled={dataBusy}>
-              Back up data
+              Fazer backup
             </button>
             <button className="ghost danger" onClick={() => void restoreData()} disabled={dataBusy}>
-              {confirmRestore ? "Click again to restore" : "Restore backup"}
+              {confirmRestore ? "Clique de novo para restaurar" : "Restaurar backup"}
             </button>
             <button className="ghost" onClick={() => void openDataFolder()}>
-              Open data folder
+              Abrir pasta de dados
             </button>
             <button className="ghost" onClick={() => void copyDiagnostics()}>
-              Copy diagnostics
+              Copiar diagnóstico
             </button>
           </div>
           <span className="hint">
-            Backups include history, corrections and progress. The API key stays in Windows
-            Credential Manager.
+            O backup inclui histórico, correções e progresso. A chave de API fica no Gerenciador de
+            Credenciais do Windows.
           </span>
         </div>
 
         <div className="section-title">Chat</div>
 
         <div className="field">
-          <span>Message size</span>
+          <span>Tamanho das mensagens</span>
           <div className="levels">
             {TEXT_SIZES.map(([value, label]) => (
               <button
@@ -712,7 +718,7 @@ export function SettingsPanel({
         </div>
 
         <div className="field">
-          <span>Theme</span>
+          <span>Tema</span>
           <div className="levels">
             {THEMES.map(([value, label]) => (
               <button
@@ -734,13 +740,13 @@ export function SettingsPanel({
             onClose();
           }}
         >
-          Start a new chat
+          Começar uma nova conversa
         </button>
 
-        <div className="section-title">Window</div>
+        <div className="section-title">Janela</div>
 
         <label className="field row">
-          <span>Popup mode</span>
+          <span>Modo popup</span>
           <input
             type="checkbox"
             checked={draft.popup}
@@ -750,12 +756,12 @@ export function SettingsPanel({
 
         <div className="field note">
           <span>
-            Leaves only bubo on the desktop. Double-click the face to open the composer; Esc
-            collapses it again.
+            Deixa apenas o bubo na área de trabalho. Clique duas vezes no rosto para abrir o
+            compositor; Esc recolhe de novo.
           </span>
         </div>
 
-        <div className="section-title">Updates</div>
+        <div className="section-title">Atualizações</div>
 
         <div className="update-card">
           <span className="update-icon" aria-hidden="true">
@@ -774,7 +780,7 @@ export function SettingsPanel({
           </span>
 
           <div className="update-copy">
-            <strong>bubo {currentVersion || "unknown"}</strong>
+            <strong>bubo {currentVersion || "desconhecida"}</strong>
             <span
               className={`update-status ${updateStatus === "error" ? "is-error" : ""}`}
               role="status"
@@ -790,13 +796,15 @@ export function SettingsPanel({
             {updateStatus === "available" && updateNotes && (
               <div className="update-notes">{updateNotes}</div>
             )}
-            <span className="update-hint">Updates are checked when bubo starts.</span>
+            <span className="update-hint">
+              As atualizações são verificadas quando o bubo inicia.
+            </span>
           </div>
 
           <div className="update-actions">
             {updateStatus === "available" ? (
               <button className="primary" type="button" onClick={() => void onInstallUpdate()}>
-                Install {updateVersion}
+                Instalar {updateVersion}
               </button>
             ) : (
               <button
@@ -810,12 +818,12 @@ export function SettingsPanel({
                 }
               >
                 {updateStatus === "checking"
-                  ? "Checking..."
+                  ? "Verificando..."
                   : updateStatus === "error"
-                    ? "Try again"
+                    ? "Tentar de novo"
                     : updateStatus === "idle"
-                      ? "Check for updates"
-                      : "Check again"}
+                      ? "Verificar atualizações"
+                      : "Verificar de novo"}
               </button>
             )}
           </div>
@@ -828,10 +836,10 @@ export function SettingsPanel({
         ) : notice ? (
           <span className="hint">{notice}</span>
         ) : (
-          <span className="hint">{dirty ? "unsaved changes" : ""}</span>
+          <span className="hint">{dirty ? "alterações não salvas" : ""}</span>
         )}
         <button className="primary" onClick={save} disabled={busy || !dirty}>
-          {busy ? "saving..." : "Save"}
+          {busy ? "salvando..." : "Salvar"}
         </button>
       </div>
     </div>

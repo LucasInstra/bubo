@@ -75,8 +75,8 @@ export function CompactView({
             <button
               className={`compact-icon ${pinned ? "on" : ""}`}
               type="button"
-              title={pinned ? "Unpin window" : "Keep bubo on top"}
-              aria-label="Pin window"
+              title={pinned ? "Desafixar janela" : "Manter o bubo no topo"}
+              aria-label="Fixar janela"
               aria-pressed={pinned}
               onClick={onTogglePin}
             >
@@ -98,8 +98,8 @@ export function CompactView({
             <button
               className="compact-icon"
               type="button"
-              title="Full mode"
-              aria-label="Full mode"
+              title="Modo completo"
+              aria-label="Modo completo"
               onClick={onFull}
             >
               <svg
@@ -120,8 +120,8 @@ export function CompactView({
             <button
               className="compact-icon"
               type="button"
-              title={`Hide (${settings.hotkey})`}
-              aria-label="Hide"
+              title={`Ocultar (${settings.hotkey})`}
+              aria-label="Ocultar"
               onClick={onHide}
             >
               <svg
@@ -142,7 +142,7 @@ export function CompactView({
         </header>
 
         <div className="compact-chat">
-          {exchange.length === 0 && !pending && <p className="compact-empty">Say hi in English.</p>}
+          {exchange.length === 0 && !pending && <p className="compact-empty">Diga oi em inglês.</p>}
 
           {exchange.map((message) => (
             <div className={`compact-bubble ${message.role}`} key={message.id}>
@@ -153,7 +153,7 @@ export function CompactView({
 
           {pending && (
             <div className="compact-bubble assistant compact-typing">
-              {status === "thinking" ? "thinking..." : "writing..."}
+              {status === "thinking" ? "pensando..." : "escrevendo..."}
             </div>
           )}
         </div>

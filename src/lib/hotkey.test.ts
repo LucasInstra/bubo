@@ -88,11 +88,11 @@ describe("hotkeyFromEvent", () => {
   it("requires at least Ctrl, Alt or Super", () => {
     const shiftOnly = describeHotkey(press({ code: "KeyK", key: "K", shiftKey: true }));
     expect(shiftOnly.value).toBeNull();
-    expect(shiftOnly.hint).toContain("Shift alone");
+    expect(shiftOnly.hint).toContain("Shift sozinho");
 
     const plain = describeHotkey(press({ code: "KeyK", key: "k" }));
     expect(plain.value).toBeNull();
-    expect(plain.hint).toContain("Ctrl, Alt or Super");
+    expect(plain.hint).toContain("Ctrl, Alt ou Super");
   });
 
   it("rejects keys that the parser cannot represent", () => {
@@ -100,7 +100,7 @@ describe("hotkeyFromEvent", () => {
       press({ code: "IntlBackslash", key: "\\", ctrlKey: true, altKey: true }),
     );
     expect(result.value).toBeNull();
-    expect(result.hint).toContain("cannot be used");
+    expect(result.hint).toContain("não pode ser usada");
   });
 });
 

@@ -58,7 +58,7 @@ fn install_hotkey(
     let parsed: Shortcut = hotkey
         .trim()
         .parse()
-        .map_err(|_| format!("Invalid hotkey: {hotkey}. Try something like Ctrl+Alt+B."))?;
+        .map_err(|_| format!("Atalho inválido: {hotkey}. Tente algo como Ctrl+Alt+B."))?;
 
     let previous = slot.lock().ok().and_then(|current| *current);
 
@@ -75,7 +75,7 @@ fn install_hotkey(
             if let Some(previous) = previous {
                 let _ = app.global_shortcut().register(previous);
             }
-            Err(format!("Could not register {hotkey}: {error}"))
+            Err(format!("Não foi possível registrar {hotkey}: {error}"))
         }
     }
 }
@@ -468,7 +468,7 @@ async fn test_connection(
 ) -> Result<ConnectionTest, String> {
     let base = settings.base_url.trim().trim_end_matches('/');
     if base.is_empty() {
-        return Err("Add a base URL first.".to_string());
+        return Err("Adicione uma URL base primeiro.".to_string());
     }
 
     let key = api_key
@@ -488,7 +488,7 @@ async fn test_connection(
     let response = request
         .send()
         .await
-        .map_err(|error| format!("Could not reach the endpoint: {error}"))?;
+        .map_err(|error| format!("Não foi possível alcançar o endpoint: {error}"))?;
 
     let status = response.status();
     let body = response.text().await.unwrap_or_default();
@@ -500,9 +500,9 @@ async fn test_connection(
 
     let models = parse_model_ids(&body);
     let message = if models.is_empty() {
-        "Connected".to_string()
+        "Conectado".to_string()
     } else {
-        format!("Connected, {} model(s) available", models.len())
+        format!("Conectado, {} modelo(s) disponível(is)", models.len())
     };
 
     Ok(ConnectionTest { message, models })
@@ -543,8 +543,8 @@ async fn chat(
 ) -> Result<String, String> {
     let settings = config::load_settings(&app)?;
     let client = http_client(&settings)?;
-    let api_key =
-        config::load_api_key()?.ok_or("No API key yet. Open settings and paste your Groq key.")?;
+    let api_key = config::load_api_key()?
+        .ok_or("Ainda não há chave de API. Abra as configurações e cole sua chave.")?;
 
     let user_row = messages
         .iter()
@@ -681,8 +681,8 @@ async fn explain_fix(
 ) -> Result<String, String> {
     let settings = config::load_settings(&app)?;
     let client = http_client(&settings)?;
-    let api_key =
-        config::load_api_key()?.ok_or("No API key yet. Open settings and paste your Groq key.")?;
+    let api_key = config::load_api_key()?
+        .ok_or("Ainda não há chave de API. Abra as configurações e cole sua chave.")?;
 
     let body = prompt::explain_body(&settings, &wrong, &right, &note);
     let text = llm::complete(&app, &client, &settings, &api_key, body).await?;
@@ -766,7 +766,7 @@ fn backup_data(state: State<'_, AppState>, path: String) -> Result<(), String> {
 fn restore_data(state: State<'_, AppState>, path: String) -> Result<(), String> {
     let source = std::path::Path::new(&path);
     if !store::is_backup(source).map_err(|e| e.to_string())? {
-        return Err("That file is not a bubo backup.".to_string());
+        return Err("Esse arquivo não é um backup do bubo.".to_string());
     }
     let mut db = state.db.lock().map_err(|e| e.to_string())?;
     store::restore_from(&mut db, source).map_err(|e| e.to_string())

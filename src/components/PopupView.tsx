@@ -19,7 +19,6 @@ interface PopupViewProps {
   onSend: (text: string) => boolean;
   onStop: () => void;
   onOpenChat: () => void;
-  onOpenSettings: () => void;
 }
 
 /**
@@ -37,7 +36,6 @@ export function PopupView({
   onSend,
   onStop,
   onOpenChat,
-  onOpenSettings,
 }: PopupViewProps) {
   const innerRef = useRef<HTMLDivElement>(null);
   const clickTimer = useRef<number | null>(null);
@@ -222,30 +220,6 @@ export function PopupView({
 
   return (
     <div className={`popup-stage stage-${stage}`}>
-      {stage === "input" && (
-        <button
-          type="button"
-          className="popup-settings"
-          title="Settings"
-          aria-label="Settings"
-          onClick={onOpenSettings}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            width="14"
-            height="14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="3" />
-            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" />
-          </svg>
-        </button>
-      )}
-
       {stage === "reply" && (
         <div className="popup-reply">
           {lastAssistant && !pending ? (
@@ -258,7 +232,7 @@ export function PopupView({
             </div>
           ) : (
             <div className="popup-bubble assistant popup-typing">
-              <div className="popup-bubble-text">thinking...</div>
+              <div className="popup-bubble-text">pensando...</div>
               {tail}
             </div>
           )}
@@ -269,8 +243,8 @@ export function PopupView({
         className={`popup-face ${dragging ? "dragging" : ""}`}
         role="button"
         tabIndex={0}
-        aria-label="Chat with bubo"
-        title="Click to talk · drag to move · double-click for the chat"
+        aria-label="Conversar com o bubo"
+        title="Clique para conversar · arraste para mover · clique duplo para o chat"
         onPointerDown={beginDrag}
         onPointerMove={moveDrag}
         onPointerUp={endDrag}

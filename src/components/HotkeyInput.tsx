@@ -9,14 +9,19 @@ export interface HotkeyInputProps {
 }
 
 const DEFAULT_HINT =
-  "Click and press the combination. Use at least one of Ctrl, Alt or Super (Win) plus a key. Esc cancels.";
+  "Clique e pressione a combinação. Use pelo menos Ctrl, Alt ou Super (Win) mais uma tecla. Esc cancela.";
 
 /**
  * Click-to-record control for the global show/hide shortcut. While armed it
  * captures the next chord on window (capture phase) so the app-level Escape
  * handler never sees keys meant for the recorder.
  */
-export function HotkeyInput({ value, onChange, id, label = "Show/hide hotkey" }: HotkeyInputProps) {
+export function HotkeyInput({
+  value,
+  onChange,
+  id,
+  label = "Atalho para mostrar/ocultar",
+}: HotkeyInputProps) {
   const [armed, setArmed] = useState(false);
   const [preview, setPreview] = useState("");
   const [message, setMessage] = useState("");
@@ -108,10 +113,10 @@ export function HotkeyInput({ value, onChange, id, label = "Show/hide hotkey" }:
         }}
       >
         <span className="hotkey-value" aria-live="polite">
-          {armed ? preview || "Press a shortcut..." : value || "Not set"}
+          {armed ? preview || "Pressione um atalho..." : value || "Não definido"}
         </span>
         <span className="hotkey-action" aria-hidden="true">
-          {armed ? "recording" : "record"}
+          {armed ? "gravando" : "gravar"}
         </span>
       </button>
       <span className="hint" id={hintId}>

@@ -2,9 +2,9 @@ import { expect, test } from "@playwright/test";
 
 test("settings dialog traps focus and restores it to the trigger", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
-  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Configurações" }).click();
 
-  const dialog = page.getByRole("dialog", { name: "Settings" });
+  const dialog = page.getByRole("dialog", { name: "Configurações" });
   await expect(dialog).toBeVisible();
 
   await expect
@@ -26,5 +26,5 @@ test("settings dialog traps focus and restores it to the trigger", async ({ page
   await expect(page.locator(".head")).not.toHaveAttribute("inert", "");
   await expect
     .poll(() => page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? null))
-    .toBe("Settings");
+    .toBe("Configurações");
 });

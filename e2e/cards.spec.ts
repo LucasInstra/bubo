@@ -11,11 +11,11 @@ async function calls(page: import("@playwright/test").Page): Promise<HarnessCall
 
 test("practice starts from a correction card", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
-  await expect(page.getByText("corrections")).toBeVisible();
+  await expect(page.getByText("correções")).toBeVisible();
 
-  await page.getByRole("button", { name: "Practice this correction" }).click();
+  await page.getByRole("button", { name: "Praticar esta correção" }).click();
 
-  const dialog = page.getByRole("dialog", { name: "Practice" });
+  const dialog = page.getByRole("dialog", { name: "Prática" });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText("i go to the gym yesterday", { exact: true })).toBeVisible();
 
@@ -27,7 +27,7 @@ test("practice starts from a correction card", async ({ page }) => {
     },
   });
 
-  await dialog.getByRole("button", { name: "Back" }).click();
+  await dialog.getByRole("button", { name: "Voltar" }).click();
   await expect(dialog).toHaveCount(0);
 });
 
@@ -35,9 +35,9 @@ test("deletes a correction from the card", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await expect(page.locator(".fixes")).toBeVisible();
 
-  const remove = page.getByRole("button", { name: "Delete this correction" });
+  const remove = page.getByRole("button", { name: "Excluir esta correção" });
   await remove.click();
-  await expect(remove).toHaveText("erase?");
+  await expect(remove).toHaveText("apagar?");
   await remove.click();
 
   await expect(page.locator(".fixes")).toHaveCount(0);
@@ -55,7 +55,7 @@ test("explains a correction inline", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await expect(page.locator(".fixes")).toBeVisible();
 
-  const explain = page.getByRole("button", { name: "Explain this correction" });
+  const explain = page.getByRole("button", { name: "Explicar esta correção" });
   await explain.click();
 
   const explanation = page.locator(".fix-explain");

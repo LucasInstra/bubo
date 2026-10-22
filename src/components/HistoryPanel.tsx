@@ -134,17 +134,17 @@ export function HistoryPanel({
       className="settings history"
       role="dialog"
       aria-modal="true"
-      aria-label="History"
+      aria-label="Histórico"
       ref={dialogRef}
       tabIndex={-1}
     >
       <div className="settings-head" data-tauri-drag-region>
-        <button className="ghost" onClick={onClose} aria-label="Back">
+        <button className="ghost" onClick={onClose} aria-label="Voltar">
           ←
         </button>
-        <span>history</span>
+        <span>histórico</span>
         <button className="ghost history-new" onClick={() => void create()} disabled={busy}>
-          + new
+          + nova
         </button>
       </div>
 
@@ -153,8 +153,8 @@ export function HistoryPanel({
           className="history-search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="search conversations"
-          aria-label="Search conversations"
+          placeholder="buscar conversas"
+          aria-label="Buscar conversas"
           spellCheck={false}
         />
         <button
@@ -163,7 +163,7 @@ export function HistoryPanel({
           aria-pressed={showArchived}
           onClick={() => setShowArchived((value) => !value)}
         >
-          {showArchived ? "archived" : "active"}
+          {showArchived ? "arquivadas" : "ativas"}
         </button>
       </div>
 
@@ -171,14 +171,14 @@ export function HistoryPanel({
         {error ? (
           <p className="history-error">{error}</p>
         ) : sessions === null ? (
-          <p className="hint">reading your conversations…</p>
+          <p className="hint">lendo suas conversas…</p>
         ) : visible.length === 0 ? (
           <p className="hint">
             {query.trim()
-              ? "No conversations match that search."
+              ? "Nenhuma conversa corresponde a essa busca."
               : showArchived
-                ? "No archived conversations."
-                : "No conversations yet. Start one and it will show up here."}
+                ? "Nenhuma conversa arquivada."
+                : "Nenhuma conversa ainda. Comece uma e ela aparece aqui."}
           </p>
         ) : (
           visible.map((session) => (
@@ -188,7 +188,7 @@ export function HistoryPanel({
                   className="session-rename-input"
                   value={editingTitle}
                   autoFocus
-                  aria-label="Conversation name"
+                  aria-label="Nome da conversa"
                   onChange={(event) => setEditingTitle(event.target.value)}
                   onBlur={() => void saveRename(session.id)}
                   onKeyDown={(event) => {
@@ -209,27 +209,27 @@ export function HistoryPanel({
                 >
                   <span className="session-title">
                     {session.id === currentSession && <span className="session-dot" />}
-                    {session.title || "New chat"}
+                    {session.title || "Nova conversa"}
                   </span>
                   <span className="session-meta">
                     {formatDate(session.updatedAt)} · {session.messages}{" "}
-                    {session.messages === 1 ? "message" : "messages"}
+                    {session.messages === 1 ? "mensagem" : "mensagens"}
                   </span>
                   {session.preview && <span className="session-preview">{session.preview}</span>}
                 </button>
               )}
               <button
                 className="ghost session-icon"
-                title="Rename conversation"
-                aria-label="Rename conversation"
+                title="Renomear conversa"
+                aria-label="Renomear conversa"
                 onClick={() => startRename(session)}
               >
                 <span aria-hidden="true">✎</span>
               </button>
               <button
                 className="ghost session-icon"
-                title={session.archived ? "Unarchive conversation" : "Archive conversation"}
-                aria-label={session.archived ? "Unarchive conversation" : "Archive conversation"}
+                title={session.archived ? "Desarquivar conversa" : "Arquivar conversa"}
+                aria-label={session.archived ? "Desarquivar conversa" : "Arquivar conversa"}
                 onClick={() => void toggleArchive(session)}
                 disabled={busy}
               >
@@ -250,12 +250,14 @@ export function HistoryPanel({
               </button>
               <button
                 className={`ghost session-delete ${confirmId === session.id ? "confirm" : ""}`}
-                title={confirmId === session.id ? "Click again to delete" : "Delete conversation"}
-                aria-label="Delete conversation"
+                title={
+                  confirmId === session.id ? "Clique de novo para excluir" : "Excluir conversa"
+                }
+                aria-label="Excluir conversa"
                 onClick={() => void remove(session.id)}
               >
                 <span aria-hidden="true">×</span>
-                {confirmId === session.id && <span className="session-delete-text">erase</span>}
+                {confirmId === session.id && <span className="session-delete-text">apagar</span>}
               </button>
             </div>
           ))

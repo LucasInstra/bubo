@@ -57,18 +57,18 @@ export const EYE_TILTS = ["soft", "straight", "sharp"] as const;
 export const EYE_COLORS = ["auto", "#fcfcff", "#fff4d6", "#241d33"] as const;
 
 export const SHAPE_LABELS: Record<MascotShape, string> = {
-  round: "round",
+  round: "redondo",
   oval: "oval",
-  square: "square",
-  pill: "pill",
-  triangle: "triangle",
-  hexagon: "hexagon",
-  cloud: "cloud",
-  drop: "drop",
-  blob: "blob",
-  egg: "egg",
-  diamond: "diamond",
-  star: "star",
+  square: "quadrado",
+  pill: "pílula",
+  triangle: "triângulo",
+  hexagon: "hexágono",
+  cloud: "nuvem",
+  drop: "gota",
+  blob: "mancha",
+  egg: "ovo",
+  diamond: "diamante",
+  star: "estrela",
 };
 
 const TAU = Math.PI * 2;
@@ -1070,7 +1070,7 @@ export function Mascot({
       <div
         ref={hitRef}
         className="mascot-hit"
-        title={boopable ? "Drag me, or click for a boop" : undefined}
+        title={boopable ? "Arraste-me ou clique para um carinho" : undefined}
         style={{
           position: "absolute",
           inset: 0,

@@ -11,12 +11,12 @@ interface ProgressPanelProps {
 
 function attemptsLabel(mistake: TopMistake): string {
   const parts: string[] = [];
-  if (mistake.seen > 1) parts.push(`seen ${mistake.seen} times`);
+  if (mistake.seen > 1) parts.push(`visto ${mistake.seen} vezes`);
   if (mistake.attempts === 0) {
-    parts.push("not practiced yet");
+    parts.push("ainda não praticado");
   } else {
-    const tries = `${mistake.attempts} ${mistake.attempts === 1 ? "try" : "tries"}`;
-    parts.push(`${tries} · ${Math.round((mistake.correct / mistake.attempts) * 100)}% right`);
+    const tries = `${mistake.attempts} ${mistake.attempts === 1 ? "tentativa" : "tentativas"}`;
+    parts.push(`${tries} · ${Math.round((mistake.correct / mistake.attempts) * 100)}% de acerto`);
   }
   return parts.join(" · ");
 }
@@ -56,65 +56,65 @@ export function ProgressPanel({ onClose, onPractice, goal }: ProgressPanelProps)
       className="settings progress"
       role="dialog"
       aria-modal="true"
-      aria-label="Progress"
+      aria-label="Progresso"
       ref={dialogRef}
       tabIndex={-1}
     >
       <div className="settings-head" data-tauri-drag-region>
-        <button className="ghost" onClick={onClose} aria-label="Back">
+        <button className="ghost" onClick={onClose} aria-label="Voltar">
           ←
         </button>
-        <span>progress</span>
-        {stats && <span className="drill-count">{stats.due} due</span>}
+        <span>progresso</span>
+        {stats && <span className="drill-count">{stats.due} pendentes</span>}
       </div>
 
       <div className="settings-body progress-body">
         {error ? (
           <div className="progress-empty">
-            <p>Could not read your progress.</p>
+            <p>Não foi possível ler seu progresso.</p>
             <p className="hint">{error}</p>
           </div>
         ) : !stats ? (
-          <p className="hint">reading your progress…</p>
+          <p className="hint">lendo seu progresso…</p>
         ) : (
           <>
             <div className="progress-hero">
-              <span className="progress-kicker">your learning so far</span>
+              <span className="progress-kicker">seu aprendizado até agora</span>
               <strong>
-                {stats.streak} {stats.streak === 1 ? "day" : "days"} in a row
+                {stats.streak} {stats.streak === 1 ? "dia" : "dias"} seguidos
               </strong>
               <span className="hint">
-                {stats.messages} messages, {stats.cards} corrections and {stats.reviews} reviews.
+                {stats.messages} mensagens, {stats.cards} correções e {stats.reviews} revisões.
               </span>
             </div>
 
             <div className="progress-grid">
               <div className="progress-tile">
                 <strong>{accuracy}%</strong>
-                <span>accuracy · {stats.reviews} reviews</span>
+                <span>precisão · {stats.reviews} revisões</span>
               </div>
               <div className="progress-tile">
                 <strong>
                   {stats.correct}/{stats.reviews}
                 </strong>
-                <span>correct answers</span>
+                <span>respostas corretas</span>
               </div>
               <div className="progress-tile">
                 <strong>{stats.cards}</strong>
-                <span>corrections saved</span>
+                <span>correções salvas</span>
               </div>
               <div className="progress-tile">
                 <strong>{stats.due}</strong>
-                <span>cards due now</span>
+                <span>cards pendentes agora</span>
               </div>
             </div>
 
             {goal > 0 && (
               <div className="goal">
                 <div className="goal-head">
-                  <span>today's goal</span>
+                  <span>meta de hoje</span>
                   <span>
-                    {todayReviews} / {goal} reviews
+                    {todayReviews} / {goal} revisões
                   </span>
                 </div>
                 <div className="goal-bar" aria-hidden="true">
@@ -125,14 +125,14 @@ export function ProgressPanel({ onClose, onPractice, goal }: ProgressPanelProps)
 
             {stats.cards > 0 && (
               <button className="primary progress-practice" onClick={onPractice}>
-                {stats.due > 0 ? `Practice ${stats.due} due` : "Practice ahead"}
+                {stats.due > 0 ? `Praticar ${stats.due} pendentes` : "Praticar adiantado"}
               </button>
             )}
 
             <div className="progress-block">
               <div className="progress-block-head">
-                <span>last 14 days</span>
-                <span className="hint">chats and reviews</span>
+                <span>últimos 14 dias</span>
+                <span className="hint">conversas e revisões</span>
               </div>
               <div className="activity">
                 {stats.days.map((day) => {
@@ -154,12 +154,13 @@ export function ProgressPanel({ onClose, onPractice, goal }: ProgressPanelProps)
 
             <div className="progress-block">
               <div className="progress-block-head">
-                <span>most practiced mistakes</span>
+                <span>erros mais praticados</span>
                 <span className="hint">top 5</span>
               </div>
               {stats.top.length === 0 ? (
                 <p className="hint">
-                  Nothing here yet. Chat in English and corrections will start filling this list.
+                  Nada aqui ainda. Converse em inglês e as correções vão começar a preencher esta
+                  lista.
                 </p>
               ) : (
                 <div className="progress-mistakes">

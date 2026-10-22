@@ -4,7 +4,7 @@ test("a single click opens the composer under the face", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=popup");
   const stage = page.locator(".popup-stage");
   await expect(stage).toHaveClass(/stage-face/);
-  await expect(page.locator(".popup-face")).toHaveAttribute("aria-label", "Chat with bubo");
+  await expect(page.locator(".popup-face")).toHaveAttribute("aria-label", "Conversar com o bubo");
   await expect(page.locator(".popup-stage .composer")).toHaveCount(0);
 
   await page.locator(".popup-face").click();
@@ -95,8 +95,8 @@ test("dragging the face grabs it and moves the window", async ({ page }) => {
 
 test("the settings sheet exposes the popup mode", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
-  await page.getByRole("button", { name: "Settings" }).click();
-  const popupMode = page.getByText("Popup mode", { exact: true });
+  await page.getByRole("button", { name: "Configurações" }).click();
+  const popupMode = page.getByText("Modo popup", { exact: true });
   await popupMode.scrollIntoViewIfNeeded();
   await expect(popupMode).toBeVisible();
 });

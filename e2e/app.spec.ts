@@ -2,22 +2,22 @@ import { expect, test } from "@playwright/test";
 
 test("settings switches provider and base URL", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
-  await page.getByRole("button", { name: "Settings" }).click();
-  await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();
+  await page.getByRole("button", { name: "Configurações" }).click();
+  await expect(page.getByRole("dialog", { name: "Configurações" })).toBeVisible();
 
   await page.getByRole("button", { name: "OpenAI" }).click();
-  await expect(page.getByLabel("Base URL")).toHaveValue("https://api.openai.com/v1");
+  await expect(page.getByLabel("URL base")).toHaveValue("https://api.openai.com/v1");
 });
 
 test("compact mode toggles back to full", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=compact");
   await expect(page.locator(".app.compact-liquid")).toBeVisible();
   await expect(page.locator(".compact-face")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Pin window" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Hide" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Fixar janela" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Ocultar" })).toBeVisible();
   await expect(page.locator(".compact-card .composer textarea")).toBeVisible();
 
-  await page.getByRole("button", { name: "Full mode" }).click();
+  await page.getByRole("button", { name: "Modo completo" }).click();
   await expect(page.locator(".app.compact-liquid")).toHaveCount(0);
 });
 
@@ -34,30 +34,47 @@ test("compact composer shows wrapped text", async ({ page }) => {
 
 test("history delete keeps the X in frame", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
-  await page.getByRole("button", { name: "History" }).click();
+  await page.getByRole("button", { name: "Histórico" }).click();
   const del = page.locator(".session-delete").first();
   await expect(del).toHaveText("×");
   await del.click();
-  await expect(del).toHaveText("×erase");
+  await expect(del).toHaveText("×apagar");
   const overflow = await del.evaluate((element) => element.scrollWidth - element.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
 test("practice checks a correct answer", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=practice");
-  await expect(page.getByText("how would you say this?")).toBeVisible();
+  await expect(page.getByText("como você diria isto?")).toBeVisible();
 
-  await page.getByPlaceholder("type the corrected sentence").fill("I went to the gym yesterday");
-  await page.getByRole("button", { name: "Check" }).click();
+  await page.getByPlaceholder("digite a frase corrigida").fill("I went to the gym yesterday");
+  await page.getByRole("button", { name: "Conferir" }).click();
 
-  await expect(page.getByText("exactly right")).toBeVisible();
+  await expect(page.getByText("exatamente certo")).toBeVisible();
   await expect(page.getByText("I went to the gym yesterday", { exact: true })).toBeVisible();
+});
+
+test("light theme keeps the send button visible", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=app");
+  await page.getByRole("button", { name: "Configurações" }).click();
+  await page.getByRole("button", { name: "Claro" }).click();
+  await page.getByRole("button", { name: "Salvar" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+
+  const send = page.locator(".composer .send");
+  await expect(send).toBeVisible();
+  const colors = await send.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { background: style.backgroundColor, color: style.color };
+  });
+  expect(colors.background).not.toBe("rgba(0, 0, 0, 0)");
+  expect(colors.color).not.toBe(colors.background);
 });
 
 test("mascot accepts a drag gesture", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   const hit = page.locator(".mascot-hit");
-  await expect(hit).toHaveAttribute("title", /Drag me/);
+  await expect(hit).toHaveAttribute("title", /Arraste/);
 
   const box = await hit.boundingBox();
   if (!box) throw new Error("mascot hit area not found");

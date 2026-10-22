@@ -76,7 +76,7 @@ async fn post(
         settings.base_url.trim_end_matches('/')
     );
 
-    let mut last_error = String::from("request failed");
+    let mut last_error = String::from("requisição falhou");
 
     for attempt in 0..2 {
         if attempt > 0 {
@@ -92,7 +92,7 @@ async fn post(
         {
             Ok(response) => response,
             Err(error) => {
-                last_error = format!("network error: {error}");
+                last_error = format!("erro de rede: {error}");
                 continue;
             }
         };
@@ -136,7 +136,7 @@ pub async fn stream_reply(
             });
         }
 
-        let chunk = chunk.map_err(|error| format!("stream error: {error}"))?;
+        let chunk = chunk.map_err(|error| format!("erro no stream: {error}"))?;
         pending.extend_from_slice(&chunk);
 
         while let Some(position) = pending.iter().position(|byte| *byte == b'\n') {

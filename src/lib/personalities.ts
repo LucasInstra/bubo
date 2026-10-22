@@ -37,8 +37,8 @@ export interface Personality {
 export const PERSONALITIES: Personality[] = [
   {
     id: "warm_coach",
-    label: "Warm Coach",
-    vibe: "steady, believes in you",
+    label: "Treinador acolhedor",
+    vibe: "constante, acredita em você",
     preview: {
       shape: "round",
       color: "#f59e0b",
@@ -54,8 +54,8 @@ export const PERSONALITIES: Personality[] = [
   },
   {
     id: "hype_friend",
-    label: "Hype Friend",
-    vibe: "loud best friend",
+    label: "Amigo empolgado",
+    vibe: "melhor amigo barulhento",
     preview: {
       shape: "cloud",
       color: "#ec4899",
@@ -71,8 +71,8 @@ export const PERSONALITIES: Personality[] = [
   },
   {
     id: "playful_tease",
-    label: "Playful Tease",
-    vibe: "cheeky sibling",
+    label: "Provocação brincalhona",
+    vibe: "irmão atrevido",
     preview: {
       shape: "blob",
       color: "#f97316",
@@ -88,8 +88,8 @@ export const PERSONALITIES: Personality[] = [
   },
   {
     id: "friendly_rival",
-    label: "Friendly Rival",
-    vibe: "scoreboard energy",
+    label: "Rival amigável",
+    vibe: "energia de placar",
     preview: {
       shape: "star",
       color: "#22c55e",
@@ -105,8 +105,8 @@ export const PERSONALITIES: Personality[] = [
   },
   {
     id: "calm_mentor",
-    label: "Calm Mentor",
-    vibe: "unhurried elder",
+    label: "Mentor calmo",
+    vibe: "sábio sem pressa",
     preview: {
       shape: "oval",
       color: "#14b8a6",
@@ -122,8 +122,8 @@ export const PERSONALITIES: Personality[] = [
   },
   {
     id: "gentle_guide",
-    label: "Gentle Guide",
-    vibe: "soft, low pressure",
+    label: "Guia gentil",
+    vibe: "suave, sem pressão",
     preview: {
       shape: "egg",
       color: "#8b5cf6",
@@ -139,8 +139,8 @@ export const PERSONALITIES: Personality[] = [
   },
   {
     id: "curious_nerd",
-    label: "Curious Nerd",
-    vibe: "delighted by details",
+    label: "Nerd curioso",
+    vibe: "encantado por detalhes",
     preview: {
       shape: "hexagon",
       color: "#3b82f6",
@@ -156,8 +156,8 @@ export const PERSONALITIES: Personality[] = [
   },
   {
     id: "dry_wit",
-    label: "Dry Wit",
-    vibe: "deadpan, secretly fond",
+    label: "Humor seco",
+    vibe: "irônico, secretamente afetuoso",
     preview: {
       shape: "square",
       color: "#a9714b",
@@ -173,8 +173,8 @@ export const PERSONALITIES: Personality[] = [
   },
   {
     id: "strict_examiner",
-    label: "Strict Examiner",
-    vibe: "no fluff, high bar",
+    label: "Examinador rigoroso",
+    vibe: "sem enrolação, exigente",
     preview: {
       shape: "diamond",
       color: "#ef4444",
@@ -190,8 +190,8 @@ export const PERSONALITIES: Personality[] = [
   },
   {
     id: "shy_penpal",
-    label: "Shy Pen Pal",
-    vibe: "quiet at first, warm once you know them",
+    label: "Amigo por carta",
+    vibe: "quieto no começo, caloroso quando você conhece",
     preview: {
       shape: "drop",
       color: "#38bdf8",
@@ -207,8 +207,8 @@ export const PERSONALITIES: Personality[] = [
   },
   {
     id: "storyteller",
-    label: "Storyteller",
-    vibe: "every reply turns into a small story",
+    label: "Contador de histórias",
+    vibe: "cada resposta vira uma pequena história",
     preview: {
       shape: "pill",
       color: "#eab308",
@@ -224,8 +224,8 @@ export const PERSONALITIES: Personality[] = [
   },
   {
     id: "night_owl",
-    label: "Night Owl",
-    vibe: "calm late-night company, dry humor",
+    label: "Coruja noturna",
+    vibe: "companhia calma de madrugada, humor seco",
     preview: {
       shape: "triangle",
       color: "#334155",

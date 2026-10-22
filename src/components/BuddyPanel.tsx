@@ -21,33 +21,33 @@ interface BuddyPanelProps {
 }
 
 const EYE_LABELS: Record<string, string> = {
-  bars: "Bars",
-  dots: "Dots",
-  arcs: "Arcs",
-  sleepy: "Sleepy",
-  sparkle: "Sparkle",
-  heart: "Heart",
-  ring: "Ring",
-  wink: "Wink",
-  angry: "Angry",
+  bars: "Barras",
+  dots: "Pontos",
+  arcs: "Arcos",
+  sleepy: "Sonolento",
+  sparkle: "Brilho",
+  heart: "Coração",
+  ring: "Anel",
+  wink: "Piscadinha",
+  angry: "Bravo",
 };
 const SPACING_LABELS = [
-  ["close", "Close"],
+  ["close", "Perto"],
   ["normal", "Normal"],
-  ["wide", "Wide"],
+  ["wide", "Largo"],
 ];
 const TILT_LABELS = [
-  ["soft", "Soft"],
-  ["straight", "Straight"],
-  ["sharp", "Sharp"],
+  ["soft", "Suave"],
+  ["straight", "Reta"],
+  ["sharp", "Acentuada"],
 ];
 const MOUTH_STYLES = [
-  ["line", "Line"],
-  ["smile", "Smile"],
-  ["grin", "Grin"],
-  ["cat", "Cat"],
-  ["open", "Open"],
-  ["flat", "Flat"],
+  ["line", "Linha"],
+  ["smile", "Sorriso"],
+  ["grin", "Sorrisão"],
+  ["cat", "Gato"],
+  ["open", "Aberto"],
+  ["flat", "Plano"],
 ];
 const MOUTH_SIZES = [
   ["small", "S"],
@@ -74,7 +74,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
     try {
       await onSave(draft);
     } catch (problem) {
-      setError(typeof problem === "string" ? problem : "Could not save the buddy.");
+      setError(typeof problem === "string" ? problem : "Não foi possível salvar o bubo.");
     } finally {
       setBusy(false);
     }
@@ -93,20 +93,22 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
       className="settings buddy"
       role="dialog"
       aria-modal="true"
-      aria-label="Customize buddy"
+      aria-label="Personalizar o bubo"
       ref={dialogRef}
       tabIndex={-1}
     >
       <div className="settings-head" data-tauri-drag-region>
-        <button className="ghost" onClick={() => void close()} aria-label="Back">
+        <button className="ghost" onClick={() => void close()} aria-label="Voltar">
           ←
         </button>
-        <span>buddy</span>
+        <span>bubo</span>
         <button
           type="button"
           className={`ghost icon settings-pin ${pinned ? "on" : ""}`}
-          title={pinned ? "Unpin (let other windows cover bubo)" : "Keep bubo on top"}
-          aria-label="Pin window"
+          title={
+            pinned ? "Desafixar (deixar outras janelas cobrirem o bubo)" : "Manter o bubo no topo"
+          }
+          aria-label="Fixar janela"
           aria-pressed={pinned}
           onClick={onTogglePin}
         >
@@ -127,10 +129,10 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
       </div>
 
       <div className="settings-body">
-        <div className="section-title">Personality</div>
+        <div className="section-title">Personalidade</div>
 
         <div className="field">
-          <span>Voice</span>
+          <span>Voz</span>
           <div className="personalities">
             {PERSONALITIES.map((preset) => (
               <button
@@ -153,29 +155,29 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
             ))}
           </div>
           <p className="hint">
-            {personality(draft.personality).vibe}. Previews are illustrative: picking a voice
-            changes only the tone, the mascot is yours.
+            {personality(draft.personality).vibe}. As prévias são ilustrativas: escolher uma voz
+            muda apenas o tom; o mascote é seu.
           </p>
         </div>
 
         <label className="field">
-          <span>Extra flavor &amp; personality</span>
+          <span>Toque extra e personalidade</span>
           <textarea
             rows={2}
             value={draft.persona}
-            placeholder="e.g. be a little sarcastic, keep replies short, talk about music"
+            placeholder="ex.: seja um pouco sarcástico, respostas curtas, fale sobre música"
             onChange={(event) => patch({ persona: event.target.value })}
           />
           <span className="hint">
-            Adds topics, quirks or a whole custom personality on top of the picked voice. Tone
-            instructions here win over the preset.
+            Adiciona tópicos, manias ou uma personalidade inteira por cima da voz escolhida.
+            Instruções de tom aqui vencem o preset.
           </span>
         </label>
 
-        <div className="section-title">Look</div>
+        <div className="section-title">Aparência</div>
 
         <div className="field">
-          <span>Your buddy</span>
+          <span>Seu bubo</span>
           <div className="look">
             <div className="look-preview">
               <Mascot
@@ -207,12 +209,12 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
                     aria-label={`color ${option}`}
                   />
                 ))}
-                <label className="swatch-custom" title="Custom color">
+                <label className="swatch-custom" title="Cor personalizada">
                   <input
                     type="color"
                     value={draft.color}
                     onChange={(event) => patch({ color: event.target.value })}
-                    aria-label="Custom color"
+                    aria-label="Cor personalizada"
                   />
                 </label>
               </div>
@@ -250,14 +252,14 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
         </div>
 
         <div className="field row">
-          <span>Start over from the original bubo face</span>
+          <span>Voltar ao rosto original do bubo</span>
           <button className="ghost" type="button" onClick={resetLook}>
-            Reset look to bubo default
+            Redefinir visual
           </button>
         </div>
 
         <div className="field">
-          <span>Eyes</span>
+          <span>Olhos</span>
           <div className="option-box">
             <div className="eye-grid">
               {EYE_STYLES.map((value) => (
@@ -273,7 +275,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
             </div>
 
             <div className="option-row">
-              <span className="option-label">Color</span>
+              <span className="option-label">Cor</span>
               <div className="swatches">
                 {EYE_COLORS.map((option) => (
                   <button
@@ -287,23 +289,25 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
                           : option,
                     }}
                     onClick={() => patch({ eyeColor: option })}
-                    aria-label={option === "auto" ? "auto contrast" : `eye color ${option}`}
-                    title={option === "auto" ? "Auto contrast" : option}
+                    aria-label={
+                      option === "auto" ? "contraste automático" : `cor dos olhos ${option}`
+                    }
+                    title={option === "auto" ? "Contraste automático" : option}
                   />
                 ))}
-                <label className="swatch-custom" title="Custom eye color">
+                <label className="swatch-custom" title="Cor dos olhos personalizada">
                   <input
                     type="color"
                     value={draft.eyeColor === "auto" ? "#fcfcff" : draft.eyeColor}
                     onChange={(event) => patch({ eyeColor: event.target.value })}
-                    aria-label="Custom eye color"
+                    aria-label="Cor dos olhos personalizada"
                   />
                 </label>
               </div>
             </div>
 
             <div className="option-row">
-              <span className="option-label">Size</span>
+              <span className="option-label">Tamanho</span>
               <div className="levels compact">
                 {EYE_SIZES.map((value) => (
                   <button
@@ -319,7 +323,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
             </div>
 
             <div className="option-row">
-              <span className="option-label">Spacing</span>
+              <span className="option-label">Espaçamento</span>
               <div className="levels compact">
                 {SPACING_LABELS.map(([value, label]) => (
                   <button
@@ -335,7 +339,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
             </div>
 
             <div className="option-row">
-              <span className="option-label">Tilt</span>
+              <span className="option-label">Inclinação</span>
               <div className="levels compact">
                 {TILT_LABELS.map(([value, label]) => (
                   <button
@@ -353,10 +357,10 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
         </div>
 
         <div className="field">
-          <span>Mouth</span>
+          <span>Boca</span>
           <div className="option-box">
             <div className="option-row">
-              <span className="option-label">Show</span>
+              <span className="option-label">Mostrar</span>
               <input
                 type="checkbox"
                 checked={draft.showMouth}
@@ -378,7 +382,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
             </div>
 
             <div className="option-row">
-              <span className="option-label">Size</span>
+              <span className="option-label">Tamanho</span>
               <div className="levels compact">
                 {MOUTH_SIZES.map(([value, label]) => (
                   <button
@@ -394,7 +398,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
             </div>
 
             <div className="option-row">
-              <span className="option-label">Color</span>
+              <span className="option-label">Cor</span>
               <div className="swatches">
                 {MOUTH_COLORS.map((option) => (
                   <button
@@ -408,16 +412,18 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
                           : option,
                     }}
                     onClick={() => patch({ mouthColor: option })}
-                    aria-label={option === "auto" ? "auto mouth color" : `mouth color ${option}`}
-                    title={option === "auto" ? "Auto (body shade)" : option}
+                    aria-label={
+                      option === "auto" ? "cor da boca automática" : `cor da boca ${option}`
+                    }
+                    title={option === "auto" ? "Automático (tom do corpo)" : option}
                   />
                 ))}
-                <label className="swatch-custom" title="Custom mouth color">
+                <label className="swatch-custom" title="Cor da boca personalizada">
                   <input
                     type="color"
                     value={draft.mouthColor === "auto" ? "#241d33" : draft.mouthColor}
                     onChange={(event) => patch({ mouthColor: event.target.value })}
-                    aria-label="Custom mouth color"
+                    aria-label="Cor da boca personalizada"
                   />
                 </label>
               </div>
@@ -426,7 +432,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
         </div>
 
         <label className="field row">
-          <span>Status label under the mascot</span>
+          <span>Rótulo de status embaixo do mascote</span>
           <input
             type="checkbox"
             checked={draft.showStatus}
@@ -435,7 +441,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
         </label>
 
         <label className="field row">
-          <span>Use the mascot color across the app</span>
+          <span>Usar a cor do mascote no app</span>
           <input
             type="checkbox"
             checked={draft.accentFromMascot}
@@ -451,7 +457,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
           <span className="hint">{dirty ? "unsaved changes" : ""}</span>
         )}
         <button className="primary" onClick={save} disabled={busy || !dirty}>
-          {busy ? "saving..." : "Save"}
+          {busy ? "saving..." : "Salvar"}
         </button>
       </div>
     </div>

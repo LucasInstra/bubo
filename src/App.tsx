@@ -32,9 +32,17 @@ const SUGGESTIONS = [
 ];
 
 const STATUS_LABEL: Record<OrbState, string> = {
-  idle: "here with you",
-  thinking: "thinking",
-  streaming: "writing",
+  idle: "aqui com você",
+  thinking: "pensando",
+  streaming: "escrevendo",
+};
+
+const MOOD_LABEL: Record<Mood, string> = {
+  idle: "amigo de inglês",
+  happy: "feliz",
+  sad: "triste",
+  surprised: "surpreso",
+  proud: "orgulhoso",
 };
 
 function withAlpha(hex: string, alpha: number): string {
@@ -161,7 +169,7 @@ export default function App() {
         if (!alive || !granted) return;
         sendNotification({
           title: "bubo",
-          body: `${due} correction${due === 1 ? "" : "s"} waiting for practice.`,
+          body: `${due} ${due === 1 ? "correção" : "correções"} esperando para praticar.`,
         });
         localStorage.setItem(key, "1");
       } catch {
@@ -357,7 +365,7 @@ export default function App() {
             ? problem
             : problem instanceof Error
               ? problem.message
-              : "Something went wrong.";
+              : "Algo deu errado.";
         if (reason === "cancelled") {
           setMessages((current) => current.filter((message) => message.id !== botMessage.id));
         } else {
@@ -625,10 +633,6 @@ export default function App() {
           stage={popupStage}
           onShowInput={() => changePopupStage("input")}
           onOpenChat={exitPopup}
-          onOpenSettings={() => {
-            exitPopup();
-            setShowSettings(true);
-          }}
           onSend={sendFromPopup}
           onStop={stop}
         />
@@ -665,8 +669,8 @@ export default function App() {
           <button
             className="brand brand-button"
             type="button"
-            title="Customize buddy"
-            aria-label="Customize buddy"
+            title="Personalizar o bubo"
+            aria-label="Personalizar o bubo"
             onClick={() => {
               setShowSettings(false);
               setShowProgress(false);
@@ -696,7 +700,7 @@ export default function App() {
             )}
             <span className="brand-copy">
               <strong>bubo</strong>
-              <span className="brand-sub">{mood === "idle" ? "English buddy" : mood}</span>
+              <span className="brand-sub">{MOOD_LABEL[mood]}</span>
             </span>
             <span className="brand-edit" aria-hidden="true">
               <svg
@@ -719,8 +723,8 @@ export default function App() {
               <>
                 <button
                   className="ghost icon"
-                  title="New chat"
-                  aria-label="New chat"
+                  title="Nova conversa"
+                  aria-label="Nova conversa"
                   disabled={status !== "idle"}
                   onClick={() => void newChat()}
                 >
@@ -736,8 +740,8 @@ export default function App() {
                 </button>
                 <button
                   className="ghost icon"
-                  title="History"
-                  aria-label="History"
+                  title="Histórico"
+                  aria-label="Histórico"
                   disabled={status !== "idle"}
                   onClick={() => {
                     setShowSettings(false);
@@ -766,39 +770,9 @@ export default function App() {
                   </svg>
                 </button>
                 <button
-                  className={`ghost icon ${searchOpen ? "on" : ""}`}
-                  title="Search messages"
-                  aria-label="Search messages"
-                  aria-pressed={searchOpen}
-                  onClick={() => {
-                    setSearchOpen((open) => {
-                      if (open) setSearchQuery("");
-                      return !open;
-                    });
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-                    <circle
-                      cx="10.5"
-                      cy="10.5"
-                      r="6.2"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                    />
-                    <path
-                      d="m15 15 5 5"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </button>
-                <button
                   className="ghost icon"
-                  title="Progress"
-                  aria-label="Progress"
+                  title="Progresso"
+                  aria-label="Progresso"
                   onClick={() => {
                     setShowSettings(false);
                     setShowBuddy(false);
@@ -819,8 +793,8 @@ export default function App() {
                 </button>
                 <button
                   className="ghost icon"
-                  title={due > 0 ? `Practice ${due} corrections` : "Practice corrections"}
-                  aria-label="Practice"
+                  title={due > 0 ? `Praticar ${due} correções` : "Praticar correções"}
+                  aria-label="Praticar"
                   onClick={() => {
                     setDrillFocus(null);
                     setShowDrill(true);
@@ -844,8 +818,12 @@ export default function App() {
             )}
             <button
               className={`ghost icon ${pinned ? "on" : ""}`}
-              title={pinned ? "Unpin (let other windows cover bubo)" : "Keep bubo on top"}
-              aria-label="Pin window"
+              title={
+                pinned
+                  ? "Desafixar (deixar outras janelas cobrirem o bubo)"
+                  : "Manter o bubo no topo"
+              }
+              aria-label="Fixar janela"
               onClick={togglePin}
             >
               <svg
@@ -864,8 +842,8 @@ export default function App() {
             </button>
             <button
               className={`ghost icon ${settings.compact ? "on" : ""}`}
-              title={settings.compact ? "Full mode" : "Compact mode"}
-              aria-label={settings.compact ? "Full mode" : "Compact mode"}
+              title={settings.compact ? "Modo completo" : "Modo compacto"}
+              aria-label={settings.compact ? "Modo completo" : "Modo compacto"}
               aria-pressed={settings.compact}
               onClick={toggleCompact}
             >
@@ -889,8 +867,8 @@ export default function App() {
             </button>
             <button
               className="ghost icon"
-              title="Popup mode"
-              aria-label="Popup mode"
+              title="Modo popup"
+              aria-label="Modo popup"
               disabled={!hasKey}
               onClick={enterPopup}
             >
@@ -911,8 +889,8 @@ export default function App() {
             {!settings.compact && (
               <button
                 className="ghost icon"
-                title="Settings"
-                aria-label="Settings"
+                title="Configurações"
+                aria-label="Configurações"
                 onClick={() => {
                   setShowBuddy(false);
                   setShowProgress(false);
@@ -949,8 +927,8 @@ export default function App() {
             )}
             <button
               className="ghost icon"
-              title={`Hide (${settings.hotkey})`}
-              aria-label="Hide"
+              title={`Ocultar (${settings.hotkey})`}
+              aria-label="Ocultar"
               onClick={() => void ipc.hideWindow()}
             >
               <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
@@ -1017,8 +995,8 @@ export default function App() {
                 autoFocus
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="search this conversation"
-                aria-label="Search this conversation"
+                placeholder="buscar nesta conversa"
+                aria-label="Buscar nesta conversa"
                 spellCheck={false}
               />
               {normalizedSearch && (
@@ -1027,7 +1005,7 @@ export default function App() {
               <button
                 type="button"
                 className="ghost"
-                aria-label="Close search"
+                aria-label="Fechar busca"
                 onClick={() => {
                   setSearchOpen(false);
                   setSearchQuery("");
@@ -1040,10 +1018,10 @@ export default function App() {
 
           {empty && !showSettings && !showBuddy ? (
             <div className="hero">
-              <h1>Hey, I'm bubo.</h1>
+              <h1>Oi, eu sou o bubo.</h1>
               <p>
-                Talk to me in English. I keep the conversation going and quietly show what a native
-                speaker would have said.
+                Fale comigo em inglês. Eu mantenho a conversa e mostro discretamente como um falante
+                nativo diria.
               </p>
               <div className="suggestions">
                 {due > 0 && (
@@ -1054,7 +1032,7 @@ export default function App() {
                       setShowDrill(true);
                     }}
                   >
-                    Practice {due} {due === 1 ? "correction" : "corrections"} from our chats
+                    Praticar {due} {due === 1 ? "correção" : "correções"} das nossas conversas
                   </button>
                 )}
                 {SUGGESTIONS.map((suggestion) => (
@@ -1076,11 +1054,13 @@ export default function App() {
             >
               {contextTrimmed && (
                 <div className="context-hint">
-                  Long conversation: bubo is using the most recent messages.
+                  Conversa longa: o bubo está usando as mensagens mais recentes.
                 </div>
               )}
               {normalizedSearch && visibleMessages.length === 0 && (
-                <p className="search-empty">No messages match “{searchQuery.trim()}”.</p>
+                <p className="search-empty">
+                  Nenhuma mensagem corresponde a “{searchQuery.trim()}”.
+                </p>
               )}
               {visibleMessages.map((message) => (
                 <Message
@@ -1111,6 +1091,12 @@ export default function App() {
           busy={status !== "idle"}
           onSend={send}
           onStop={stop}
+          onSearch={() => {
+            setSearchOpen((open) => {
+              if (open) setSearchQuery("");
+              return !open;
+            });
+          }}
         />
 
         {showHistory && (

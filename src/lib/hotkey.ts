@@ -145,7 +145,7 @@ export function describeHotkey(event: HotkeyEventLike): HotkeyCapture {
       preview: names.length > 0 ? `${prefix}...` : "",
       hint:
         event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey
-          ? "Shift alone is not enough. Add Ctrl, Alt or Super."
+          ? "Shift sozinho não basta. Adicione Ctrl, Alt ou Super."
           : "",
     };
   }
@@ -155,7 +155,7 @@ export function describeHotkey(event: HotkeyEventLike): HotkeyCapture {
     return {
       value: null,
       preview: names.length > 0 ? `${prefix}?` : "",
-      hint: "That key cannot be used. Try a letter, digit, F-key, arrow or punctuation.",
+      hint: "Essa tecla não pode ser usada. Tente uma letra, número, tecla F, seta ou pontuação.",
     };
   }
 
@@ -164,8 +164,8 @@ export function describeHotkey(event: HotkeyEventLike): HotkeyCapture {
       value: null,
       preview: `${prefix}${token}`,
       hint: event.shiftKey
-        ? "Shift alone is not enough. Add Ctrl, Alt or Super."
-        : "Hold Ctrl, Alt or Super as well.",
+        ? "Shift sozinho não basta. Adicione Ctrl, Alt ou Super."
+        : "Segure Ctrl, Alt ou Super também.",
     };
   }
 
