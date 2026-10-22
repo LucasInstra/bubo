@@ -28,12 +28,13 @@ Because the useful part of learning a language is the five minutes between real 
 - **A mascot with a face**: 12 shapes, 9 colors plus a custom picker, 9 eye styles, eye color, spacing and tilt, plus an optional mouth with six shapes and three sizes. Spring physics, drag jelly, idle look-arounds, blinks, pointer gaze and a hop when you click it. The little mascot in the header opens its customization panel.
 - **Ready-made personalities**: twelve voices such as Warm Coach, Dry Wit or Hype Friend. Picking one changes only the tutor's tone; the mascot look stays exactly as you customized it. The free-text flavor field stacks on top.
 - **Compact mode**: a 400 x 280 horizontal chat card with the buddy in the header, the current mood under the name and a one-line composer. The full window is one click away.
-- **Bring your own endpoint**: Groq, OpenAI, OpenRouter, Ollama or any OpenAI-compatible URL, with model suggestions and a test connection button.
+- **Bring your own endpoint**: Groq, OpenAI, OpenRouter, Ollama or any OpenAI-compatible URL, with model suggestions, a test connection button, optional proxy and custom CA certificate for company networks.
 - **Conversation first**: replies stream token by token; a separate pass returns corrections as strict JSON, so the card never depends on the model following inline formatting.
 - **Corrections that stick**: every fix is stored, linked to the message that produced it, and scheduled with a 1 / 3 / 7 / 21 / 45 day ladder. A miss comes back in ten minutes.
-- **Practice mode**: rewrite the wrong sentence, get instant feedback, see the original context. Skip the due cards or reset the deck from settings.
+- **Practice mode**: rewrite the wrong sentence, get instant feedback, see the original context, and use “I was right” when a valid alternative was marked wrong. Skip the due cards or reset the deck from settings.
 - **Progress**: streak, accuracy, a 14-day activity strip and the mistakes you practice most, all from the local database.
-- **History**: every conversation is a session. Reopen an old one, start a new one or delete one from the list.
+- **History**: every conversation is a session. Search, rename, archive, reopen, start a new one or delete one from the list.
+- **Backups and diagnostics**: export the SQLite database to a file, restore it later, open the data folder or copy a diagnostics report from Settings.
 - **Local by default**: API key in the Windows Credential Manager, history in SQLite, no telemetry, no account.
 - **Recoverable**: stop a reply mid-stream, retry a failed turn, copy or delete a message.
 
@@ -187,9 +188,12 @@ e2e/                      Playwright harness and tests
 
 ## Roadmap
 
-- Search and rename old sessions.
-- Per-message "practice this" on the correction card.
-- Tighter Content Security Policy for the webview.
+- Message search inside a conversation.
+- Manual correction add/edit when the model misses or mislabels a fix.
+- Daily practice reminder and a weekly goal.
+- Light theme and Portuguese UI.
+- Content Security Policy without inline styles.
+- Authenticode signing for the installer.
 - Voice practice (speak and listen), later, deliberately.
 
 ## License

@@ -7,12 +7,15 @@ use tauri::{AppHandle, Manager};
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
     pub base_url: String,
+    pub proxy_url: String,
+    pub ca_cert_path: String,
     pub model: String,
     pub level: String,
     pub persona: String,
     pub personality: String,
     pub hotkey: String,
     pub autostart: bool,
+    pub start_hidden: bool,
     pub pinned: bool,
     pub compact: bool,
     pub popup: bool,
@@ -38,12 +41,15 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             base_url: "https://api.groq.com/openai/v1".to_string(),
+            proxy_url: String::new(),
+            ca_cert_path: String::new(),
             model: "openai/gpt-oss-120b".to_string(),
             level: "B1".to_string(),
             persona: String::new(),
             personality: "warm_coach".to_string(),
             hotkey: "Ctrl+Alt+B".to_string(),
             autostart: false,
+            start_hidden: false,
             pinned: true,
             compact: false,
             popup: false,

@@ -12,6 +12,7 @@ import { ProgressPanel } from "./components/ProgressPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { BUILD_LABEL } from "./lib/build";
+import { trimContext } from "./lib/context";
 import { parseStoredFixes } from "./lib/format";
 import { ipc } from "./lib/ipc";
 import { moodRequest } from "./lib/mood";
@@ -68,6 +69,7 @@ export default function App() {
   const [drillFocus, setDrillFocus] = useState<Fix | null>(null);
   const [popupStage, setPopupStage] = useState<PopupStage>("face");
   const [stageSize, setStageSize] = useState(76);
+  const [contextTrimmed, setContextTrimmed] = useState(false);
   const [updateDismissed, setUpdateDismissed] = useState(false);
 
   const updater = useUpdater();
@@ -232,10 +234,9 @@ export default function App() {
         streaming: true,
       };
 
-      const context = [...base, userMessage]
-        .filter((message) => !message.error)
-        .slice(-16)
-        .map(({ role, content }) => ({ role, content }));
+      const trimmed = trimContext([...base, userMessage]);
+      setContextTrimmed(trimmed.trimmed);
+      const context = trimmed.messages.map(({ role, content }) => ({ role, content }));
 
       const turn = turnRef.current + 1;
       turnRef.current = turn;
@@ -478,6 +479,7 @@ export default function App() {
     const id = await ipc.newSession();
     setSessionId(id);
     setMessages([]);
+    setContextTrimmed(false);
     setShowHistory(false);
   }, []);
 
@@ -486,6 +488,7 @@ export default function App() {
     const stored = await ipc.openSession(id);
     setSessionId(id);
     setMessages(stored.map(fromStored));
+    setContextTrimmed(false);
     setShowHistory(false);
     void ipc
       .drillStats()
@@ -497,6 +500,7 @@ export default function App() {
     const [stored, id] = await Promise.all([ipc.history(), ipc.currentSession()]);
     setSessionId(id);
     setMessages(stored.map(fromStored));
+    setContextTrimmed(false);
     void ipc
       .drillStats()
       .then((stats) => setDue(stats.due))
@@ -939,6 +943,11 @@ export default function App() {
                 stickRef.current = list.scrollHeight - list.scrollTop - list.clientHeight < 48;
               }}
             >
+              {contextTrimmed && (
+                <div className="context-hint">
+                  Long conversation: bubo is using the most recent messages.
+                </div>
+              )}
               {messages.map((message) => (
                 <Message
                   key={message.id}
@@ -1031,6 +1040,7 @@ export default function App() {
             }
             updateStatus={updater.status}
             updateVersion={updater.version}
+            updateNotes={updater.notes}
             updateProgress={updater.progress}
             updateError={updater.error}
             onCheckUpdate={updater.checkNow}

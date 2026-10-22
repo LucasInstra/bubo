@@ -135,6 +135,23 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
     }
   };
 
+  const overrideCorrect = async () => {
+    if (!item || phase !== "answered" || result?.correct || busy.current) return;
+    busy.current = true;
+    try {
+      const updated = await ipc.drillOverride(item.id);
+      setResult({ correct: true, item: updated ?? item });
+      void ipc
+        .drillStats()
+        .then(setStats)
+        .catch(() => {});
+    } catch (error) {
+      console.error("drill override failed", error);
+    } finally {
+      busy.current = false;
+    }
+  };
+
   return (
     <div
       className="settings"
@@ -262,6 +279,11 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
                     </div>
                   </div>
                   {result.item.note && <span className="drill-note">{result.item.note}</span>}
+                  {!result.correct && (
+                    <button className="ghost" type="button" onClick={() => void overrideCorrect()}>
+                      I was right
+                    </button>
+                  )}
                   <button
                     className="primary"
                     onClick={() => void load()}

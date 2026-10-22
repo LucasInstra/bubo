@@ -1,3 +1,4 @@
+import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ipc } from "../lib/ipc";
 import { useModalFocus } from "../lib/modal";
@@ -19,13 +20,14 @@ interface SettingsPanelProps {
   currentVersion: string;
   updateStatus: UpdateStatus;
   updateVersion: string;
+  updateNotes: string;
   updateProgress: number;
   updateError: string;
   onCheckUpdate: () => Promise<void>;
   onInstallUpdate: () => Promise<void>;
 }
 
-const LEVELS = ["A2", "B1", "B2", "C1"];
+const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 const TEXT_SIZES = [
   ["small", "Small"],
   ["normal", "Normal"],
@@ -82,6 +84,7 @@ export function SettingsPanel({
   currentVersion,
   updateStatus,
   updateVersion,
+  updateNotes,
   updateProgress,
   updateError,
   onCheckUpdate,
@@ -93,6 +96,8 @@ export function SettingsPanel({
   const [error, setError] = useState("");
   const [queue, setQueue] = useState<DrillStats>({ total: 0, due: 0 });
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmRestore, setConfirmRestore] = useState(false);
+  const [dataBusy, setDataBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [providerId, setProviderId] = useState(() => matchProvider(settings.baseUrl).id);
   const [testing, setTesting] = useState(false);
@@ -134,6 +139,12 @@ export function SettingsPanel({
   }, [confirmReset]);
 
   useEffect(() => {
+    if (!confirmRestore) return;
+    const timer = setTimeout(() => setConfirmRestore(false), 4000);
+    return () => clearTimeout(timer);
+  }, [confirmRestore]);
+
+  useEffect(() => {
     if (!modelOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -172,6 +183,19 @@ export function SettingsPanel({
     setProviderId(matchProvider(value).id);
     resetTest();
     patch({ baseUrl: value });
+  };
+
+  const chooseCa = async () => {
+    try {
+      const path = await openDialog({
+        multiple: false,
+        directory: false,
+        filters: [{ name: "Certificate", extensions: ["pem", "crt", "cer"] }],
+      });
+      if (path && !Array.isArray(path)) patch({ caCertPath: path });
+    } catch (problem) {
+      setError(typeof problem === "string" ? problem : "Could not open the certificate.");
+    }
   };
 
   const test = async () => {
@@ -238,6 +262,75 @@ export function SettingsPanel({
       setNotice(`${removed} correction(s) cleared.`);
     } catch (problem) {
       setError(String(problem));
+    }
+  };
+
+  const backupData = async () => {
+    if (dataBusy) return;
+    setError("");
+    setNotice("");
+    setDataBusy(true);
+    try {
+      const path = await saveDialog({
+        defaultPath: `bubo-backup-${new Date().toISOString().slice(0, 10)}.db`,
+        filters: [{ name: "bubo backup", extensions: ["db"] }],
+      });
+      if (!path) return;
+      await ipc.backupData(path);
+      setNotice(`Backup saved to ${path}`);
+    } catch (problem) {
+      setError(typeof problem === "string" ? problem : "Could not write the backup.");
+    } finally {
+      setDataBusy(false);
+    }
+  };
+
+  const restoreData = async () => {
+    if (dataBusy) return;
+    if (!confirmRestore) {
+      setConfirmRestore(true);
+      setNotice("Restoring replaces the current history. Click again to choose a backup.");
+      return;
+    }
+    setConfirmRestore(false);
+    setError("");
+    setNotice("");
+    setDataBusy(true);
+    try {
+      const path = await openDialog({
+        multiple: false,
+        directory: false,
+        filters: [{ name: "bubo backup", extensions: ["db"] }],
+      });
+      if (!path || Array.isArray(path)) return;
+      await ipc.restoreData(path);
+      window.location.reload();
+    } catch (problem) {
+      setError(typeof problem === "string" ? problem : "Could not restore that backup.");
+    } finally {
+      setDataBusy(false);
+    }
+  };
+
+  const copyDiagnostics = async () => {
+    setError("");
+    setNotice("");
+    try {
+      const text = await ipc.diagnostics();
+      await navigator.clipboard.writeText(text);
+      setNotice("Diagnostics copied to the clipboard.");
+    } catch (problem) {
+      setError(typeof problem === "string" ? problem : "Could not copy diagnostics.");
+    }
+  };
+
+  const openDataFolder = async () => {
+    setError("");
+    setNotice("");
+    try {
+      await ipc.openDataFolder();
+    } catch (problem) {
+      setError(typeof problem === "string" ? problem : "Could not open the data folder.");
     }
   };
 
@@ -355,6 +448,34 @@ export function SettingsPanel({
             placeholder="https://api.example.com/v1"
           />
         </label>
+
+        <label className="field">
+          <span>Proxy URL (optional)</span>
+          <input
+            value={draft.proxyUrl}
+            onChange={(event) => patch({ proxyUrl: event.target.value })}
+            spellCheck={false}
+            placeholder="http://proxy.company.com:8080"
+          />
+          <span className="hint">HTTP or HTTPS proxy for company networks.</span>
+        </label>
+
+        <div className="field">
+          <span>Custom CA certificate (optional)</span>
+          <div className="row-buttons">
+            <input
+              className="path-input"
+              value={draft.caCertPath}
+              onChange={(event) => patch({ caCertPath: event.target.value })}
+              spellCheck={false}
+              placeholder="C:\path\to\company-ca.pem"
+            />
+            <button className="ghost" type="button" onClick={() => void chooseCa()}>
+              Choose...
+            </button>
+          </div>
+          <span className="hint">PEM root certificate for corporate SSL inspection.</span>
+        </div>
 
         <div className="field">
           <label htmlFor="bubo-model">Model</label>
@@ -484,6 +605,15 @@ export function SettingsPanel({
           />
         </label>
 
+        <label className="field row">
+          <span>Start hidden</span>
+          <input
+            type="checkbox"
+            checked={draft.startHidden}
+            onChange={(event) => patch({ startHidden: event.target.checked })}
+          />
+        </label>
+
         <div className="field note">
           <span>
             Combine Ctrl, Alt or Super (Win) with a key, like <code>Ctrl+Alt+B</code>. ESC hides the
@@ -508,6 +638,30 @@ export function SettingsPanel({
           <span className="hint">
             Skipping moves the cards to tomorrow. Resetting deletes every saved correction,
             including the ones in old messages.
+          </span>
+        </div>
+
+        <div className="section-title">Data</div>
+
+        <div className="field">
+          <span>Backup and diagnostics</span>
+          <div className="row-buttons data-actions">
+            <button className="ghost" onClick={() => void backupData()} disabled={dataBusy}>
+              Back up data
+            </button>
+            <button className="ghost danger" onClick={() => void restoreData()} disabled={dataBusy}>
+              {confirmRestore ? "Click again to restore" : "Restore backup"}
+            </button>
+            <button className="ghost" onClick={() => void openDataFolder()}>
+              Open data folder
+            </button>
+            <button className="ghost" onClick={() => void copyDiagnostics()}>
+              Copy diagnostics
+            </button>
+          </div>
+          <span className="hint">
+            Backups include history, corrections and progress. The API key stays in Windows
+            Credential Manager.
           </span>
         </div>
 
@@ -588,6 +742,9 @@ export function SettingsPanel({
               <div className="update-progress" aria-hidden="true">
                 <span style={{ width: `${updateProgress}%` }} />
               </div>
+            )}
+            {updateStatus === "available" && updateNotes && (
+              <div className="update-notes">{updateNotes}</div>
             )}
             <span className="update-hint">Updates are checked when bubo starts.</span>
           </div>

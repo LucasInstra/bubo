@@ -22,12 +22,15 @@ export interface Msg {
 
 export interface Settings {
   baseUrl: string;
+  proxyUrl: string;
+  caCertPath: string;
   model: string;
   level: string;
   persona: string;
   personality: string;
   hotkey: string;
   autostart: boolean;
+  startHidden: boolean;
   pinned: boolean;
   compact: boolean;
   popup: boolean;
@@ -106,6 +109,7 @@ export interface SessionSummary {
   title: string;
   createdAt: number;
   updatedAt: number;
+  archived: boolean;
   messages: number;
   preview: string | null;
 }
@@ -142,12 +146,15 @@ export const DEFAULT_LOOK: LookSettings = {
 
 export const DEFAULT_SETTINGS: Settings = {
   baseUrl: "https://api.groq.com/openai/v1",
+  proxyUrl: "",
+  caCertPath: "",
   model: "openai/gpt-oss-120b",
   level: "B1",
   persona: "",
   personality: "warm_coach",
   hotkey: "Ctrl+Alt+B",
   autostart: false,
+  startHidden: false,
   pinned: true,
   compact: false,
   popup: false,

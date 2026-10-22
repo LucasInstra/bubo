@@ -301,6 +301,16 @@ button {
   border-radius: 6px;
 }
 
+.context-hint {
+  align-self: center;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-size: 9.5px;
+}
+
 .msg {
   display: flex;
   flex-direction: column;
@@ -872,6 +882,17 @@ button {
   opacity: 0.7;
 }
 
+.update-notes {
+  max-height: 96px;
+  margin-top: 4px;
+  overflow-y: auto;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  scrollbar-width: thin;
+}
+
 .update-progress {
   width: 100%;
   height: 4px;
@@ -1100,6 +1121,11 @@ button {
 .field textarea {
   resize: none;
   line-height: 1.45;
+}
+
+.field .path-input {
+  flex: 1;
+  min-width: 0;
 }
 
 .field input[type="checkbox"] {
@@ -2057,6 +2083,77 @@ button {
   font-size: 10.5px;
 }
 
+.history-tools {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px 0;
+}
+
+.history-search {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font: inherit;
+  font-size: 11.5px;
+}
+
+.history-search:focus {
+  border-color: rgba(139, 125, 255, 0.6);
+}
+
+.history-filter {
+  flex: none;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.history-filter.on {
+  border-color: rgba(139, 125, 255, 0.55);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.session-rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(139, 125, 255, 0.6);
+  border-radius: 11px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.session-icon {
+  width: 30px;
+  flex: none;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.session-icon:hover {
+  color: var(--text);
+  border-color: rgba(139, 125, 255, 0.4);
+}
+
 .session-row {
   display: flex;
   align-items: stretch;
@@ -2551,4 +2648,15 @@ button {
 .session-delete-text {
   font-size: 9px;
   letter-spacing: 0.3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

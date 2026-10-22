@@ -8,6 +8,7 @@ const MIN_HEIGHT: u32 = 260;
 const DEFAULT_WIDTH: u32 = 420;
 const DEFAULT_HEIGHT: u32 = 640;
 const FILE_NAME: &str = "window.json";
+const POPUP_FILE_NAME: &str = "popup.json";
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", default)]
@@ -43,6 +44,47 @@ pub fn load(app: &AppHandle) -> Option<WindowState> {
     let path = state_path(app)?;
     let raw = fs::read_to_string(path).ok()?;
     serde_json::from_str(&raw).ok()
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+struct PopupPosition {
+    x: i32,
+    y: i32,
+}
+
+/// The popup window has a fixed size, so only its top-left corner needs saving.
+pub fn load_popup(app: &AppHandle) -> Option<PhysicalPosition<i32>> {
+    let dir = app.path().app_config_dir().ok()?;
+    let raw = fs::read_to_string(dir.join(POPUP_FILE_NAME)).ok()?;
+    let saved: PopupPosition = serde_json::from_str(&raw).ok()?;
+    Some(PhysicalPosition::new(saved.x, saved.y))
+}
+
+pub fn save_popup(app: &AppHandle, position: PhysicalPosition<i32>) {
+    let Ok(dir) = app.path().app_config_dir() else {
+        return;
+    };
+    if fs::create_dir_all(&dir).is_err() {
+        return;
+    }
+
+    let saved = PopupPosition {
+        x: position.x,
+        y: position.y,
+    };
+    let Ok(raw) = serde_json::to_string_pretty(&saved) else {
+        return;
+    };
+
+    let path = dir.join(POPUP_FILE_NAME);
+    let temp = dir.join(format!("{POPUP_FILE_NAME}.tmp"));
+    if fs::write(&temp, &raw).is_err() {
+        return;
+    }
+    if fs::rename(&temp, &path).is_err() {
+        let _ = fs::write(&path, &raw);
+        let _ = fs::remove_file(&temp);
+    }
 }
 
 pub fn save(app: &AppHandle, state: WindowState) {

@@ -62,7 +62,14 @@ export const ipc = {
   newSession: () => invoke<number>("new_session"),
   openSession: (id: number) => invoke<StoredMessage[]>("open_session", { id }),
   deleteSession: (id: number) => invoke<number>("delete_session", { id }),
+  renameSession: (id: number, title: string) => invoke<void>("rename_session", { id, title }),
+  archiveSession: (id: number, archived: boolean) =>
+    invoke<void>("archive_session", { id, archived }),
   clearHistory: () => invoke<void>("clear_history"),
+  backupData: (path: string) => invoke<void>("backup_data", { path }),
+  restoreData: (path: string) => invoke<void>("restore_data", { path }),
+  openDataFolder: () => invoke<void>("open_data_folder"),
+  diagnostics: () => invoke<string>("diagnostics"),
   deleteMessage: (id: number) => invoke<void>("delete_message", { id }),
   drillStats: () => invoke<DrillStats>("drill_stats"),
   progressStats: () => invoke<ProgressStats>("progress_stats"),
@@ -70,6 +77,7 @@ export const ipc = {
     invoke<DrillItem | null>("drill_next", { includeFuture, excludeId }),
   drillReview: (id: number, correct: boolean) =>
     invoke<DrillItem | null>("drill_review", { id, correct }),
+  drillOverride: (id: number) => invoke<DrillItem | null>("drill_override", { id }),
   drillFocus: (wrong: string, right: string) =>
     invoke<DrillItem | null>("drill_focus", { wrong, right }),
   deleteFix: (messageId: number, wrong: string, right: string) =>

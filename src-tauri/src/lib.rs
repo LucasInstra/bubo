@@ -18,7 +18,6 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 struct AppState {
     db: Mutex<rusqlite::Connection>,
-    http: reqwest::Client,
     shortcut: Mutex<Option<Shortcut>>,
     cancels: Mutex<HashMap<String, Arc<AtomicBool>>>,
     compact_origin: Mutex<Option<(i32, i32)>>,
@@ -27,6 +26,28 @@ struct AppState {
     popup_origin: Mutex<Option<(i32, i32)>>,
     popup_stage: Mutex<PopupStage>,
     last_window_save: Mutex<Option<Instant>>,
+}
+
+fn http_client(settings: &config::Settings) -> Result<reqwest::Client, String> {
+    let mut builder = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(10))
+        .read_timeout(Duration::from_secs(60));
+
+    if !settings.proxy_url.trim().is_empty() {
+        let proxy = reqwest::Proxy::all(settings.proxy_url.trim())
+            .map_err(|error| format!("Invalid proxy URL: {error}"))?;
+        builder = builder.proxy(proxy);
+    }
+
+    if !settings.ca_cert_path.trim().is_empty() {
+        let pem = std::fs::read(settings.ca_cert_path.trim())
+            .map_err(|error| format!("Could not read the CA certificate: {error}"))?;
+        let certificate = reqwest::Certificate::from_pem(&pem)
+            .map_err(|error| format!("Invalid CA certificate: {error}"))?;
+        builder = builder.add_root_certificate(certificate);
+    }
+
+    builder.build().map_err(|error| error.to_string())
 }
 
 fn install_hotkey(
@@ -290,12 +311,16 @@ fn set_popup(
             .map_err(|error| error.to_string())?;
         let physical_width = (POPUP_WIDTH * scale).round() as i32;
         let physical_height = (POPUP_HEIGHT * scale).round() as i32;
-        let (origin_x, origin_y) = origin.unwrap_or((0, 0));
-        let margin = (24.0 * scale).round() as i32;
-        let outer = window.outer_size().map_err(|error| error.to_string())?;
-        let x = origin_x + outer.width as i32 - physical_width - margin;
-        let y = origin_y + outer.height as i32 - physical_height - margin;
-        let (x, y) = clamp_to_monitor(&window, x, y, physical_width, physical_height);
+        let (x, y) = if let Some(saved) = window_state::load_popup(window.app_handle()) {
+            clamp_to_monitor(&window, saved.x, saved.y, physical_width, physical_height)
+        } else {
+            let (origin_x, origin_y) = origin.unwrap_or((0, 0));
+            let margin = (24.0 * scale).round() as i32;
+            let outer = window.outer_size().map_err(|error| error.to_string())?;
+            let x = origin_x + outer.width as i32 - physical_width - margin;
+            let y = origin_y + outer.height as i32 - physical_height - margin;
+            clamp_to_monitor(&window, x, y, physical_width, physical_height)
+        };
         window
             .set_size(tauri::Size::Logical(tauri::LogicalSize::new(
                 POPUP_WIDTH,
@@ -451,12 +476,11 @@ async fn test_connection(
         .filter(|key| !key.is_empty())
         .or_else(|| config::load_api_key().ok().flatten());
 
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(12))
-        .build()
-        .map_err(|error| error.to_string())?;
+    let client = http_client(&settings)?;
 
-    let mut request = client.get(format!("{base}/models"));
+    let mut request = client
+        .get(format!("{base}/models"))
+        .timeout(Duration::from_secs(12));
     if let Some(key) = key {
         request = request.bearer_auth(key);
     }
@@ -517,8 +541,8 @@ async fn chat(
     request_id: String,
     messages: Vec<prompt::ChatMsg>,
 ) -> Result<String, String> {
-    let client = state.http.clone();
     let settings = config::load_settings(&app)?;
+    let client = http_client(&settings)?;
     let api_key =
         config::load_api_key()?.ok_or("No API key yet. Open settings and paste your Groq key.")?;
 
@@ -651,13 +675,12 @@ async fn chat(
 #[tauri::command]
 async fn explain_fix(
     app: AppHandle,
-    state: State<'_, AppState>,
     wrong: String,
     right: String,
     note: String,
 ) -> Result<String, String> {
-    let client = state.http.clone();
     let settings = config::load_settings(&app)?;
+    let client = http_client(&settings)?;
     let api_key =
         config::load_api_key()?.ok_or("No API key yet. Open settings and paste your Groq key.")?;
 
@@ -716,9 +739,95 @@ fn delete_session(state: State<'_, AppState>, id: i64) -> Result<i64, String> {
 }
 
 #[tauri::command]
+fn rename_session(state: State<'_, AppState>, id: i64, title: String) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::rename_session(&db, id, &title).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn archive_session(state: State<'_, AppState>, id: i64, archived: bool) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::archive_session(&db, id, archived).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn clear_history(state: State<'_, AppState>) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     store::clear(&db).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn backup_data(state: State<'_, AppState>, path: String) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::backup_to(&db, std::path::Path::new(&path)).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn restore_data(state: State<'_, AppState>, path: String) -> Result<(), String> {
+    let source = std::path::Path::new(&path);
+    if !store::is_backup(source).map_err(|e| e.to_string())? {
+        return Err("That file is not a bubo backup.".to_string());
+    }
+    let mut db = state.db.lock().map_err(|e| e.to_string())?;
+    store::restore_from(&mut db, source).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn open_data_folder(app: AppHandle) -> Result<(), String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?;
+    std::fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
+    open_folder(&dir).map_err(|error| error.to_string())
+}
+
+fn open_folder(path: &std::path::Path) -> std::io::Result<()> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer").arg(path).spawn()?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open").arg(path).spawn()?;
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        std::process::Command::new("xdg-open").arg(path).spawn()?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn diagnostics(app: AppHandle) -> Result<String, String> {
+    let data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?;
+    let settings = config::load_settings(&app).unwrap_or_default();
+    let log_path = data_dir.join("bubo.log");
+    let log = std::fs::read_to_string(&log_path).unwrap_or_default();
+    let tail = log
+        .lines()
+        .rev()
+        .take(80)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    Ok(format!(
+        "bubo {version}\nOS: {os} {arch}\ndata: {data}\nbaseUrl: {base}\nmodel: {model}\nlevel: {level}\n\nlog tail:\n{tail}",
+        version = app.package_info().version,
+        os = std::env::consts::OS,
+        arch = std::env::consts::ARCH,
+        data = data_dir.display(),
+        base = settings.base_url,
+        model = settings.model,
+        level = settings.level,
+        tail = tail,
+    ))
 }
 
 #[tauri::command]
@@ -763,6 +872,12 @@ fn drill_review(
 ) -> Result<Option<store::DrillItem>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     store::review_drill(&db, id, correct).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn drill_override(state: State<'_, AppState>, id: i64) -> Result<Option<store::DrillItem>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::override_review(&db, id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -836,7 +951,7 @@ fn place_bottom_right(window: &tauri::WebviewWindow) {
 /// resize events are throttled to avoid a write per pixel while dragging.
 fn save_window_state(app: &AppHandle, force: bool) {
     let state = app.state::<AppState>();
-    if state.compact.load(Ordering::Relaxed) || state.popup.load(Ordering::Relaxed) {
+    if state.compact.load(Ordering::Relaxed) {
         return;
     }
 
@@ -855,6 +970,14 @@ fn save_window_state(app: &AppHandle, force: bool) {
     let Some(window) = app.get_webview_window("main") else {
         return;
     };
+
+    if state.popup.load(Ordering::Relaxed) {
+        if let Ok(position) = window.outer_position() {
+            window_state::save_popup(app, position);
+        }
+        return;
+    }
+
     if let Some(captured) = window_state::capture(&window) {
         window_state::save(app, captured);
     }
@@ -870,9 +993,10 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            None,
+            Some(vec!["--hidden"]),
         ))
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
@@ -891,11 +1015,6 @@ pub fn run() {
 
             app.manage(AppState {
                 db: Mutex::new(connection),
-                http: reqwest::Client::builder()
-                    .connect_timeout(Duration::from_secs(10))
-                    .read_timeout(Duration::from_secs(60))
-                    .build()
-                    .map_err(|error| std::io::Error::other(error.to_string()))?,
                 shortcut: Mutex::new(None),
                 cancels: Mutex::new(HashMap::new()),
                 compact_origin: Mutex::new(None),
@@ -925,13 +1044,31 @@ pub fn run() {
                         POPUP_WIDTH,
                         POPUP_HEIGHT,
                     )));
-                    place_bottom_right(&window);
+                    let scale = window.scale_factor().unwrap_or(1.0);
+                    let physical_width = (POPUP_WIDTH * scale).round() as i32;
+                    let physical_height = (POPUP_HEIGHT * scale).round() as i32;
+                    if let Some(saved) = window_state::load_popup(app.handle()) {
+                        let (x, y) = clamp_to_monitor(
+                            &window,
+                            saved.x,
+                            saved.y,
+                            physical_width,
+                            physical_height,
+                        );
+                        let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
+                    } else {
+                        place_bottom_right(&window);
+                    }
                     let _ = set_popup_region(&window, false);
                 } else if !settings.compact {
                     let _ = window.set_resizable(true);
                     window_state::restore(&window);
                 }
                 let _ = window.set_always_on_top(settings.pinned);
+
+                if settings.start_hidden && std::env::args().any(|arg| arg == "--hidden") {
+                    let _ = window.hide();
+                }
 
                 let handle = app.handle().clone();
                 window.on_window_event(move |event| match event {
@@ -1043,11 +1180,18 @@ pub fn run() {
             new_session,
             open_session,
             delete_session,
+            rename_session,
+            archive_session,
             clear_history,
+            backup_data,
+            restore_data,
+            open_data_folder,
+            diagnostics,
             drill_stats,
             progress_stats,
             drill_next,
             drill_review,
+            drill_override,
             drill_focus,
             delete_fix,
             drill_skip_due,

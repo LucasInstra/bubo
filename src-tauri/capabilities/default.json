@@ -18,6 +18,7 @@
     "autostart:allow-disable",
     "autostart:allow-is-enabled",
     "updater:default",
+    "dialog:default",
     "process:allow-restart",
     "process:allow-exit"
   ]

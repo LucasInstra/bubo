@@ -31,6 +31,10 @@ export function HistoryPanel({
   const [error, setError] = useState("");
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useModalFocus(dialogRef);
@@ -86,6 +90,45 @@ export function HistoryPanel({
     }
   };
 
+  const startRename = (session: SessionSummary) => {
+    setEditingId(session.id);
+    setEditingTitle(session.title);
+  };
+
+  const saveRename = async (id: number) => {
+    if (editingId !== id) return;
+    const title = editingTitle;
+    setEditingId(null);
+    try {
+      await ipc.renameSession(id, title);
+      await load();
+    } catch (problem) {
+      setError(String(problem));
+    }
+  };
+
+  const toggleArchive = async (session: SessionSummary) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await ipc.archiveSession(session.id, !session.archived);
+      await load();
+    } catch (problem) {
+      setError(String(problem));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const needle = query.trim().toLowerCase();
+  const visible = (sessions ?? []).filter(
+    (session) =>
+      Boolean(session.archived) === showArchived &&
+      (!needle ||
+        session.title.toLowerCase().includes(needle) ||
+        (session.preview ?? "").toLowerCase().includes(needle)),
+  );
+
   return (
     <div
       className="settings history"
@@ -105,29 +148,92 @@ export function HistoryPanel({
         </button>
       </div>
 
+      <div className="history-tools">
+        <input
+          className="history-search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="search conversations"
+          aria-label="Search conversations"
+          spellCheck={false}
+        />
+        <button
+          type="button"
+          className={`ghost history-filter ${showArchived ? "on" : ""}`}
+          aria-pressed={showArchived}
+          onClick={() => setShowArchived((value) => !value)}
+        >
+          {showArchived ? "archived" : "active"}
+        </button>
+      </div>
+
       <div className="settings-body history-body">
         {error ? (
           <p className="history-error">{error}</p>
         ) : sessions === null ? (
           <p className="hint">reading your conversations…</p>
-        ) : sessions.length === 0 ? (
-          <p className="hint">No conversations yet. Start one and it will show up here.</p>
+        ) : visible.length === 0 ? (
+          <p className="hint">
+            {query.trim()
+              ? "No conversations match that search."
+              : showArchived
+                ? "No archived conversations."
+                : "No conversations yet. Start one and it will show up here."}
+          </p>
         ) : (
-          sessions.map((session) => (
+          visible.map((session) => (
             <div className="session-row" key={session.id}>
+              {editingId === session.id ? (
+                <input
+                  className="session-rename-input"
+                  value={editingTitle}
+                  autoFocus
+                  aria-label="Conversation name"
+                  onChange={(event) => setEditingTitle(event.target.value)}
+                  onBlur={() => void saveRename(session.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void saveRename(session.id);
+                    } else if (event.key === "Escape") {
+                      event.preventDefault();
+                      setEditingId(null);
+                    }
+                  }}
+                />
+              ) : (
+                <button
+                  className={`session-main ${session.id === currentSession ? "on" : ""}`}
+                  onClick={() => void onOpen(session.id)}
+                  onDoubleClick={() => startRename(session)}
+                >
+                  <span className="session-title">
+                    {session.id === currentSession && <span className="session-dot" />}
+                    {session.title || "New chat"}
+                  </span>
+                  <span className="session-meta">
+                    {formatDate(session.updatedAt)} · {session.messages}{" "}
+                    {session.messages === 1 ? "message" : "messages"}
+                  </span>
+                  {session.preview && <span className="session-preview">{session.preview}</span>}
+                </button>
+              )}
               <button
-                className={`session-main ${session.id === currentSession ? "on" : ""}`}
-                onClick={() => void onOpen(session.id)}
+                className="ghost session-icon"
+                title="Rename conversation"
+                aria-label="Rename conversation"
+                onClick={() => startRename(session)}
               >
-                <span className="session-title">
-                  {session.id === currentSession && <span className="session-dot" />}
-                  {session.title || "New chat"}
-                </span>
-                <span className="session-meta">
-                  {formatDate(session.updatedAt)} · {session.messages}{" "}
-                  {session.messages === 1 ? "message" : "messages"}
-                </span>
-                {session.preview && <span className="session-preview">{session.preview}</span>}
+                <span aria-hidden="true">✎</span>
+              </button>
+              <button
+                className="ghost session-icon"
+                title={session.archived ? "Unarchive conversation" : "Archive conversation"}
+                aria-label={session.archived ? "Unarchive conversation" : "Archive conversation"}
+                onClick={() => void toggleArchive(session)}
+                disabled={busy}
+              >
+                <span aria-hidden="true">{session.archived ? "↩" : "⌄"}</span>
               </button>
               <button
                 className={`ghost session-delete ${confirmId === session.id ? "confirm" : ""}`}

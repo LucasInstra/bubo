@@ -1,8 +1,9 @@
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::backup::Backup;
+use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
 use serde::Serialize;
 use std::collections::HashSet;
-use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::llm::Fix;
 
@@ -23,6 +24,7 @@ pub struct SessionSummary {
     pub title: String,
     pub created_at: i64,
     pub updated_at: i64,
+    pub archived: bool,
     pub messages: i64,
     pub preview: Option<String>,
 }
@@ -87,6 +89,42 @@ pub fn open(path: PathBuf) -> rusqlite::Result<Connection> {
     backfill_fixes(&conn)?;
     Ok(conn)
 }
+
+/// Writes a consistent copy of the live database to a user-chosen file.
+pub fn backup_to(conn: &Connection, path: &Path) -> rusqlite::Result<()> {
+    let mut destination = Connection::open(path)?;
+    let backup = Backup::new(conn, &mut destination)?;
+    backup.run_to_completion(5, Duration::from_millis(50), None)?;
+    Ok(())
+}
+
+/// True when the file looks like a bubo database with all the tables we need.
+pub fn is_backup(path: &Path) -> rusqlite::Result<bool> {
+    let source = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let tables: i64 = source.query_row(
+        "SELECT COUNT(*) FROM sqlite_master
+         WHERE type = 'table' AND name IN ('sessions', 'messages', 'fixes', 'reviews')",
+        [],
+        |row| row.get(0),
+    )?;
+    if tables != 4 {
+        return Ok(false);
+    }
+    let integrity: String = source.query_row("PRAGMA integrity_check", [], |row| row.get(0))?;
+    Ok(integrity == "ok")
+}
+
+/// Replaces the live database with a backup, keeping the same connection.
+pub fn restore_from(conn: &mut Connection, path: &Path) -> rusqlite::Result<()> {
+    let source = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    {
+        let backup = Backup::new(&source, conn)?;
+        backup.run_to_completion(5, Duration::from_millis(50), None)?;
+    }
+    init(conn)?;
+    backfill_fixes(conn)?;
+    Ok(())
+}
 /// Older databases stored corrections only inside messages; seed the drill
 /// table from them so history is practiceable right away. Idempotent.
 fn backfill_fixes(conn: &Connection) -> rusqlite::Result<()> {
@@ -104,7 +142,7 @@ fn backfill_fixes(conn: &Connection) -> rusqlite::Result<()> {
     Ok(())
 }
 
-fn init(conn: &Connection) -> rusqlite::Result<()> {
+pub(crate) fn init(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -134,7 +172,8 @@ fn init(conn: &Connection) -> rusqlite::Result<()> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL
+            updated_at INTEGER NOT NULL,
+            archived INTEGER NOT NULL DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS meta (
             key TEXT PRIMARY KEY,
@@ -153,6 +192,11 @@ fn init(conn: &Connection) -> rusqlite::Result<()> {
     );
     // ... and the link between a message and a session.
     let _ = conn.execute("ALTER TABLE messages ADD COLUMN session_id INTEGER", []);
+    // ... and whether an old conversation was put away.
+    let _ = conn.execute(
+        "ALTER TABLE sessions ADD COLUMN archived INTEGER NOT NULL DEFAULT 0",
+        [],
+    );
     migrate_sessions(conn)
 }
 
@@ -245,7 +289,7 @@ pub fn create_session(conn: &Connection) -> rusqlite::Result<i64> {
 
 pub fn list_sessions(conn: &Connection) -> rusqlite::Result<Vec<SessionSummary>> {
     let mut statement = conn.prepare(
-        "SELECT s.id, s.title, s.created_at, s.updated_at,
+        "SELECT s.id, s.title, s.created_at, s.updated_at, s.archived,
                 (SELECT COUNT(*) FROM messages m WHERE m.session_id = s.id),
                 (SELECT content FROM messages m
                   WHERE m.session_id = s.id AND m.role = 'user'
@@ -254,17 +298,36 @@ pub fn list_sessions(conn: &Connection) -> rusqlite::Result<Vec<SessionSummary>>
          ORDER BY s.updated_at DESC, s.id DESC",
     )?;
     let rows = statement.query_map([], |row| {
-        let preview: Option<String> = row.get(5)?;
+        let preview: Option<String> = row.get(6)?;
         Ok(SessionSummary {
             id: row.get(0)?,
             title: row.get(1)?,
             created_at: row.get(2)?,
             updated_at: row.get(3)?,
-            messages: row.get(4)?,
+            archived: row.get::<_, i64>(4)? != 0,
+            messages: row.get(5)?,
             preview: preview.map(|text| text.chars().take(90).collect()),
         })
     })?;
     rows.collect()
+}
+
+pub fn rename_session(conn: &Connection, id: i64, title: &str) -> rusqlite::Result<()> {
+    let title = title.trim();
+    let title = if title.is_empty() { "New chat" } else { title };
+    conn.execute(
+        "UPDATE sessions SET title = ?1 WHERE id = ?2",
+        params![title, id],
+    )?;
+    Ok(())
+}
+
+pub fn archive_session(conn: &Connection, id: i64, archived: bool) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE sessions SET archived = ?1 WHERE id = ?2",
+        params![if archived { 1 } else { 0 }, id],
+    )?;
+    Ok(())
 }
 
 pub fn messages_for_session(
@@ -815,9 +878,125 @@ pub fn review_drill(
     Ok(Some(DrillItem { streak, ..item }))
 }
 
+/// Marks the most recent review of a card as correct. This is the escape
+/// hatch for a valid alternative that the exact-match checker rejected.
+pub fn override_review(conn: &Connection, id: i64) -> rusqlite::Result<Option<DrillItem>> {
+    let item = conn
+        .query_row(
+            "SELECT f.id, f.wrong, f.right, f.note, f.streak, f.seen, m.content
+             FROM fixes f LEFT JOIN messages m ON m.id = f.message_id
+             WHERE f.id = ?1",
+            [id],
+            row_to_item,
+        )
+        .optional()?;
+
+    let Some(item) = item else {
+        return Ok(None);
+    };
+
+    let reviewed = now();
+    let streak = 1;
+    let delay = INTERVALS_MS[0];
+
+    conn.execute(
+        "UPDATE fixes SET streak = ?1, due_at = ?2 WHERE id = ?3",
+        params![streak, reviewed + delay, id],
+    )?;
+    conn.execute(
+        "UPDATE reviews SET correct = 1
+         WHERE id = (SELECT id FROM reviews WHERE fix_id = ?1 ORDER BY id DESC LIMIT 1)",
+        [id],
+    )?;
+
+    Ok(Some(DrillItem { streak, ..item }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::{delete, insert, list, StoredMessage};
+
+    #[test]
+    fn renames_and_archives_sessions() {
+        let conn = memory_db();
+        let id = super::create_session(&conn).unwrap();
+
+        super::rename_session(&conn, id, "Travel English").unwrap();
+        let session = super::list_sessions(&conn)
+            .unwrap()
+            .into_iter()
+            .find(|session| session.id == id)
+            .unwrap();
+        assert_eq!(session.title, "Travel English");
+        assert!(!session.archived);
+
+        super::archive_session(&conn, id, true).unwrap();
+        let session = super::list_sessions(&conn)
+            .unwrap()
+            .into_iter()
+            .find(|session| session.id == id)
+            .unwrap();
+        assert!(session.archived);
+
+        super::archive_session(&conn, id, false).unwrap();
+        let session = super::list_sessions(&conn)
+            .unwrap()
+            .into_iter()
+            .find(|session| session.id == id)
+            .unwrap();
+        assert!(!session.archived);
+    }
+
+    #[test]
+    fn overrides_an_incorrect_review() {
+        let conn = memory_db();
+        insert(&conn, "user", "i go yesterday", None).unwrap();
+        super::save_fixes(
+            &conn,
+            &[super::Fix {
+                wrong: "i go".to_string(),
+                right: "I went".to_string(),
+                note: String::new(),
+            }],
+        )
+        .unwrap();
+
+        let item = super::next_drill(&conn, true, None).unwrap().unwrap();
+        super::review_drill(&conn, item.id, false).unwrap();
+        let updated = super::override_review(&conn, item.id).unwrap().unwrap();
+        assert_eq!(updated.streak, 1);
+
+        let correct: i64 = conn
+            .query_row(
+                "SELECT correct FROM reviews WHERE fix_id = ?1 ORDER BY id DESC LIMIT 1",
+                [item.id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(correct, 1);
+    }
+
+    #[test]
+    fn backs_up_and_restores_a_database() {
+        let conn = memory_db();
+        insert(&conn, "user", "i go yesterday", None).unwrap();
+        let path = std::env::temp_dir().join(format!(
+            "bubo-backup-test-{}-{}.db",
+            std::process::id(),
+            super::now()
+        ));
+
+        super::backup_to(&conn, &path).unwrap();
+        assert!(super::is_backup(&path).unwrap());
+
+        let mut restored = memory_db();
+        super::restore_from(&mut restored, &path).unwrap();
+        let messages = list(&restored, 10).unwrap();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].content, "i go yesterday");
+
+        let _ = std::fs::remove_file(path);
+    }
 
     fn memory_db() -> rusqlite::Connection {
         let conn = rusqlite::Connection::open_in_memory().expect("memory db");
