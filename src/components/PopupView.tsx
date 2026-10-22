@@ -205,6 +205,17 @@ export function PopupView({
   };
 
   const reply = lastAssistant ? stripLegacyFixes(lastAssistant.content) : "";
+  const tail = (
+    <svg className="popup-tail" viewBox="0 0 18 10" aria-hidden="true">
+      <path
+        d="M1 0 L9 9 L17 0"
+        fill="rgba(23, 19, 34, 0.97)"
+        stroke="rgba(255, 255, 255, 0.18)"
+        strokeWidth="1"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 
   return (
     <div className={`popup-stage stage-${stage}`}>
@@ -214,9 +225,13 @@ export function PopupView({
             <div className={`popup-bubble assistant ${lastAssistant.error ? "error" : ""}`}>
               {reply}
               {lastAssistant.streaming && <span className="caret" />}
+              {tail}
             </div>
           ) : (
-            <div className="popup-bubble assistant popup-typing">thinking...</div>
+            <div className="popup-bubble assistant popup-typing">
+              thinking...
+              {tail}
+            </div>
           )}
         </div>
       )}

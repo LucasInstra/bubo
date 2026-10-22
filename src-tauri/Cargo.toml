@@ -1,6 +1,6 @@
 [package]
 name = "bubo"
-version = "0.6.3"
+version = "0.6.4"
 description = "bubo - a small floating English tutor"
 authors = ["Lucas"]
 edition = "2021"
