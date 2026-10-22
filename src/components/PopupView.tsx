@@ -15,6 +15,7 @@ interface PopupViewProps {
   status: OrbState;
   mood: Mood;
   stage: PopupStage;
+  busy: boolean;
   onShowInput: () => void;
   onSend: (text: string) => boolean;
   onStop: () => void;
@@ -32,6 +33,7 @@ export function PopupView({
   status,
   mood,
   stage,
+  busy,
   onShowInput,
   onSend,
   onStop,
@@ -206,10 +208,11 @@ export function PopupView({
 
   const reply = lastAssistant ? stripLegacyFixes(lastAssistant.content) : "";
   const tail = (
-    <svg className="popup-tail" viewBox="0 0 18 10" aria-hidden="true">
+    <svg className="popup-tail" viewBox="0 0 20 14" aria-hidden="true">
+      <path d="M2 0 H18 V4 L10 14 L2 4 Z" fill="rgba(23, 19, 34, 0.97)" />
       <path
-        d="M1 0 L9 9 L17 0"
-        fill="rgba(23, 19, 34, 0.97)"
+        d="M2 4 L10 14 L18 4"
+        fill="none"
         stroke="rgba(255, 255, 255, 0.18)"
         strokeWidth="1"
         strokeLinejoin="round"
@@ -218,7 +221,7 @@ export function PopupView({
   );
 
   return (
-    <div className={`popup-stage stage-${stage}`}>
+    <div className={`popup-stage stage-${stage} ${busy ? "busy" : ""}`}>
       {stage === "reply" && (
         <div className="popup-reply">
           {lastAssistant && !pending ? (

@@ -66,6 +66,7 @@ export default function App() {
   const [showDrill, setShowDrill] = useState(false);
   const [drillFocus, setDrillFocus] = useState<Fix | null>(null);
   const [popupStage, setPopupStage] = useState<PopupStage>("face");
+  const [popupBusy, setPopupBusy] = useState(false);
   const [stageSize, setStageSize] = useState(76);
   const [updateDismissed, setUpdateDismissed] = useState(false);
 
@@ -81,11 +82,32 @@ export default function App() {
   statusRef.current = status;
   const popupStageRef = useRef(popupStage);
   popupStageRef.current = popupStage;
+  const popupStageRequest = useRef(0);
 
-  const changePopupStage = useCallback((next: PopupStage) => {
-    setPopupStage(next);
-    void ipc.setPopupStage(next);
-  }, []);
+  const changePopupStage = useCallback(
+    async (next: PopupStage) => {
+      const request = popupStageRequest.current + 1;
+      popupStageRequest.current = request;
+      const needsResize = popupStage === "face" || next === "face";
+      if (!needsResize) {
+        setPopupStage(next);
+        void ipc.setPopupStage(next);
+        return;
+      }
+      setPopupBusy(true);
+      await new Promise((resolve) => window.setTimeout(resolve, 90));
+      try {
+        await ipc.setPopupStage(next);
+      } catch {
+        // keep the UI responsive if the window went away
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 60));
+      if (popupStageRequest.current !== request) return;
+      setPopupStage(next);
+      setPopupBusy(false);
+    },
+    [popupStage],
+  );
 
   const react = useCallback((next: Mood, ms = 1500) => {
     setMood(next);
@@ -564,6 +586,7 @@ export default function App() {
           status={status}
           mood={mood}
           stage={popupStage}
+          busy={popupBusy}
           onShowInput={() => changePopupStage("input")}
           onOpenChat={exitPopup}
           onSend={sendFromPopup}

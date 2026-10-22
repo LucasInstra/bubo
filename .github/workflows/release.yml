@@ -50,3 +50,12 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           updaterJsonPreferNsis: true
+
+      - name: Add a stable direct-download asset
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          cp "src-tauri/target/release/bundle/nsis/bubo_${version}_x64-setup.exe" bubo-setup.exe
+          gh release upload "${GITHUB_REF_NAME}" bubo-setup.exe --clobber
