@@ -166,7 +166,67 @@ fn set_compact(
     Ok(())
 }
 
-const POPUP_SIZE: f64 = 132.0;
+const POPUP_WIDTH: f64 = 320.0;
+const POPUP_HEIGHT: f64 = 360.0;
+const FACE_DIAMETER: f64 = 132.0;
+
+/// Shape the popup window natively so the collapsed state only exposes the
+/// face. The window stays 320x360 the whole time; resizing it while the
+/// webview catches up is what made the face appear to jump.
+#[cfg(windows)]
+fn set_popup_region(window: &tauri::WebviewWindow, full: bool) -> Result<(), String> {
+    use windows::Win32::Graphics::Gdi::{
+        CreateEllipticRgn, CreateRectRgn, DeleteObject, SetWindowRgn,
+    };
+
+    let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let width = (POPUP_WIDTH * scale).round() as i32;
+    let height = (POPUP_HEIGHT * scale).round() as i32;
+    let region = unsafe {
+        if full {
+            CreateRectRgn(0, 0, width, height)
+        } else {
+            let radius = (FACE_DIAMETER * scale / 2.0).round() as i32;
+            let cx = (POPUP_WIDTH * scale / 2.0).round() as i32;
+            let cy = (POPUP_HEIGHT * scale / 2.0).round() as i32;
+            CreateEllipticRgn(cx - radius, cy - radius, cx + radius + 1, cy + radius + 1)
+        }
+    };
+    if region.is_invalid() {
+        return Err("popup region creation failed".to_string());
+    }
+
+    let applied = unsafe { SetWindowRgn(hwnd, Some(region), true) };
+    if applied == 0 {
+        unsafe {
+            let _ = DeleteObject(region.into());
+        }
+        return Err("popup region apply failed".to_string());
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn set_popup_region(_window: &tauri::WebviewWindow, _full: bool) -> Result<(), String> {
+    Ok(())
+}
+
+#[cfg(windows)]
+fn clear_popup_region(window: &tauri::WebviewWindow) -> Result<(), String> {
+    use windows::Win32::Graphics::Gdi::SetWindowRgn;
+
+    let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+    unsafe {
+        SetWindowRgn(hwnd, None, true);
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn clear_popup_region(_window: &tauri::WebviewWindow) -> Result<(), String> {
+    Ok(())
+}
 
 fn clamp_to_monitor(
     window: &tauri::WebviewWindow,
@@ -220,30 +280,41 @@ fn set_popup(
         }
 
         window
+            .set_resizable(false)
+            .map_err(|error| error.to_string())?;
+        window
             .set_min_size(Some(tauri::Size::Logical(tauri::LogicalSize::new(
-                96.0, 96.0,
+                POPUP_WIDTH,
+                POPUP_HEIGHT,
             ))))
             .map_err(|error| error.to_string())?;
-        let size = (POPUP_SIZE * scale).round() as i32;
+        let physical_width = (POPUP_WIDTH * scale).round() as i32;
+        let physical_height = (POPUP_HEIGHT * scale).round() as i32;
         let (origin_x, origin_y) = origin.unwrap_or((0, 0));
         let margin = (24.0 * scale).round() as i32;
         let outer = window.outer_size().map_err(|error| error.to_string())?;
-        let x = origin_x + outer.width as i32 - size - margin;
-        let y = origin_y + outer.height as i32 - size - margin;
-        let (x, y) = clamp_to_monitor(&window, x, y, size, size);
+        let x = origin_x + outer.width as i32 - physical_width - margin;
+        let y = origin_y + outer.height as i32 - physical_height - margin;
+        let (x, y) = clamp_to_monitor(&window, x, y, physical_width, physical_height);
         window
             .set_size(tauri::Size::Logical(tauri::LogicalSize::new(
-                POPUP_SIZE, POPUP_SIZE,
+                POPUP_WIDTH,
+                POPUP_HEIGHT,
             )))
             .map_err(|error| error.to_string())?;
         window
             .set_position(tauri::PhysicalPosition::new(x, y))
             .map_err(|error| error.to_string())?;
+        set_popup_region(&window, false)?;
     } else {
         state.popup.store(false, Ordering::Relaxed);
         if let Ok(mut slot) = state.popup_stage.lock() {
             *slot = PopupStage::Face;
         }
+        clear_popup_region(&window)?;
+        window
+            .set_resizable(true)
+            .map_err(|error| error.to_string())?;
         window
             .set_min_size(Some(tauri::Size::Logical(tauri::LogicalSize::new(
                 360.0, 260.0,
@@ -275,29 +346,11 @@ enum PopupStage {
     Reply,
 }
 
-fn popup_size(stage: PopupStage) -> (f64, f64) {
-    match stage {
-        PopupStage::Face => (132.0, 132.0),
-        PopupStage::Input => (320.0, 360.0),
-        PopupStage::Reply => (320.0, 360.0),
-    }
-}
-
-/// Where the face's center sits inside each popup layout, in logical pixels.
-fn popup_face_offset(stage: PopupStage) -> (f64, f64) {
-    match stage {
-        PopupStage::Face => (66.0, 66.0),
-        PopupStage::Input => (160.0, 180.0),
-        PopupStage::Reply => (160.0, 180.0),
-    }
-}
-
 #[tauri::command]
 fn set_popup_stage(
     window: tauri::WebviewWindow,
     state: State<'_, AppState>,
     stage: String,
-    resize: bool,
 ) -> Result<(), String> {
     if !state.popup.load(Ordering::Relaxed) {
         return Ok(());
@@ -316,51 +369,10 @@ fn set_popup_stage(
         return Ok(());
     }
 
-    if !resize {
-        if let Ok(mut slot) = state.popup_stage.lock() {
-            *slot = next;
-        }
-        return Ok(());
-    }
-
-    if popup_size(previous) == popup_size(next)
-        && popup_face_offset(previous) == popup_face_offset(next)
-    {
-        if let Ok(mut slot) = state.popup_stage.lock() {
-            *slot = next;
-        }
-        return Ok(());
-    }
-
-    let scale = window.scale_factor().unwrap_or(1.0);
-    let position = window.outer_position().map_err(|error| error.to_string())?;
-    let (old_x, old_y) = popup_face_offset(previous);
-    let face_x = position.x + (old_x * scale).round() as i32;
-    let face_y = position.y + (old_y * scale).round() as i32;
-
-    let (width, height) = popup_size(next);
-    let (face_offset_x, face_offset_y) = popup_face_offset(next);
-    let physical_width = (width * scale).round() as i32;
-    let physical_height = (height * scale).round() as i32;
-    let (x, y) = clamp_to_monitor(
-        &window,
-        face_x - (face_offset_x * scale).round() as i32,
-        face_y - (face_offset_y * scale).round() as i32,
-        physical_width,
-        physical_height,
-    );
-
-    window
-        .set_size(tauri::Size::Logical(tauri::LogicalSize::new(width, height)))
-        .map_err(|error| error.to_string())?;
-    window
-        .set_position(tauri::PhysicalPosition::new(x, y))
-        .map_err(|error| error.to_string())?;
-
     if let Ok(mut slot) = state.popup_stage.lock() {
         *slot = next;
     }
-    Ok(())
+    set_popup_region(&window, next != PopupStage::Face)
 }
 
 #[tauri::command]
@@ -905,21 +917,53 @@ pub fn run() {
                 // Compact mode owns its own size and origin, so only replay the
                 // saved geometry when the app starts in full mode.
                 if settings.popup {
+                    let _ = window.set_resizable(false);
                     let _ = window.set_min_size(Some(tauri::Size::Logical(
-                        tauri::LogicalSize::new(96.0, 96.0),
+                        tauri::LogicalSize::new(POPUP_WIDTH, POPUP_HEIGHT),
                     )));
                     let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize::new(
-                        POPUP_SIZE, POPUP_SIZE,
+                        POPUP_WIDTH,
+                        POPUP_HEIGHT,
                     )));
                     place_bottom_right(&window);
+                    let _ = set_popup_region(&window, false);
                 } else if !settings.compact {
+                    let _ = window.set_resizable(true);
                     window_state::restore(&window);
                 }
                 let _ = window.set_always_on_top(settings.pinned);
 
                 let handle = app.handle().clone();
                 window.on_window_event(move |event| match event {
-                    tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_) => {
+                    tauri::WindowEvent::Resized(_) => {
+                        save_window_state(&handle, false);
+                        let state = handle.state::<AppState>();
+                        if state.popup.load(Ordering::Relaxed) {
+                            let stage = state
+                                .popup_stage
+                                .lock()
+                                .map(|slot| *slot)
+                                .unwrap_or(PopupStage::Face);
+                            if let Some(window) = handle.get_webview_window("main") {
+                                let _ = set_popup_region(&window, stage != PopupStage::Face);
+                            }
+                        }
+                    }
+                    tauri::WindowEvent::ScaleFactorChanged { .. } => {
+                        save_window_state(&handle, false);
+                        let state = handle.state::<AppState>();
+                        if state.popup.load(Ordering::Relaxed) {
+                            let stage = state
+                                .popup_stage
+                                .lock()
+                                .map(|slot| *slot)
+                                .unwrap_or(PopupStage::Face);
+                            if let Some(window) = handle.get_webview_window("main") {
+                                let _ = set_popup_region(&window, stage != PopupStage::Face);
+                            }
+                        }
+                    }
+                    tauri::WindowEvent::Moved(_) => {
                         save_window_state(&handle, false);
                     }
                     tauri::WindowEvent::Focused(false) => {

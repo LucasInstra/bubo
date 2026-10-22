@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { LogicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Composer } from "./components/Composer";
 import { BuddyPanel } from "./components/BuddyPanel";
 import { CompactView } from "./components/CompactView";
@@ -13,6 +11,7 @@ import { PopupView, type PopupStage } from "./components/PopupView";
 import { ProgressPanel } from "./components/ProgressPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { UpdateBanner } from "./components/UpdateBanner";
+import { BUILD_LABEL } from "./lib/build";
 import { parseStoredFixes } from "./lib/format";
 import { ipc } from "./lib/ipc";
 import { moodRequest } from "./lib/mood";
@@ -83,69 +82,12 @@ export default function App() {
   statusRef.current = status;
   const popupStageRef = useRef(popupStage);
   popupStageRef.current = popupStage;
-  const popupStageRequest = useRef(0);
-
-  const animatePopupWindow = useCallback(async (toFace: boolean, token: number) => {
-    const appWindow = getCurrentWindow();
-    const scale = window.devicePixelRatio || 1;
-    const [position, size] = await Promise.all([appWindow.outerPosition(), appWindow.outerSize()]);
-    const centerX = position.x + size.width / 2;
-    const centerY = position.y + size.height / 2;
-    const startWidth = size.width / scale;
-    const startHeight = size.height / scale;
-    const targetWidth = toFace ? 132 : 320;
-    const targetHeight = toFace ? 132 : 360;
-    const duration = 190;
-    const started = performance.now();
-
-    await new Promise<void>((resolve) => {
-      const step = (now: number) => {
-        if (popupStageRequest.current !== token) {
-          resolve();
-          return;
-        }
-        const progress = Math.min(1, (now - started) / duration);
-        const eased = 1 - (1 - progress) ** 3;
-        const width = startWidth + (targetWidth - startWidth) * eased;
-        const height = startHeight + (targetHeight - startHeight) * eased;
-        void appWindow.setSize(new LogicalSize(width, height)).catch(() => {});
-        void appWindow
-          .setPosition(
-            new PhysicalPosition(
-              Math.round(centerX - (width * scale) / 2),
-              Math.round(centerY - (height * scale) / 2),
-            ),
-          )
-          .catch(() => {});
-        if (progress < 1) requestAnimationFrame(step);
-        else resolve();
-      };
-      requestAnimationFrame(step);
+  const changePopupStage = useCallback((next: PopupStage) => {
+    setPopupStage(next);
+    void ipc.setPopupStage(next).catch(() => {
+      // the window may be gone; the stage state does not matter anymore
     });
   }, []);
-
-  const changePopupStage = useCallback(
-    async (next: PopupStage) => {
-      const request = popupStageRequest.current + 1;
-      popupStageRequest.current = request;
-      const needsResize = (popupStage === "face") !== (next === "face");
-      setPopupStage(next);
-      if (needsResize) {
-        try {
-          await animatePopupWindow(next === "face", request);
-        } catch {
-          // keep the UI responsive if the window went away
-        }
-      }
-      if (popupStageRequest.current !== request) return;
-      try {
-        await ipc.setPopupStage(next, false);
-      } catch {
-        // the window may be gone; the stage state does not matter anymore
-      }
-    },
-    [popupStage, animatePopupWindow],
-  );
 
   const react = useCallback((next: Mood, ms = 1500) => {
     setMood(next);
@@ -1082,7 +1024,11 @@ export default function App() {
                 ),
               )
             }
-            currentVersion={updater.currentVersion}
+            currentVersion={
+              updater.currentVersion
+                ? `${updater.currentVersion} · ${BUILD_LABEL}`
+                : updater.currentVersion
+            }
             updateStatus={updater.status}
             updateVersion={updater.version}
             updateProgress={updater.progress}
