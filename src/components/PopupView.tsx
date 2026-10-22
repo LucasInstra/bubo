@@ -192,7 +192,7 @@ export function PopupView({
             eyeSpacing={settings.eyeSpacing}
             eyeTilt={settings.eyeTilt}
             eyeColor={settings.eyeColor}
-            boopable={false}
+            boopable
           />
         </div>
       </div>
