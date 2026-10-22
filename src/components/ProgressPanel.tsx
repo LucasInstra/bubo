@@ -6,6 +6,7 @@ import type { ProgressStats, TopMistake } from "../lib/types";
 interface ProgressPanelProps {
   onClose: () => void;
   onPractice: () => void;
+  goal: number;
 }
 
 function attemptsLabel(mistake: TopMistake): string {
@@ -20,7 +21,7 @@ function attemptsLabel(mistake: TopMistake): string {
   return parts.join(" · ");
 }
 
-export function ProgressPanel({ onClose, onPractice }: ProgressPanelProps) {
+export function ProgressPanel({ onClose, onPractice, goal }: ProgressPanelProps) {
   const [stats, setStats] = useState<ProgressStats | null>(null);
   const [error, setError] = useState("");
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -48,6 +49,7 @@ export function ProgressPanel({ onClose, onPractice }: ProgressPanelProps) {
   const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
     now.getDate(),
   ).padStart(2, "0")}`;
+  const todayReviews = stats?.days.find((day) => day.date === localToday)?.reviews ?? 0;
 
   return (
     <div
@@ -106,6 +108,20 @@ export function ProgressPanel({ onClose, onPractice }: ProgressPanelProps) {
                 <span>cards due now</span>
               </div>
             </div>
+
+            {goal > 0 && (
+              <div className="goal">
+                <div className="goal-head">
+                  <span>today's goal</span>
+                  <span>
+                    {todayReviews} / {goal} reviews
+                  </span>
+                </div>
+                <div className="goal-bar" aria-hidden="true">
+                  <span style={{ width: `${Math.min(100, (todayReviews / goal) * 100)}%` }} />
+                </div>
+              </div>
+            )}
 
             {stats.cards > 0 && (
               <button className="primary progress-practice" onClick={onPractice}>

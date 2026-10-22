@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from "@tauri-apps/plugin-notification";
 import { Composer } from "./components/Composer";
 import { BuddyPanel } from "./components/BuddyPanel";
 import { CompactView } from "./components/CompactView";
@@ -70,6 +75,8 @@ export default function App() {
   const [popupStage, setPopupStage] = useState<PopupStage>("face");
   const [stageSize, setStageSize] = useState(76);
   const [contextTrimmed, setContextTrimmed] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [updateDismissed, setUpdateDismissed] = useState(false);
 
   const updater = useUpdater();
@@ -142,6 +149,32 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!settings.reminders || due <= 0) return;
+    const key = `bubo-reminder-${new Date().toDateString()}`;
+    if (localStorage.getItem(key)) return;
+
+    let alive = true;
+    void (async () => {
+      try {
+        let granted = await isPermissionGranted();
+        if (!granted) granted = (await requestPermission()) === "granted";
+        if (!alive || !granted) return;
+        sendNotification({
+          title: "bubo",
+          body: `${due} correction${due === 1 ? "" : "s"} waiting for practice.`,
+        });
+        localStorage.setItem(key, "1");
+      } catch {
+        // Notifications are best-effort; the due badge still works.
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [due, settings.reminders]);
+
+  useEffect(() => {
     const list = listRef.current;
     if (list && stickRef.current) list.scrollTop = list.scrollHeight;
   }, [messages]);
@@ -149,6 +182,18 @@ export default function App() {
   useEffect(() => {
     if (updater.status !== "available") setUpdateDismissed(false);
   }, [updater.status]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const theme =
+        settings.theme === "system" ? (media.matches ? "dark" : "light") : settings.theme;
+      document.documentElement.dataset.theme = theme === "light" ? "light" : "dark";
+    };
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, [settings.theme]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -480,6 +525,8 @@ export default function App() {
     setSessionId(id);
     setMessages([]);
     setContextTrimmed(false);
+    setSearchOpen(false);
+    setSearchQuery("");
     setShowHistory(false);
   }, []);
 
@@ -489,6 +536,8 @@ export default function App() {
     setSessionId(id);
     setMessages(stored.map(fromStored));
     setContextTrimmed(false);
+    setSearchOpen(false);
+    setSearchQuery("");
     setShowHistory(false);
     void ipc
       .drillStats()
@@ -550,6 +599,10 @@ export default function App() {
   }, []);
 
   const empty = messages.length === 0;
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const visibleMessages = normalizedSearch
+    ? messages.filter((message) => message.content.toLowerCase().includes(normalizedSearch))
+    : messages;
   const accent = settings.accentFromMascot ? settings.color : "#8b7dff";
   const showUpdateBanner =
     updater.status === "downloading" ||
@@ -572,6 +625,10 @@ export default function App() {
           stage={popupStage}
           onShowInput={() => changePopupStage("input")}
           onOpenChat={exitPopup}
+          onOpenSettings={() => {
+            exitPopup();
+            setShowSettings(true);
+          }}
           onSend={sendFromPopup}
           onStop={stop}
         />
@@ -704,6 +761,36 @@ export default function App() {
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+                <button
+                  className={`ghost icon ${searchOpen ? "on" : ""}`}
+                  title="Search messages"
+                  aria-label="Search messages"
+                  aria-pressed={searchOpen}
+                  onClick={() => {
+                    setSearchOpen((open) => {
+                      if (open) setSearchQuery("");
+                      return !open;
+                    });
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                    <circle
+                      cx="10.5"
+                      cy="10.5"
+                      r="6.2"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                    />
+                    <path
+                      d="m15 15 5 5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
                       strokeLinecap="round"
                     />
                   </svg>
@@ -907,6 +994,50 @@ export default function App() {
             </div>
           )}
 
+          {searchOpen && (
+            <div className="message-search">
+              <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+                <circle
+                  cx="10.5"
+                  cy="10.5"
+                  r="6.2"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                />
+                <path
+                  d="m15 15 5 5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <input
+                autoFocus
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="search this conversation"
+                aria-label="Search this conversation"
+                spellCheck={false}
+              />
+              {normalizedSearch && (
+                <span className="message-search-count">{visibleMessages.length}</span>
+              )}
+              <button
+                type="button"
+                className="ghost"
+                aria-label="Close search"
+                onClick={() => {
+                  setSearchOpen(false);
+                  setSearchQuery("");
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )}
+
           {empty && !showSettings && !showBuddy ? (
             <div className="hero">
               <h1>Hey, I'm bubo.</h1>
@@ -948,7 +1079,10 @@ export default function App() {
                   Long conversation: bubo is using the most recent messages.
                 </div>
               )}
-              {messages.map((message) => (
+              {normalizedSearch && visibleMessages.length === 0 && (
+                <p className="search-empty">No messages match “{searchQuery.trim()}”.</p>
+              )}
+              {visibleMessages.map((message) => (
                 <Message
                   key={message.id}
                   message={message}
@@ -1003,6 +1137,7 @@ export default function App() {
               setDrillFocus(null);
               setShowDrill(true);
             }}
+            goal={settings.dailyGoal}
           />
         )}
 

@@ -35,6 +35,9 @@ export interface Settings {
   compact: boolean;
   popup: boolean;
   ignoreCapitalization: boolean;
+  dailyGoal: number;
+  reminders: boolean;
+  theme: string;
   shape: string;
   color: string;
   showMouth: boolean;
@@ -159,6 +162,9 @@ export const DEFAULT_SETTINGS: Settings = {
   compact: false,
   popup: false,
   ignoreCapitalization: true,
+  dailyGoal: 10,
+  reminders: true,
+  theme: "dark",
   ...DEFAULT_LOOK,
   showStatus: true,
   accentFromMascot: true,

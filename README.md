@@ -29,7 +29,8 @@ Because the useful part of learning a language is the five minutes between real 
 - **Ready-made personalities**: twelve voices such as Warm Coach, Dry Wit or Hype Friend. Picking one changes only the tutor's tone; the mascot look stays exactly as you customized it. The free-text flavor field stacks on top.
 - **Compact mode**: a 400 x 280 horizontal chat card with the buddy in the header, the current mood under the name and a one-line composer. The full window is one click away.
 - **Bring your own endpoint**: Groq, OpenAI, OpenRouter, Ollama or any OpenAI-compatible URL, with model suggestions, a test connection button, optional proxy and custom CA certificate for company networks.
-- **Conversation first**: replies stream token by token; a separate pass returns corrections as strict JSON, so the card never depends on the model following inline formatting.
+- **Conversation first**: replies stream token by token; a separate pass returns corrections as strict JSON, so the card never depends on the model following inline formatting. Replies render Markdown, and a search field filters the current conversation.
+- **Looks and pace**: dark, light or system theme; a daily review goal; an optional daily reminder notification when cards are due.
 - **Corrections that stick**: every fix is stored, linked to the message that produced it, and scheduled with a 1 / 3 / 7 / 21 / 45 day ladder. A miss comes back in ten minutes.
 - **Practice mode**: rewrite the wrong sentence, get instant feedback, see the original context, and use “I was right” when a valid alternative was marked wrong. Skip the due cards or reset the deck from settings.
 - **Progress**: streak, accuracy, a 14-day activity strip and the mistakes you practice most, all from the local database.
@@ -40,13 +41,13 @@ Because the useful part of learning a language is the five minutes between real 
 
 ## Screenshots
 
-| Chat and corrections                                                                   | Practice                                                                          | Progress                                                                          |
-| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| [![Chat](docs/screenshots/chat.png)](docs/screenshots/chat.png)                         | [![Practice](docs/screenshots/practice.png)](docs/screenshots/practice.png)       | [![Progress](docs/screenshots/progress.png)](docs/screenshots/progress.png)       |
+| Chat and corrections                                            | Practice                                                                    | Progress                                                                    |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [![Chat](docs/screenshots/chat.png)](docs/screenshots/chat.png) | [![Practice](docs/screenshots/practice.png)](docs/screenshots/practice.png) | [![Progress](docs/screenshots/progress.png)](docs/screenshots/progress.png) |
 
-| Buddy panel                                                                             | Compact mode                                                                        | History                                                                            |
-| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| [![Buddy panel](docs/screenshots/buddy.png)](docs/screenshots/buddy.png)                 | [![Compact mode](docs/screenshots/compact.png)](docs/screenshots/compact.png)       | [![History](docs/screenshots/history.png)](docs/screenshots/history.png)           |
+| Buddy panel                                                              | Compact mode                                                                  | History                                                                  |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [![Buddy panel](docs/screenshots/buddy.png)](docs/screenshots/buddy.png) | [![Compact mode](docs/screenshots/compact.png)](docs/screenshots/compact.png) | [![History](docs/screenshots/history.png)](docs/screenshots/history.png) |
 
 ### Customization
 
@@ -61,6 +62,12 @@ The default bubo is purple, round, with bars eyes, size L, straight tilt and no 
 1. Download the latest `bubo_x.y.z_x64-setup.exe` from [Releases](https://github.com/LucasInstra/bubo/releases).
 2. Run it. It installs per user in `%LOCALAPPDATA%\bubo`.
 3. Launch **bubo** from the Start menu.
+
+### Portable and ARM64
+
+Each release also gets `bubo-portable-x64.zip` (the executable alone). The
+ARM64 bundles are produced manually from the **ARM64 build** GitHub workflow;
+they are not part of the x64 release assets.
 
 ### From source
 
@@ -141,6 +148,15 @@ The first updater-enabled release must be installed by hand. After that, later v
 
 Only the text you send is forwarded to your provider. There is no analytics and no third-party service besides the model endpoint you configure.
 
+## Distribution
+
+```powershell
+npm run tauri build     # NSIS and MSI in src-tauri/target/release/bundle
+npm run portable        # bubo-portable-x64.zip beside the release executable
+```
+
+Winget manifests are generated after a release; see `winget/README.md`.
+
 ## Development
 
 ```powershell
@@ -188,10 +204,8 @@ e2e/                      Playwright harness and tests
 
 ## Roadmap
 
-- Message search inside a conversation.
 - Manual correction add/edit when the model misses or mislabels a fix.
-- Daily practice reminder and a weekly goal.
-- Light theme and Portuguese UI.
+- Portuguese UI.
 - Content Security Policy without inline styles.
 - Authenticode signing for the installer.
 - Voice practice (speak and listen), later, deliberately.

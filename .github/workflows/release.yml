@@ -58,4 +58,12 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           cp "src-tauri/target/release/bundle/nsis/bubo_${version}_x64-setup.exe" bubo-setup.exe
+
+      - name: Add a portable zip
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          Compress-Archive -Path "src-tauri/target/release/bubo.exe" -DestinationPath "bubo-portable-x64.zip" -Force
+          gh release upload "${{ github.ref_name }}" "bubo-portable-x64.zip" --clobber
           gh release upload "${GITHUB_REF_NAME}" bubo-setup.exe --clobber

@@ -33,6 +33,11 @@ const TEXT_SIZES = [
   ["normal", "Normal"],
   ["large", "Large"],
 ];
+const THEMES = [
+  ["dark", "Dark"],
+  ["light", "Light"],
+  ["system", "System"],
+];
 
 function updateLabel(
   status: UpdateStatus,
@@ -624,6 +629,29 @@ export function SettingsPanel({
         <div className="section-title">Practice</div>
 
         <div className="field">
+          <span>Daily review goal</span>
+          <input
+            type="number"
+            min={0}
+            max={200}
+            value={draft.dailyGoal}
+            onChange={(event) =>
+              patch({ dailyGoal: Math.max(0, Math.min(200, Number(event.target.value) || 0)) })
+            }
+          />
+          <span className="hint">Reviews per day. Set 0 to turn the goal off.</span>
+        </div>
+
+        <label className="field row">
+          <span>Daily reminder</span>
+          <input
+            type="checkbox"
+            checked={draft.reminders}
+            onChange={(event) => patch({ reminders: event.target.checked })}
+          />
+        </label>
+
+        <div className="field">
           <span>
             {queue.due} due · {queue.total} saved
           </span>
@@ -676,6 +704,22 @@ export function SettingsPanel({
                 key={value}
                 className={`chip ${draft.textSize === value ? "chip-on" : ""}`}
                 onClick={() => patch({ textSize: value })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="field">
+          <span>Theme</span>
+          <div className="levels">
+            {THEMES.map(([value, label]) => (
+              <button
+                type="button"
+                key={value}
+                className={`chip ${draft.theme === value ? "chip-on" : ""}`}
+                onClick={() => patch({ theme: value })}
               >
                 {label}
               </button>

@@ -19,6 +19,7 @@
     "autostart:allow-is-enabled",
     "updater:default",
     "dialog:default",
+    "notification:default",
     "process:allow-restart",
     "process:allow-exit"
   ]

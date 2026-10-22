@@ -233,7 +233,20 @@ export function HistoryPanel({
                 onClick={() => void toggleArchive(session)}
                 disabled={busy}
               >
-                <span aria-hidden="true">{session.archived ? "↩" : "⌄"}</span>
+                <svg
+                  viewBox="0 0 24 24"
+                  width="14"
+                  height="14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 7h16M5 7v12h14V7M9 7V5h6v2" />
+                  {session.archived ? <path d="M12 16v-6m0 0-2 2m2-2 2 2" /> : <path d="M9 12h6" />}
+                </svg>
               </button>
               <button
                 className={`ghost session-delete ${confirmId === session.id ? "confirm" : ""}`}

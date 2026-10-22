@@ -1,4 +1,5 @@
 import { memo, useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { stripLegacyFixes } from "../lib/format";
 import { ipc } from "../lib/ipc";
 import type { Fix, Msg } from "../lib/types";
@@ -112,7 +113,19 @@ export const Message = memo(function Message({
   return (
     <div className={`msg ${isUser ? "msg-user" : "msg-bot"}`}>
       <div className={`bubble ${message.error ? "bubble-error" : ""}`}>
-        {body}
+        {isUser ? (
+          body
+        ) : (
+          <div className="markdown">
+            <ReactMarkdown
+              components={{
+                a: ({ children }) => <span className="md-link">{children}</span>,
+              }}
+            >
+              {body}
+            </ReactMarkdown>
+          </div>
+        )}
         {message.streaming && <span className="caret" />}
       </div>
 
