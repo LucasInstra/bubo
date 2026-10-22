@@ -13,12 +13,21 @@ test("a single click opens the composer under the face", async ({ page }) => {
   await expect(page.locator(".popup-stage .composer textarea")).toBeVisible();
   await page.locator(".popup-stage .composer textarea").fill("hello bubo");
   await expect(page.locator(".popup-stage .composer textarea")).toHaveValue("hello bubo");
-  expect(
-    await page.evaluate(() => (window as unknown as { __calls: unknown[] }).__calls),
-  ).toContainEqual({
-    cmd: "set_popup_stage",
-    args: { stage: "input" },
-  });
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() =>
+          (window as unknown as { __calls: unknown[] }).__calls.some(
+            (call) =>
+              (call as { cmd?: string; args?: { stage?: string; resize?: boolean } }).cmd ===
+                "set_popup_stage" &&
+              (call as { args?: { stage?: string; resize?: boolean } }).args?.stage === "input" &&
+              (call as { args?: { stage?: string; resize?: boolean } }).args?.resize === false,
+          ),
+        ),
+      { timeout: 3000 },
+    )
+    .toBe(true);
 });
 
 test("hovering near the face after a click does not drag the window", async ({ page }) => {
@@ -26,6 +35,8 @@ test("hovering near the face after a click does not drag the window", async ({ p
   const face = page.locator(".popup-face");
   await face.click();
   await expect(page.locator(".popup-stage")).toHaveClass(/stage-input/);
+  // Let the window grow animation finish before measuring new calls.
+  await page.waitForTimeout(320);
 
   const before = await page.evaluate(
     () => (window as unknown as { __calls: unknown[] }).__calls.length,

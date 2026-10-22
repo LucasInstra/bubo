@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import { LogicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Composer } from "./components/Composer";
 import { BuddyPanel } from "./components/BuddyPanel";
 import { CompactView } from "./components/CompactView";
@@ -66,7 +68,6 @@ export default function App() {
   const [showDrill, setShowDrill] = useState(false);
   const [drillFocus, setDrillFocus] = useState<Fix | null>(null);
   const [popupStage, setPopupStage] = useState<PopupStage>("face");
-  const [popupBusy, setPopupBusy] = useState(false);
   const [stageSize, setStageSize] = useState(76);
   const [updateDismissed, setUpdateDismissed] = useState(false);
 
@@ -84,29 +85,66 @@ export default function App() {
   popupStageRef.current = popupStage;
   const popupStageRequest = useRef(0);
 
+  const animatePopupWindow = useCallback(async (toFace: boolean, token: number) => {
+    const appWindow = getCurrentWindow();
+    const scale = window.devicePixelRatio || 1;
+    const [position, size] = await Promise.all([appWindow.outerPosition(), appWindow.outerSize()]);
+    const centerX = position.x + size.width / 2;
+    const centerY = position.y + size.height / 2;
+    const startWidth = size.width / scale;
+    const startHeight = size.height / scale;
+    const targetWidth = toFace ? 132 : 320;
+    const targetHeight = toFace ? 132 : 360;
+    const duration = 190;
+    const started = performance.now();
+
+    await new Promise<void>((resolve) => {
+      const step = (now: number) => {
+        if (popupStageRequest.current !== token) {
+          resolve();
+          return;
+        }
+        const progress = Math.min(1, (now - started) / duration);
+        const eased = 1 - (1 - progress) ** 3;
+        const width = startWidth + (targetWidth - startWidth) * eased;
+        const height = startHeight + (targetHeight - startHeight) * eased;
+        void appWindow.setSize(new LogicalSize(width, height)).catch(() => {});
+        void appWindow
+          .setPosition(
+            new PhysicalPosition(
+              Math.round(centerX - (width * scale) / 2),
+              Math.round(centerY - (height * scale) / 2),
+            ),
+          )
+          .catch(() => {});
+        if (progress < 1) requestAnimationFrame(step);
+        else resolve();
+      };
+      requestAnimationFrame(step);
+    });
+  }, []);
+
   const changePopupStage = useCallback(
     async (next: PopupStage) => {
       const request = popupStageRequest.current + 1;
       popupStageRequest.current = request;
-      const needsResize = popupStage === "face" || next === "face";
-      if (!needsResize) {
-        setPopupStage(next);
-        void ipc.setPopupStage(next);
-        return;
-      }
-      setPopupBusy(true);
-      await new Promise((resolve) => window.setTimeout(resolve, 90));
-      try {
-        await ipc.setPopupStage(next);
-      } catch {
-        // keep the UI responsive if the window went away
-      }
-      await new Promise((resolve) => window.setTimeout(resolve, 60));
-      if (popupStageRequest.current !== request) return;
+      const needsResize = (popupStage === "face") !== (next === "face");
       setPopupStage(next);
-      setPopupBusy(false);
+      if (needsResize) {
+        try {
+          await animatePopupWindow(next === "face", request);
+        } catch {
+          // keep the UI responsive if the window went away
+        }
+      }
+      if (popupStageRequest.current !== request) return;
+      try {
+        await ipc.setPopupStage(next, false);
+      } catch {
+        // the window may be gone; the stage state does not matter anymore
+      }
     },
-    [popupStage],
+    [popupStage, animatePopupWindow],
   );
 
   const react = useCallback((next: Mood, ms = 1500) => {
@@ -586,7 +624,6 @@ export default function App() {
           status={status}
           mood={mood}
           stage={popupStage}
-          busy={popupBusy}
           onShowInput={() => changePopupStage("input")}
           onOpenChat={exitPopup}
           onSend={sendFromPopup}

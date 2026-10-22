@@ -15,7 +15,6 @@ interface PopupViewProps {
   status: OrbState;
   mood: Mood;
   stage: PopupStage;
-  busy: boolean;
   onShowInput: () => void;
   onSend: (text: string) => boolean;
   onStop: () => void;
@@ -33,7 +32,6 @@ export function PopupView({
   status,
   mood,
   stage,
-  busy,
   onShowInput,
   onSend,
   onStop,
@@ -221,18 +219,20 @@ export function PopupView({
   );
 
   return (
-    <div className={`popup-stage stage-${stage} ${busy ? "busy" : ""}`}>
+    <div className={`popup-stage stage-${stage}`}>
       {stage === "reply" && (
         <div className="popup-reply">
           {lastAssistant && !pending ? (
             <div className={`popup-bubble assistant ${lastAssistant.error ? "error" : ""}`}>
-              {reply}
-              {lastAssistant.streaming && <span className="caret" />}
+              <div className="popup-bubble-text">
+                {reply}
+                {lastAssistant.streaming && <span className="caret" />}
+              </div>
               {tail}
             </div>
           ) : (
             <div className="popup-bubble assistant popup-typing">
-              thinking...
+              <div className="popup-bubble-text">thinking...</div>
               {tail}
             </div>
           )}

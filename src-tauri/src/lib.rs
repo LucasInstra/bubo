@@ -278,8 +278,8 @@ enum PopupStage {
 fn popup_size(stage: PopupStage) -> (f64, f64) {
     match stage {
         PopupStage::Face => (132.0, 132.0),
-        PopupStage::Input => (320.0, 260.0),
-        PopupStage::Reply => (320.0, 260.0),
+        PopupStage::Input => (320.0, 360.0),
+        PopupStage::Reply => (320.0, 360.0),
     }
 }
 
@@ -287,8 +287,8 @@ fn popup_size(stage: PopupStage) -> (f64, f64) {
 fn popup_face_offset(stage: PopupStage) -> (f64, f64) {
     match stage {
         PopupStage::Face => (66.0, 66.0),
-        PopupStage::Input => (160.0, 130.0),
-        PopupStage::Reply => (160.0, 130.0),
+        PopupStage::Input => (160.0, 180.0),
+        PopupStage::Reply => (160.0, 180.0),
     }
 }
 
@@ -297,6 +297,7 @@ fn set_popup_stage(
     window: tauri::WebviewWindow,
     state: State<'_, AppState>,
     stage: String,
+    resize: bool,
 ) -> Result<(), String> {
     if !state.popup.load(Ordering::Relaxed) {
         return Ok(());
@@ -312,6 +313,13 @@ fn set_popup_stage(
         .lock()
         .map_err(|_| "popup stage lock".to_string())?;
     if previous == next {
+        return Ok(());
+    }
+
+    if !resize {
+        if let Ok(mut slot) = state.popup_stage.lock() {
+            *slot = next;
+        }
         return Ok(());
     }
 
