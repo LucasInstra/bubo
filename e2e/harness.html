@@ -191,6 +191,10 @@
         },
         transformCallback: () => 0,
         unregisterCallback: () => {},
+        metadata: {
+          currentWindow: { label: "main" },
+          currentWebview: { windowLabel: "main", label: "main" },
+        },
       };
 
       const root = createRoot(rootElement);

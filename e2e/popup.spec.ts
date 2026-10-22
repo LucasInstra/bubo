@@ -61,6 +61,38 @@ test("a double click opens the full chat", async ({ page }) => {
   await expect(page.locator(".panel")).toBeVisible();
 });
 
+test("dragging the face grabs it and moves the window", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=popup");
+  const face = page.locator(".popup-face");
+  const box = await face.boundingBox();
+  if (!box) throw new Error("face not found");
+
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(150);
+  await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2 + 16);
+
+  await expect(page.locator(".popup-face")).toHaveClass(/dragging/);
+  const transform = await page
+    .locator(".popup-face-inner")
+    .evaluate((element) => element.style.transform);
+  expect(transform).toContain("rotate");
+
+  await expect
+    .poll(async () =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __calls: Array<{ cmd: string }> }).__calls.filter((call) =>
+            call.cmd.includes("set_position"),
+          ).length,
+      ),
+    )
+    .toBeGreaterThan(0);
+
+  await page.mouse.up();
+  await expect(page.locator(".popup-face")).not.toHaveClass(/dragging/);
+});
+
 test("the settings sheet exposes the popup mode", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await page.getByRole("button", { name: "Settings" }).click();

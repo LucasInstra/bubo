@@ -2305,8 +2305,8 @@ button {
 
 .popup-reply {
   position: absolute;
-  top: 8px;
   right: 10px;
+  bottom: 108px;
   left: 10px;
   z-index: 1;
   display: flex;
@@ -2322,6 +2322,7 @@ button {
 
 .popup-bubble {
   position: relative;
+  margin-top: auto;
   padding: 9px 12px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 16px 16px 16px 6px;

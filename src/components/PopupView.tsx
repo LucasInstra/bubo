@@ -41,6 +41,15 @@ export function PopupView({
   const clickTimer = useRef<number | null>(null);
   const frame = useRef<number | null>(null);
   const [dragging, setDragging] = useState(false);
+  const motion = useRef({
+    active: false,
+    x: 0,
+    y: 0,
+    targetX: 0,
+    targetY: 0,
+    lastX: null as number | null,
+    lastY: null as number | null,
+  });
   const drag = useRef({
     active: false,
     startX: 0,
@@ -102,21 +111,61 @@ export function PopupView({
     if (!current.moved && Math.hypot(dx, dy) < 6) return;
     current.moved = true;
     if (!dragging) setDragging(true);
+
+    const distance = Math.hypot(dx, dy);
+    const tilt = Math.max(-16, Math.min(16, dx * 0.22));
+    const stretch = Math.min(0.16, distance * 0.0022);
+    const shiftX = Math.max(-14, Math.min(14, -dx * 0.07));
+    const shiftY = Math.max(-14, Math.min(14, -dy * 0.07));
     if (innerRef.current) {
-      const tilt = Math.max(-7, Math.min(7, dx * 0.1));
-      const shiftX = Math.max(-5, Math.min(5, dx * 0.03));
-      const shiftY = Math.max(-5, Math.min(5, dy * 0.03));
-      innerRef.current.style.transform = `translate(${shiftX}px, ${shiftY}px) rotate(${tilt}deg) scale(1.04)`;
+      innerRef.current.style.transform = `translate(${shiftX}px, ${shiftY}px) rotate(${tilt}deg) scale(${1 + stretch}, ${1 - stretch * 0.55})`;
     }
-    if (frame.current !== null) cancelAnimationFrame(frame.current);
-    frame.current = requestAnimationFrame(() => {
-      frame.current = null;
+
+    const movement = motion.current;
+    movement.targetX = startWindowX + dx;
+    movement.targetY = startWindowY + dy;
+    if (movement.active) return;
+
+    movement.active = true;
+    movement.x = startWindowX;
+    movement.y = startWindowY;
+    movement.lastX = null;
+    movement.lastY = null;
+    const step = () => {
+      const currentMotion = motion.current;
+      if (!currentMotion.active) return;
+      // The window chases the pointer instead of snapping to it: the few
+      // pixels of lag are what lets the mascot's own grab deform the face.
+      currentMotion.x += (currentMotion.targetX - currentMotion.x) * 0.42;
+      currentMotion.y += (currentMotion.targetY - currentMotion.y) * 0.42;
+      const nextX = Math.round(currentMotion.x);
+      const nextY = Math.round(currentMotion.y);
+      if (nextX !== currentMotion.lastX || nextY !== currentMotion.lastY) {
+        currentMotion.lastX = nextX;
+        currentMotion.lastY = nextY;
+        void getCurrentWindow()
+          .setPosition(new LogicalPosition(nextX, nextY))
+          .catch(() => {});
+      }
+      frame.current = requestAnimationFrame(step);
+    };
+    frame.current = requestAnimationFrame(step);
+  };
+
+  const stopMotion = (snap: boolean) => {
+    const movement = motion.current;
+    if (movement.active && snap) {
       void getCurrentWindow()
         .setPosition(
-          new LogicalPosition(Math.round(startWindowX + dx), Math.round(startWindowY + dy)),
+          new LogicalPosition(Math.round(movement.targetX), Math.round(movement.targetY)),
         )
         .catch(() => {});
-    });
+    }
+    movement.active = false;
+    if (frame.current !== null) {
+      cancelAnimationFrame(frame.current);
+      frame.current = null;
+    }
   };
 
   const cancelDrag = () => {
@@ -125,19 +174,13 @@ export function PopupView({
     drag.current.moved = false;
     drag.current.windowX = null;
     drag.current.windowY = null;
-    if (frame.current !== null) {
-      cancelAnimationFrame(frame.current);
-      frame.current = null;
-    }
+    stopMotion(false);
     setDragging(false);
     if (innerRef.current) innerRef.current.style.transform = "";
   };
 
   const endDrag = () => {
-    if (frame.current !== null) {
-      cancelAnimationFrame(frame.current);
-      frame.current = null;
-    }
+    stopMotion(true);
     if (!drag.current.active) return;
     drag.current.active = false;
     drag.current.windowX = null;
