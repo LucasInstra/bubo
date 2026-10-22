@@ -634,38 +634,44 @@ export function SettingsPanel({
 
         <div className="section-title">Prática</div>
 
-        <div className="field">
-          <span>Meta diária de revisões</span>
-          <input
-            type="number"
-            min={0}
-            max={200}
-            value={draft.dailyGoal}
-            onChange={(event) =>
-              patch({ dailyGoal: Math.max(0, Math.min(200, Number(event.target.value) || 0)) })
-            }
-          />
-          <span className="hint">Revisões por dia. Use 0 para desativar a meta.</span>
+        <div className="settings-card">
+          <span className="settings-card-title">Meta e lembrete</span>
+          <div className="field">
+            <span>Meta diária de revisões</span>
+            <input
+              type="number"
+              min={0}
+              max={200}
+              value={draft.dailyGoal}
+              onChange={(event) =>
+                patch({ dailyGoal: Math.max(0, Math.min(200, Number(event.target.value) || 0)) })
+              }
+            />
+            <span className="hint">Revisões por dia. Use 0 para desativar a meta.</span>
+          </div>
+          <label className="field row">
+            <span>Lembrete diário</span>
+            <input
+              type="checkbox"
+              checked={draft.reminders}
+              onChange={(event) => patch({ reminders: event.target.checked })}
+            />
+          </label>
         </div>
 
-        <label className="field row">
-          <span>Lembrete diário</span>
-          <input
-            type="checkbox"
-            checked={draft.reminders}
-            onChange={(event) => patch({ reminders: event.target.checked })}
-          />
-        </label>
-
-        <div className="field">
-          <span>
-            {queue.due} pendentes · {queue.total} salvos
-          </span>
-          <div className="row-buttons">
-            <button className="ghost" onClick={() => void skipDue()}>
+        <div className="settings-card">
+          <div className="settings-card-head">
+            <span className="settings-card-title">Cards</span>
+            <span className="settings-count">
+              {queue.due} {queue.due === 1 ? "pendente" : "pendentes"} · {queue.total}{" "}
+              {queue.total === 1 ? "salvo" : "salvos"}
+            </span>
+          </div>
+          <div className="action-grid two">
+            <button className="action-button" onClick={() => void skipDue()}>
               Adiar cards pendentes
             </button>
-            <button className="ghost danger" onClick={() => void resetFixes()}>
+            <button className="action-button danger" onClick={() => void resetFixes()}>
               {confirmReset ? "Clique de novo para apagar" : "Apagar correções"}
             </button>
           </div>
@@ -675,31 +681,7 @@ export function SettingsPanel({
           </span>
         </div>
 
-        <div className="section-title">Dados</div>
-
-        <div className="field">
-          <span>Backup e diagnóstico</span>
-          <div className="row-buttons data-actions">
-            <button className="ghost" onClick={() => void backupData()} disabled={dataBusy}>
-              Fazer backup
-            </button>
-            <button className="ghost danger" onClick={() => void restoreData()} disabled={dataBusy}>
-              {confirmRestore ? "Clique de novo para restaurar" : "Restaurar backup"}
-            </button>
-            <button className="ghost" onClick={() => void openDataFolder()}>
-              Abrir pasta de dados
-            </button>
-            <button className="ghost" onClick={() => void copyDiagnostics()}>
-              Copiar diagnóstico
-            </button>
-          </div>
-          <span className="hint">
-            O backup inclui histórico, correções e progresso. A chave de API fica no Gerenciador de
-            Credenciais do Windows.
-          </span>
-        </div>
-
-        <div className="section-title">Chat</div>
+        <div className="section-title">Aparência</div>
 
         <div className="field">
           <span>Tamanho das mensagens</span>
@@ -733,16 +715,6 @@ export function SettingsPanel({
           </div>
         </div>
 
-        <button
-          className="ghost danger"
-          onClick={async () => {
-            await onNewChat();
-            onClose();
-          }}
-        >
-          Começar uma nova conversa
-        </button>
-
         <div className="section-title">Janela</div>
 
         <label className="field row">
@@ -759,6 +731,54 @@ export function SettingsPanel({
             Deixa apenas o bubo na área de trabalho. Clique duas vezes no rosto para abrir o
             compositor; Esc recolhe de novo.
           </span>
+        </div>
+
+        <div className="section-title">Conversa</div>
+
+        <div className="settings-card">
+          <button
+            className="action-button danger"
+            onClick={async () => {
+              await onNewChat();
+              onClose();
+            }}
+          >
+            Começar uma nova conversa
+          </button>
+        </div>
+
+        <div className="section-title">Dados</div>
+
+        <div className="settings-card">
+          <span className="settings-card-title">Backup</span>
+          <div className="action-grid two">
+            <button className="action-button" onClick={() => void backupData()} disabled={dataBusy}>
+              Fazer backup
+            </button>
+            <button
+              className="action-button danger"
+              onClick={() => void restoreData()}
+              disabled={dataBusy}
+            >
+              {confirmRestore ? "Clique de novo para restaurar" : "Restaurar backup"}
+            </button>
+          </div>
+          <span className="hint">
+            O backup inclui histórico, correções e progresso. A chave de API fica no Gerenciador de
+            Credenciais do Windows.
+          </span>
+        </div>
+
+        <div className="settings-card">
+          <span className="settings-card-title">Diagnóstico</span>
+          <div className="action-grid two">
+            <button className="action-button" onClick={() => void openDataFolder()}>
+              Abrir pasta de dados
+            </button>
+            <button className="action-button" onClick={() => void copyDiagnostics()}>
+              Copiar diagnóstico
+            </button>
+          </div>
         </div>
 
         <div className="section-title">Atualizações</div>
