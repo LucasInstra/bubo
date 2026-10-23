@@ -105,6 +105,10 @@ The first updater-enabled release must be installed by hand. After that, later v
 3. Push the commit and the tag with `git push origin main --follow-tags`.
 4. The release workflow builds on Windows and publishes the installer, the updater artifacts and `latest.json` to GitHub Releases.
 
+### Fix builds
+
+A single fix does not get a new version or tag. Run the **Fix build** workflow from Actions with the current release tag. It builds the NSIS installer with the same version, replaces the stable `bubo-setup.exe` asset on that release, and uploads the installer as a workflow artifact. The versioned assets and `latest.json` stay untouched, so existing installations are not auto-updated.
+
 ## Keyboard
 
 | Shortcut      | Action                                             |
