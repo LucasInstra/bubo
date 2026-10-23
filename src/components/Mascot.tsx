@@ -420,6 +420,10 @@ export function Mascot({
   const energyRef = useRef(energy);
   const boopRef = useRef(0);
   const canvasSize = Math.round(size * (1 + canvasPadding));
+  const boopTitle =
+    typeof document !== "undefined" && document.documentElement.lang.toLowerCase().startsWith("en")
+      ? "Drag me or click for a boop"
+      : "Arraste-me ou clique para um carinho";
 
   stateRef.current = state;
   moodRef.current = mood;
@@ -1070,7 +1074,7 @@ export function Mascot({
       <div
         ref={hitRef}
         className="mascot-hit"
-        title={boopable ? "Arraste-me ou clique para um carinho" : undefined}
+        title={boopable ? boopTitle : undefined}
         style={{
           position: "absolute",
           inset: 0,
