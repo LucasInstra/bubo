@@ -67,7 +67,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $installer = Get-ChildItem "src-tauri/target/release/bundle/nsis/bubo_*_x64-setup.exe" | Select-Object -First 1
-          gh release upload "${{ inputs.tag }}" "bubo-setup.exe" "$($installer.Name)" "$($installer.Name).sig" "latest.json" --clobber
+          gh release upload "${{ inputs.tag }}" "bubo-setup.exe" $installer.FullName "$($installer.FullName).sig" "latest.json" --clobber
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
