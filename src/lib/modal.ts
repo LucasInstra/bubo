@@ -18,7 +18,7 @@ function focusableInside(panel: HTMLElement): HTMLElement[] {
  * The background elements behind the overlay are marked inert, and focus
  * returns to whatever was focused before the dialog opened.
  */
-export function useModalFocus(ref: RefObject<HTMLElement>) {
+export function useModalFocus(ref: RefObject<HTMLElement | null>) {
   useEffect(() => {
     const panel = ref.current;
     if (!panel) return;
