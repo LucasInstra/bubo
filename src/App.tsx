@@ -1234,6 +1234,7 @@ export default function App() {
             }
             updateStatus={updater.status}
             updateVersion={updater.version}
+            updateBuild={updater.build}
             updateNotes={updater.notes}
             updateProgress={updater.progress}
             updateError={updater.error}

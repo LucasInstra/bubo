@@ -23,13 +23,13 @@ if (expected && version !== expected) {
 }
 
 // A new version starts a new build series. Fix builds of the same version
-// increment the label by hand; `npm version` resets it to build 1.
+// increment the number by hand; `npm version` resets it to build 1.
 const isVersionBump = !checkOnly && process.env.npm_lifecycle_event === "version";
 const buildSource = readFileSync(buildPath, "utf8");
-const buildNext = buildSource.replace(/(BUILD_LABEL\s*=\s*)"build \d+"/, '$1"build 1"');
+const buildNext = buildSource.replace(/(BUILD_NUMBER\s*=\s*)\d+/, (_match, prefix) => `${prefix}1`);
 if (isVersionBump && buildNext !== buildSource) {
   writeFileSync(buildPath, buildNext);
-  console.log("reset the display build label to build 1");
+  console.log("reset the build number to 1");
 }
 
 const cargo = readFileSync(cargoPath, "utf8");

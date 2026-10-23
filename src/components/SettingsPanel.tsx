@@ -5,6 +5,7 @@ import { isBeginnerLevel, STUDY_FOCUSES } from "../lib/lessons";
 import { useModalFocus } from "../lib/modal";
 import { matchProvider, PROVIDERS, type ProviderPreset } from "../lib/providers";
 import type { DrillStats, Settings } from "../lib/types";
+import { updateLabel } from "../lib/update-label";
 import type { UpdateStatus } from "../lib/updater";
 import { HotkeyInput } from "./HotkeyInput";
 
@@ -21,6 +22,7 @@ interface SettingsPanelProps {
   currentVersion: string;
   updateStatus: UpdateStatus;
   updateVersion: string;
+  updateBuild: number;
   updateNotes: string;
   updateProgress: number;
   updateError: string;
@@ -50,30 +52,6 @@ const THEMES = [
   ["system", "Sistema"],
 ];
 
-function updateLabel(
-  status: UpdateStatus,
-  version: string,
-  progress: number,
-  error: string,
-): string {
-  switch (status) {
-    case "checking":
-      return "Verificando atualizações...";
-    case "available":
-      return version ? `A versão ${version} está disponível.` : "Uma atualização está disponível.";
-    case "downloading":
-      return progress >= 0 ? `Baixando ${progress}%...` : "Baixando...";
-    case "ready":
-      return "Reiniciando para concluir a atualização...";
-    case "current":
-      return "Você está na versão mais recente.";
-    case "error":
-      return error || "Não foi possível verificar atualizações.";
-    default:
-      return "Pronto para verificar atualizações.";
-  }
-}
-
 function modelChoices(source: string[], selected: string): string[] {
   const seen = new Set<string>();
   const options: string[] = [];
@@ -100,6 +78,7 @@ export function SettingsPanel({
   currentVersion,
   updateStatus,
   updateVersion,
+  updateBuild,
   updateNotes,
   updateProgress,
   updateError,
@@ -898,7 +877,7 @@ export function SettingsPanel({
               role="status"
               aria-live="polite"
             >
-              {updateLabel(updateStatus, updateVersion, updateProgress, updateError)}
+              {updateLabel(updateStatus, updateVersion, updateBuild, updateProgress, updateError)}
             </span>
             {updateStatus === "downloading" && updateProgress >= 0 && (
               <div className="update-progress" aria-hidden="true">

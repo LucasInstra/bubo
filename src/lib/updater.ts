@@ -2,6 +2,8 @@ import { getVersion } from "@tauri-apps/api/app";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { BUILD_NUMBER } from "./build";
+import { isNewerRelease, readBuild } from "./release";
 
 export type UpdateStatus =
   "idle" | "checking" | "current" | "available" | "downloading" | "ready" | "error";
@@ -10,6 +12,7 @@ export interface UpdaterState {
   currentVersion: string;
   status: UpdateStatus;
   version: string;
+  build: number;
   notes: string;
   progress: number;
   error: string;
@@ -27,6 +30,7 @@ export function useUpdater(): UpdaterState {
   const [currentVersion, setCurrentVersion] = useState("");
   const [status, setStatus] = useState<UpdateStatus>("idle");
   const [version, setVersion] = useState("");
+  const [build, setBuild] = useState(0);
   const [notes, setNotes] = useState("");
   const [progress, setProgress] = useState(-1);
   const [error, setError] = useState("");
@@ -42,20 +46,37 @@ export function useUpdater(): UpdaterState {
     setError("");
 
     try {
-      const next = await check();
+      const found = await check();
       const previous = pending.current;
-      pending.current = next;
-      if (previous && previous !== next) {
+      pending.current = null;
+      if (previous && previous !== found) {
         void previous.close().catch(() => {});
       }
 
-      if (next) {
-        setVersion(next.version);
-        setNotes(next.body ?? "");
+      // The manifest may announce the same version with a higher build, which is
+      // how fix builds of an already released version reach existing installs.
+      const offered =
+        found &&
+        isNewerRelease(
+          { version: found.currentVersion, build: BUILD_NUMBER },
+          { version: found.version, build: readBuild(found.rawJson) },
+        )
+          ? found
+          : null;
+      if (found && !offered) {
+        void found.close().catch(() => {});
+      }
+
+      if (offered) {
+        pending.current = offered;
+        setVersion(offered.version);
+        setBuild(readBuild(offered.rawJson));
+        setNotes(offered.body ?? "");
         setProgress(-1);
         setStatus("available");
       } else {
         setVersion("");
+        setBuild(0);
         setNotes("");
         setProgress(-1);
         setStatus("current");
@@ -137,6 +158,7 @@ export function useUpdater(): UpdaterState {
     currentVersion,
     status,
     version,
+    build,
     notes,
     progress,
     error,

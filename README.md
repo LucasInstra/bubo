@@ -94,6 +94,8 @@ The default model is `openai/gpt-oss-120b`. Any OpenAI-compatible base URL works
 
 bubo checks GitHub Releases when it starts and shows a small banner when a newer version exists. There is also a manual check under Settings → Updates.
 
+Updates are matched by version and by build. A new version always wins; the same version is only offered when its build is higher, so a fix build can be published without a new version and still reach installations that already have that version. The build number is `BUILD_NUMBER` in `src/lib/build.ts` and is also written to `latest.json` by `scripts/updater-json.mjs`.
+
 The build is unsigned, so Windows SmartScreen may still warn on first run; update packages are verified with the Tauri updater signing key instead of an Authenticode certificate.
 
 The first updater-enabled release must be installed by hand. After that, later versions can download and install from inside the app.
@@ -101,13 +103,13 @@ The first updater-enabled release must be installed by hand. After that, later v
 ## Releasing
 
 1. Write `release-notes/<version>.md` in English. The release workflow uses this file as the GitHub release body.
-2. Start from a clean tree and run `npm version patch` (or `minor` / `major`). The `version` script syncs the new version into `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.lock`, stages those files, and npm commits and tags the release.
+2. Start from a clean tree and run `npm version patch` (or `minor` / `major`). The `version` script syncs the new version into `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.lock`, resets `BUILD_NUMBER` to 1, stages those files, and npm commits and tags the release.
 3. Push the commit and the tag with `git push origin main --follow-tags`.
-4. The release workflow builds on Windows and publishes the installer, the updater artifacts and `latest.json` to GitHub Releases.
+4. The release workflow builds on Windows and publishes the installer, the updater artifacts and `latest.json` (including the build number) to GitHub Releases.
 
 ### Fix builds
 
-A single fix does not get a new version or tag. Run the **Fix build** workflow from Actions with the current release tag. It builds the NSIS installer with the same version, replaces the stable `bubo-setup.exe` asset on that release, and uploads the installer as a workflow artifact. The versioned assets and `latest.json` stay untouched, so existing installations are not auto-updated.
+A single fix does not get a new version or tag. Bump `BUILD_NUMBER` in `src/lib/build.ts` by hand, commit it, and run the **Fix build** workflow from Actions with the current release tag. It builds the NSIS installer with the same version, replaces the stable `bubo-setup.exe` asset, the versioned installer and its signature, and regenerates `latest.json` with the new build number, so installations on that version update from inside the app. The release notes stay as they are; mention the fix there if it is worth telling the user.
 
 ## Keyboard
 
