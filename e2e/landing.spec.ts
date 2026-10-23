@@ -7,7 +7,7 @@ test("landing mounts the interactive mascot", async ({ page }) => {
   await expect(canvas).toBeVisible();
 
   const hit = page.locator(".hero-mascot-live .mascot-hit");
-  await expect(hit).toHaveAttribute("title", /Drag me/);
+  await expect(hit).toHaveAttribute("title", /Arraste-me/);
   const box = await hit.boundingBox();
   if (!box) throw new Error("mascot hit area not found");
 

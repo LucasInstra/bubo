@@ -27,6 +27,16 @@ interface SettingsPanelProps {
 }
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
+const REPLY_LANGUAGES = [
+  ["en", "Só inglês"],
+  ["bilingual", "Inglês + português"],
+  ["pt", "Só português"],
+];
+const REPLY_LANGUAGE_HINTS: Record<string, string> = {
+  en: "O bubo responde em inglês, no seu nível.",
+  bilingual: "O bubo responde em inglês e acrescenta uma tradução curta em português.",
+  pt: "O bubo conversa em português e mantém o inglês que você está aprendendo. As correções continuam no inglês que você escreveu.",
+};
 const TEXT_SIZES = [
   ["small", "Pequeno"],
   ["normal", "Normal"],
@@ -115,6 +125,15 @@ export function SettingsPanel({
   useModalFocus(dialogRef);
 
   const patch = (part: Partial<Settings>) => setDraft((current) => ({ ...current, ...part }));
+  const chooseReplyLanguage = (language: string) => {
+    setDraft((current) => ({
+      ...current,
+      replyLanguage: language,
+      // Portuguese-only is an accessibility choice, so the correction notes
+      // should be readable too. The field below can still be changed back.
+      noteLanguage: language === "pt" ? "pt" : current.noteLanguage,
+    }));
+  };
   const provider =
     PROVIDERS.find((preset) => preset.id === providerId) ?? matchProvider(draft.baseUrl);
   const modelOptions = modelChoices(
@@ -399,26 +418,25 @@ export function SettingsPanel({
         </div>
 
         <div className="field">
-          <span>Ajuda de tradução</span>
+          <span>Idioma das respostas</span>
           <div className="levels">
-            <button
-              type="button"
-              className={`chip ${!draft.translateReplies ? "chip-on" : ""}`}
-              onClick={() => patch({ translateReplies: false })}
-            >
-              Só inglês
-            </button>
-            <button
-              type="button"
-              className={`chip ${draft.translateReplies ? "chip-on" : ""}`}
-              onClick={() => patch({ translateReplies: true })}
-            >
-              Inglês + português
-            </button>
+            {REPLY_LANGUAGES.map(([value, label]) => (
+              <button
+                type="button"
+                key={value}
+                className={`chip ${draft.replyLanguage === value ? "chip-on" : ""}`}
+                onClick={() => chooseReplyLanguage(value)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
           <span className="hint">
-            O bubo responde em inglês e acrescenta uma tradução curta em português.
+            {REPLY_LANGUAGE_HINTS[draft.replyLanguage] ?? REPLY_LANGUAGE_HINTS.en}
           </span>
+          {draft.replyLanguage !== "pt" && (
+            <span className="hint">Ainda não lê inglês? Escolha Só português.</span>
+          )}
         </div>
 
         <label className="field row">

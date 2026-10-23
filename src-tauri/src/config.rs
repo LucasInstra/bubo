@@ -20,7 +20,7 @@ pub struct Settings {
     pub compact: bool,
     pub popup: bool,
     pub ignore_capitalization: bool,
-    pub translate_replies: bool,
+    pub reply_language: String,
     pub daily_goal: i64,
     pub reminders: bool,
     pub theme: String,
@@ -58,7 +58,7 @@ impl Default for Settings {
             compact: false,
             popup: false,
             ignore_capitalization: true,
-            translate_replies: false,
+            reply_language: "en".to_string(),
             daily_goal: 10,
             reminders: true,
             theme: "dark".to_string(),
@@ -93,7 +93,43 @@ pub fn load_settings(app: &AppHandle) -> Result<Settings, String> {
         return Ok(Settings::default());
     }
     let raw = fs::read_to_string(path).map_err(|e| e.to_string())?;
-    Ok(serde_json::from_str(&raw).unwrap_or_default())
+    let value: serde_json::Value = serde_json::from_str(&raw).unwrap_or_default();
+    Ok(settings_from_value(value))
+}
+
+/// Older builds stored the reply language as a boolean. Keep the learner's
+/// choice when the new field is missing, and normalize unknown values.
+fn settings_from_value(mut value: serde_json::Value) -> Settings {
+    if let serde_json::Value::Object(ref mut map) = value {
+        if !map.contains_key("replyLanguage")
+            && map
+                .get("translateReplies")
+                .and_then(serde_json::Value::as_bool)
+                == Some(true)
+        {
+            map.insert(
+                "replyLanguage".to_string(),
+                serde_json::Value::String("bilingual".to_string()),
+            );
+        }
+
+        let language = map
+            .get("replyLanguage")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("en")
+            .trim()
+            .to_ascii_lowercase();
+        let language = match language.as_str() {
+            "bilingual" | "pt" => language,
+            _ => "en".to_string(),
+        };
+        map.insert(
+            "replyLanguage".to_string(),
+            serde_json::Value::String(language),
+        );
+    }
+
+    serde_json::from_value(value).unwrap_or_default()
 }
 
 pub fn save_settings_file(app: &AppHandle, settings: &Settings) -> Result<(), String> {
@@ -116,5 +152,52 @@ pub fn load_api_key() -> Result<Option<String>, String> {
         Ok(key) => Ok(Some(key)),
         Err(keyring::Error::NoEntry) => Ok(None),
         Err(e) => Err(e.to_string()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn legacy_translate_replies_becomes_bilingual() {
+        let settings = settings_from_value(serde_json::json!({ "translateReplies": true }));
+        assert_eq!(settings.reply_language, "bilingual");
+    }
+
+    #[test]
+    fn disabled_legacy_translate_replies_keeps_english() {
+        let settings = settings_from_value(serde_json::json!({ "translateReplies": false }));
+        assert_eq!(settings.reply_language, "en");
+    }
+
+    #[test]
+    fn reply_language_wins_over_the_legacy_flag() {
+        let settings = settings_from_value(serde_json::json!({
+            "translateReplies": true,
+            "replyLanguage": "pt"
+        }));
+        assert_eq!(settings.reply_language, "pt");
+    }
+
+    #[test]
+    fn unknown_reply_language_falls_back_to_english() {
+        for language in ["", "english", "nonsense"] {
+            let settings = settings_from_value(serde_json::json!({ "replyLanguage": language }));
+            assert_eq!(settings.reply_language, "en", "language {language:?}");
+        }
+    }
+
+    #[test]
+    fn reply_language_is_case_insensitive() {
+        let settings = settings_from_value(serde_json::json!({ "replyLanguage": " PT " }));
+        assert_eq!(settings.reply_language, "pt");
+    }
+
+    #[test]
+    fn settings_save_the_reply_language_as_camel_case() {
+        let value = serde_json::to_value(Settings::default()).expect("settings json");
+        assert_eq!(value["replyLanguage"], "en");
+        assert!(value.get("translateReplies").is_none());
     }
 }

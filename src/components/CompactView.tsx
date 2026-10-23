@@ -1,4 +1,4 @@
-import { stripLegacyFixes } from "../lib/format";
+import { splitTranslation, stripLegacyFixes } from "../lib/format";
 import type { Mood, Msg, OrbState, Settings } from "../lib/types";
 import { Composer } from "./Composer";
 import { Mascot } from "./Mascot";
@@ -144,12 +144,29 @@ export function CompactView({
         <div className="compact-chat">
           {exchange.length === 0 && !pending && <p className="compact-empty">Diga oi em inglês.</p>}
 
-          {exchange.map((message) => (
-            <div className={`compact-bubble ${message.role}`} key={message.id}>
-              {stripLegacyFixes(message.content)}
-              {message.streaming && <span className="caret" />}
-            </div>
-          ))}
+          {exchange.map((message) => {
+            const content = stripLegacyFixes(message.content);
+            const split =
+              message.role === "assistant"
+                ? splitTranslation(content)
+                : { body: content, translation: "" };
+            return (
+              <div
+                className={`compact-bubble ${message.role} ${
+                  split.translation ? "has-translation" : ""
+                }`}
+                key={message.id}
+              >
+                {split.body}
+                {split.translation && (
+                  <span className="compact-translation" lang="pt-BR">
+                    {split.translation}
+                  </span>
+                )}
+                {message.streaming && <span className="caret" />}
+              </div>
+            );
+          })}
 
           {pending && (
             <div className="compact-bubble assistant compact-typing">
@@ -161,6 +178,11 @@ export function CompactView({
         <Composer
           disabled={status !== "idle"}
           busy={status !== "idle"}
+          placeholder={
+            settings.replyLanguage === "pt"
+              ? "Digite em português ou inglês..."
+              : "Digite em inglês..."
+          }
           onSend={onSend}
           onStop={onStop}
         />

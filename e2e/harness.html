@@ -32,8 +32,9 @@
 
       const params = new URLSearchParams(location.search);
       const mode = params.get("case") ?? "app";
-      const compact = mode === "compact";
+      const compact = mode === "compact" || mode === "compact-bilingual";
       const popup = mode === "popup";
+      const bilingual = mode === "bilingual" || mode === "compact-bilingual";
       const width = popup ? 380 : compact ? 400 : 420;
       const height = popup ? 380 : compact ? 280 : 640;
 
@@ -68,6 +69,18 @@
         },
       ];
 
+      const bilingualStored = [
+        ...stored,
+        {
+          id: 3,
+          role: "assistant",
+          content:
+            "That sounds like a good weekend. Was the water warm?\nPT: Isso parece um bom fim de semana. A água estava quente?",
+          fixes: null,
+          createdAt: 3,
+        },
+      ];
+
       const drillItem = {
         id: 1,
         wrong: "i go to the gym yesterday",
@@ -96,7 +109,7 @@
         get_settings: () => settings,
         has_api_key: () => true,
         "plugin:app|version": () => "0.5.3",
-        history: () => (mode === "empty" ? [] : stored),
+        history: () => (mode === "empty" ? [] : bilingual ? bilingualStored : stored),
         current_session: () => 1,
         list_sessions: () => [
           {

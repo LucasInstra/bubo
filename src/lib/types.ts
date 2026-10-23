@@ -35,7 +35,7 @@ export interface Settings {
   compact: boolean;
   popup: boolean;
   ignoreCapitalization: boolean;
-  translateReplies: boolean;
+  replyLanguage: string;
   dailyGoal: number;
   reminders: boolean;
   theme: string;
@@ -163,7 +163,7 @@ export const DEFAULT_SETTINGS: Settings = {
   compact: false,
   popup: false,
   ignoreCapitalization: true,
-  translateReplies: false,
+  replyLanguage: "en",
   dailyGoal: 10,
   reminders: true,
   theme: "dark",

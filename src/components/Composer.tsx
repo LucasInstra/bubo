@@ -4,6 +4,7 @@ interface ComposerProps {
   disabled: boolean;
   busy: boolean;
   autoFocus?: boolean;
+  placeholder?: string;
   onSend: (text: string) => boolean;
   onStop: () => void;
   onSearch?: () => void;
@@ -13,6 +14,7 @@ export function Composer({
   disabled,
   busy,
   autoFocus = false,
+  placeholder = "Digite em inglês...",
   onSend,
   onStop,
   onSearch,
@@ -73,7 +75,7 @@ export function Composer({
           ref={textareaRef}
           rows={1}
           value={value}
-          placeholder={disabled ? "o bubo está escrevendo..." : "Digite em inglês..."}
+          placeholder={disabled ? "o bubo está escrevendo..." : placeholder}
           onChange={(event) => {
             setValue(event.target.value);
             resize();

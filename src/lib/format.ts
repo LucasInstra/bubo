@@ -8,6 +8,21 @@ export function stripLegacyFixes(content: string): string {
   return (mark === -1 ? content : content.slice(0, mark)).trim();
 }
 
+/**
+ * Splits a bilingual reply into the English body and the Portuguese line.
+ * The marker only counts at the start of a line, and a reply that is only the
+ * translation stays untouched so nothing disappears.
+ */
+export function splitTranslation(content: string): { body: string; translation: string } {
+  const match = /(?:^|\n)PT:\s*([\s\S]*)$/.exec(content);
+  if (!match) return { body: content, translation: "" };
+  const at = match.index ?? 0;
+  const body = content.slice(0, at).trimEnd();
+  const translation = match[1].trim();
+  if (!body || !translation) return { body: content, translation: "" };
+  return { body, translation };
+}
+
 export function parseStoredFixes(raw: string | null): Fix[] {
   if (!raw) return [];
   try {

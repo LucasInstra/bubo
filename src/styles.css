@@ -469,6 +469,18 @@ button {
   color: var(--accent);
 }
 
+.msg-translation {
+  margin-top: 8px;
+  padding: 7px 10px;
+  border-left: 2px solid rgba(139, 125, 255, 0.45);
+  border-radius: 0 8px 8px 0;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 .retry {
   align-self: flex-start;
   margin-top: 2px;
@@ -1926,6 +1938,22 @@ button {
   background: rgba(255, 255, 255, 0.07);
 }
 
+.compact-bubble.has-translation {
+  -webkit-line-clamp: 4;
+}
+
+.compact-translation {
+  display: block;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--muted);
+  font-size: 10.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .compact-bubble.user {
   align-self: flex-start;
   border-color: rgba(191, 181, 255, 0.3);
@@ -2575,6 +2603,15 @@ button {
   scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
 }
 
+.popup-translation {
+  display: block;
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
 .popup-bubble-text::-webkit-scrollbar {
   width: 4px;
 }
@@ -2841,6 +2878,16 @@ button {
 
 [data-theme="light"] .msg-bot .bubble {
   color: var(--text);
+}
+
+[data-theme="light"] .msg-translation {
+  border-left-color: var(--accent);
+  background: rgba(20, 18, 40, 0.04);
+}
+
+[data-theme="light"] .compact-translation,
+[data-theme="light"] .popup-translation {
+  border-top-color: rgba(20, 18, 40, 0.1);
 }
 
 [data-theme="light"] .msg-user .bubble {

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { stripLegacyFixes } from "../lib/format";
+import { splitTranslation, stripLegacyFixes } from "../lib/format";
 import type { Mood, Msg, OrbState, Settings } from "../lib/types";
 import { Composer } from "./Composer";
 import { Mascot } from "./Mascot";
@@ -204,7 +204,8 @@ export function PopupView({
     }, 240);
   };
 
-  const reply = lastAssistant ? stripLegacyFixes(lastAssistant.content) : "";
+  const replyContent = lastAssistant ? stripLegacyFixes(lastAssistant.content) : "";
+  const reply = splitTranslation(replyContent);
   const tail = (
     <svg className="popup-tail" viewBox="0 0 20 14" aria-hidden="true">
       <path d="M2 0 H18 V4 L10 14 L2 4 Z" fill="rgba(23, 19, 34, 0.97)" />
@@ -225,7 +226,12 @@ export function PopupView({
           {lastAssistant && !pending ? (
             <div className={`popup-bubble assistant ${lastAssistant.error ? "error" : ""}`}>
               <div className="popup-bubble-text">
-                {reply}
+                {reply.body}
+                {reply.translation && (
+                  <span className="popup-translation" lang="pt-BR">
+                    {reply.translation}
+                  </span>
+                )}
                 {lastAssistant.streaming && <span className="caret" />}
               </div>
               {tail}
@@ -287,6 +293,11 @@ export function PopupView({
           disabled={status !== "idle"}
           busy={status !== "idle"}
           autoFocus
+          placeholder={
+            settings.replyLanguage === "pt"
+              ? "Digite em português ou inglês..."
+              : "Digite em inglês..."
+          }
           onSend={onSend}
           onStop={onStop}
         />

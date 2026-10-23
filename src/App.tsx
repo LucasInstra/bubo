@@ -25,10 +25,16 @@ import type { Fix, Mood, Msg, OrbState, Settings, StoredMessage } from "./lib/ty
 import { DEFAULT_SETTINGS } from "./lib/types";
 import { useUpdater } from "./lib/updater";
 
-const SUGGESTIONS = [
+const SUGGESTIONS_EN = [
   "Hi bubo! I want to talk about my weekend.",
   "Fix this: I go to the gym yesterday.",
   "Teach me how to order coffee in a cafe.",
+];
+
+const SUGGESTIONS_PT = [
+  "Oi, bubo! Quero falar sobre meu fim de semana.",
+  "Quero aprender a falar do que eu fiz ontem.",
+  "Me ensina a pedir um café em inglês.",
 ];
 
 const STATUS_LABEL: Record<OrbState, string> = {
@@ -612,6 +618,8 @@ export default function App() {
     ? messages.filter((message) => message.content.toLowerCase().includes(normalizedSearch))
     : messages;
   const accent = settings.accentFromMascot ? settings.color : "#8b7dff";
+  const portugueseReplies = settings.replyLanguage === "pt";
+  const suggestions = portugueseReplies ? SUGGESTIONS_PT : SUGGESTIONS_EN;
   const showUpdateBanner =
     updater.status === "downloading" ||
     updater.status === "ready" ||
@@ -1019,10 +1027,17 @@ export default function App() {
           {empty && !showSettings && !showBuddy ? (
             <div className="hero">
               <h1>Oi, eu sou o bubo.</h1>
-              <p>
-                Fale comigo em inglês. Eu mantenho a conversa e mostro discretamente como um falante
-                nativo diria.
-              </p>
+              {portugueseReplies ? (
+                <p>
+                  Fale comigo em português. Quando você quiser, eu mostro como dizer a mesma coisa
+                  em inglês.
+                </p>
+              ) : (
+                <p>
+                  Fale comigo em inglês. Eu mantenho a conversa e mostro discretamente como um
+                  falante nativo diria.
+                </p>
+              )}
               <div className="suggestions">
                 {due > 0 && (
                   <button
@@ -1035,7 +1050,7 @@ export default function App() {
                     Praticar {due} {due === 1 ? "correção" : "correções"} das nossas conversas
                   </button>
                 )}
-                {SUGGESTIONS.map((suggestion) => (
+                {suggestions.map((suggestion) => (
                   <button key={suggestion} className="chip" onClick={() => void send(suggestion)}>
                     {suggestion}
                   </button>
@@ -1089,6 +1104,11 @@ export default function App() {
         <Composer
           disabled={status !== "idle"}
           busy={status !== "idle"}
+          placeholder={
+            settings.replyLanguage === "pt"
+              ? "Digite em português ou inglês..."
+              : "Digite em inglês..."
+          }
           onSend={send}
           onStop={stop}
           onSearch={() => {

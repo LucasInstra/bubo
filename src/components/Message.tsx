@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { stripLegacyFixes } from "../lib/format";
+import { stripLegacyFixes, splitTranslation } from "../lib/format";
 import { ipc } from "../lib/ipc";
 import type { Fix, Msg } from "../lib/types";
 
@@ -23,8 +23,10 @@ export const Message = memo(function Message({
   onPracticeFix,
   onDeleteFix,
 }: MessageProps) {
-  const body = stripLegacyFixes(message.content);
+  const fullBody = stripLegacyFixes(message.content);
   const isUser = message.role === "user";
+  const split = isUser ? { body: fullBody, translation: "" } : splitTranslation(fullBody);
+  const body = split.body;
   const fixes = message.fixes ?? [];
   const [confirming, setConfirming] = useState(false);
   const [confirmingFix, setConfirmingFix] = useState<string | null>(null);
@@ -91,13 +93,13 @@ export const Message = memo(function Message({
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(body);
+      await navigator.clipboard.writeText(fullBody);
       return;
     } catch {
       // Fallback for webviews without clipboard permission.
     }
     const area = document.createElement("textarea");
-    area.value = body;
+    area.value = fullBody;
     area.style.position = "fixed";
     area.style.opacity = "0";
     document.body.appendChild(area);
@@ -116,15 +118,22 @@ export const Message = memo(function Message({
         {isUser ? (
           body
         ) : (
-          <div className="markdown">
-            <ReactMarkdown
-              components={{
-                a: ({ children }) => <span className="md-link">{children}</span>,
-              }}
-            >
-              {body}
-            </ReactMarkdown>
-          </div>
+          <>
+            <div className="markdown">
+              <ReactMarkdown
+                components={{
+                  a: ({ children }) => <span className="md-link">{children}</span>,
+                }}
+              >
+                {body}
+              </ReactMarkdown>
+            </div>
+            {split.translation && (
+              <div className="msg-translation" lang="pt-BR">
+                {split.translation}
+              </div>
+            )}
+          </>
         )}
         {message.streaming && <span className="caret" />}
       </div>

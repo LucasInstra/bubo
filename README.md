@@ -29,7 +29,7 @@ Because the useful part of learning a language is the five minutes between real 
 - **Ready-made personalities**: twelve voices such as Warm Coach, Dry Wit or Hype Friend. Picking one changes only the tutor's tone; the mascot look stays exactly as you customized it. The free-text flavor field stacks on top.
 - **Compact mode**: a 400 x 280 horizontal chat card with the buddy in the header, the current mood under the name and a one-line composer. The full window is one click away.
 - **Bring your own endpoint**: Groq, OpenAI, OpenRouter, Ollama or any OpenAI-compatible URL, with model suggestions, a test connection button, optional proxy and custom CA certificate for company networks.
-- **Conversation first**: replies stream token by token; a separate pass returns corrections as strict JSON, so the card never depends on the model following inline formatting. Replies render Markdown, and a search field filters the current conversation.
+- **Conversation first**: replies stream token by token; a separate pass returns corrections as strict JSON, so the card never depends on the model following inline formatting. Replies render Markdown, and a search field filters the current conversation. bubo can reply in English only, in English with a short Portuguese translation, or in Portuguese only when you are still learning to read English.
 - **Looks and pace**: dark, light or system theme; a daily review goal; an optional daily reminder notification when cards are due.
 - **Corrections that stick**: every fix is stored, linked to the message that produced it, and scheduled with a 1 / 3 / 7 / 21 / 45 day ladder. A miss comes back in ten minutes.
 - **Practice mode**: rewrite the wrong sentence, get instant feedback, see the original context, and use “I was right” when a valid alternative was marked wrong. Skip the due cards or reset the deck from settings.
@@ -85,7 +85,7 @@ Updater artifacts are enabled, so a local installer build also needs `TAURI_SIGN
 ## First run
 
 1. Settings opens automatically. Paste a Groq API key from [console.groq.com/keys](https://console.groq.com/keys). It is stored in the Windows Credential Manager.
-2. Pick your CEFR level. `B1` is a good default.
+2. Pick your CEFR level. `B1` is a good default. Then choose the reply language: English only, English with a Portuguese translation, or Portuguese only if you cannot read English yet.
 3. Press `Ctrl+Alt+B` (or use the tray icon) to show bubo, and say hello.
 
 The default model is `openai/gpt-oss-120b`. Any OpenAI-compatible base URL works if you prefer another provider.
@@ -118,7 +118,7 @@ The first updater-enabled release must be installed by hand. After that, later v
 
 - Mascot: shape, color (including picker), eyes, size, mouth, status label.
 - App: accent color follows the mascot, message text size, always-on-top, start with Windows.
-- Learning: level, ignore capitalization for informal chat, persona.
+- Learning: level, reply language, ignore capitalization for informal chat, persona.
 - Connection: API key, model, base URL.
 
 ## How it works
@@ -206,7 +206,6 @@ e2e/                      Playwright harness and tests
 ## Roadmap
 
 - Manual correction add/edit when the model misses or mislabels a fix.
-- Portuguese UI.
 - Content Security Policy without inline styles.
 - Authenticode signing for the installer.
 - Voice practice (speak and listen), later, deliberately.

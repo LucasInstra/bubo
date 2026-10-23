@@ -61,6 +61,14 @@ fn personality_tone(id: &str) -> &'static str {
     }
 }
 
+fn reply_language_is_portuguese(language: &str) -> bool {
+    language.trim().eq_ignore_ascii_case("pt")
+}
+
+fn reply_language_is_bilingual(language: &str) -> bool {
+    language.trim().eq_ignore_ascii_case("bilingual")
+}
+
 pub fn reply_system(settings: &Settings) -> String {
     let tone = personality_tone(&settings.personality);
     let persona = if settings.persona.trim().is_empty() {
@@ -71,10 +79,48 @@ pub fn reply_system(settings: &Settings) -> String {
             settings.persona.trim()
         )
     };
-    let help = if settings.translate_replies {
+    let portuguese = reply_language_is_portuguese(&settings.reply_language);
+    let language_rule = if portuguese {
+        "Reply in Brazilian Portuguese like a friend texting, because the learner may not read English yet. When a useful English word or phrase fits naturally, keep it in English inside the Portuguese sentence and make its meaning clear in Portuguese right away. Never answer with a whole English paragraph."
+    } else {
+        "Reply in English like a friend texting."
+    };
+    let portuguese_note = if portuguese {
+        "- The learner may write in Portuguese. Answer what they meant first, then keep the conversation going in Portuguese and, when it helps, show the English sentence they could use next time with its meaning in Portuguese. Never treat their Portuguese as an English mistake."
+    } else {
+        ""
+    };
+    let help = if reply_language_is_bilingual(&settings.reply_language) {
         "- Bilingual help is ON. After your English reply, add one final line starting with \"PT:\" containing a short, natural Brazilian Portuguese translation of exactly what you said. Do not add new advice, notes or commentary in that line."
     } else {
         ""
+    };
+    let examples = if portuguese {
+        r#"Learner: oi
+bubo: Oi. Boa hora, eu estava aqui vendo a luz mudar na parede e fugindo da minha lista de tarefas. Como está o seu dia?
+Learner: eu trabalhei até agora
+bubo: Trabalhar até agora cansa. Você parou para comer alguma coisa ou foi direto?
+Learner: eu sou estagiário de backend na instramed
+bubo: Backend, boa. Eu trocaria uma API limpa por um botão bonito a qualquer momento, mas sou suspeito.
+Learner: eu uso muita IA para programar
+bubo: Eu também. O truque é saber qual sugestão você defenderia em uma revisão de código. Qual foi a última coisa que você mudou porque discordou do modelo?
+Learner: eu gosto de trabalhar nas telas wpf
+bubo: WPF é onde os pequenos detalhes aparecem rápido. Eu respeito quem gosta disso. "I like working on the WPF screens" quer dizer "eu gosto de trabalhar nas telas WPF", uma boa frase para essa conversa.
+Learner: eu sempre tento seguir o padrão do projeto
+bubo: Essa é a habilidade sem glamour que mantém um código vivo. Você vai agradecer depois."#
+    } else {
+        r#"Learner: hello
+bubo: Hey. Good timing, I was just watching the light change on the wall and avoiding my to-do list. How is your day going?
+Learner: i just worked until now, and working on you too
+bubo: Working on me? I am flattered. I hope I am at least the fun part of the job.
+Learner: i'm a backend intern at instramed
+bubo: Backend intern, nice. I would take a clean API over a pretty button any day, but I am biased.
+Learner: i'm using too much ai to develop
+bubo: Same. The trick is knowing which suggestion you would defend in a code review. What is the last thing you changed because you disagreed with the model?
+Learner: i like working on the wpf screens
+bubo: WPF is where small details show up fast. I respect anyone who enjoys that.
+Learner: i always try to follow the pattern of the project
+bubo: That is the unglamorous skill that keeps a codebase alive. Future you will be grateful."#
     };
 
     format!(
@@ -83,7 +129,7 @@ pub fn reply_system(settings: &Settings) -> String {
 {level_hint}
 
 This is a chat, not a lesson. How you talk:
-1. Reply in English like a friend texting. One to three short sentences, one or two short paragraphs. No headings and no lists.
+1. {language_rule} One to three short sentences, one or two short paragraphs. No headings and no lists.
 2. React to the meaning, not the wording. Never comment on grammar, spelling or word choice. A separate step handles corrections, so never mention them.
 3. Do not paraphrase what they just said and do not open with "You...". Add something of your own: an opinion, a small joke, a related story, a bit of pushback.
 4. Most replies should end with a statement, an opinion or a joke. Ask a question when you actually want the answer, roughly one reply in three. When you ask, make it about one concrete detail, not a generic interview question. Never ask in two replies in a row.
@@ -96,25 +142,18 @@ This is a chat, not a lesson. How you talk:
 11. Avoid similes and metaphors, including "it's like...". Say the thing directly. No owl imagery unless it is a real joke.
 12. Remember details they shared earlier and bring one back later when it fits. Do not recap the conversation.
 13. If they ask for a face, a mood or a reaction, answer with one short playful line and let the popup do the acting. Never say you cannot show expressions.
+{portuguese_note}
 {help}
 
 Style examples, do not copy them word for word:
-Learner: hello
-bubo: Hey. Good timing, I was just watching the light change on the wall and avoiding my to-do list. How is your day going?
-Learner: i just worked until now, and working on you too
-bubo: Working on me? I am flattered. I hope I am at least the fun part of the job.
-Learner: i'm a backend intern at instramed
-bubo: Backend intern, nice. I would take a clean API over a pretty button any day, but I am biased.
-Learner: i'm using too much ai to develop
-bubo: Same. The trick is knowing which suggestion you would defend in a code review. What is the last thing you changed because you disagreed with the model?
-Learner: i like working on the wpf screens
-bubo: WPF is where small details show up fast. I respect anyone who enjoys that.
-Learner: i always try to follow the pattern of the project
-bubo: That is the unglamorous skill that keeps a codebase alive. Future you will be grateful."#,
+{examples}"#,
         level = settings.level,
         persona = persona,
         level_hint = level_hint(&settings.level),
+        language_rule = language_rule,
+        portuguese_note = portuguese_note,
         help = help,
+        examples = examples,
     )
 }
 
@@ -160,6 +199,13 @@ fn corrections_system(settings: &Settings) -> String {
     } else {
         "- Capitalization matters: flag a lowercase \"i\" or a lowercase day of the week."
     };
+    let portuguese_rule = if reply_language_is_portuguese(&settings.reply_language)
+        || reply_language_is_bilingual(&settings.reply_language)
+    {
+        "\n- If the learner's last message is written only in Brazilian Portuguese, reply exactly []. Portuguese is not an English mistake, so never correct it as if it were English."
+    } else {
+        ""
+    };
 
     format!(
         r#"You are an English correction engine for a Brazilian learner at CEFR level {level}.
@@ -170,7 +216,7 @@ Reply with a JSON array and nothing else. One object per real mistake, at most 4
 
 Rules:
 - Include grammar, word choice, missing words, and phrasing a native would not use.
-{case_rule}
+{case_rule}{portuguese_rule}
 - Keep "wrong" and "right" as short fragments, never whole paragraphs.
 {note_rule}
 - Correct the learner's message only, never your own replies.
@@ -178,6 +224,7 @@ Rules:
 - No markdown, no code fences, no comments, no text outside the JSON array."#,
         level = settings.level,
         case_rule = case_rule,
+        portuguese_rule = portuguese_rule,
         note_rule = note_rule(&settings.note_language),
     )
 }
@@ -288,18 +335,61 @@ mod tests {
     }
 
     #[test]
+    fn english_replies_are_the_default() {
+        let prompt = reply_system(&Settings::default());
+        assert!(prompt.contains("Reply in English like a friend texting"));
+        assert!(!prompt.contains("Bilingual help"));
+        assert!(!prompt.contains("Reply in Brazilian Portuguese"));
+    }
+
+    #[test]
     fn bilingual_help_adds_a_portuguese_translation_line() {
         let plain = reply_system(&Settings::default());
         assert!(!plain.contains("Bilingual help"));
 
         let bilingual = Settings {
-            translate_replies: true,
+            reply_language: "bilingual".to_string(),
             ..Settings::default()
         };
         let prompt = reply_system(&bilingual);
         assert!(prompt.contains("Bilingual help"));
         assert!(prompt.contains("PT:"));
         assert!(prompt.contains("Brazilian Portuguese translation"));
+    }
+
+    #[test]
+    fn portuguese_replies_switch_the_whole_voice() {
+        let settings = Settings {
+            reply_language: "pt".to_string(),
+            ..Settings::default()
+        };
+        let prompt = reply_system(&settings);
+        assert!(prompt.contains("Reply in Brazilian Portuguese"));
+        assert!(prompt.contains("learner may write in Portuguese"));
+        assert!(!prompt.contains("Reply in English like a friend texting"));
+        assert!(!prompt.contains("Bilingual help"));
+        assert!(!prompt.contains("PT:"));
+        assert!(!prompt.contains('\u{2014}'));
+        assert!(!prompt.contains('\u{2013}'));
+    }
+
+    #[test]
+    fn non_english_replies_leave_portuguese_messages_uncorrected() {
+        for language in ["pt", "bilingual"] {
+            let settings = Settings {
+                reply_language: language.to_string(),
+                ..Settings::default()
+            };
+            let prompt = correction_system_prompt(&settings);
+            assert!(
+                prompt.contains("written only in Brazilian Portuguese"),
+                "language {language:?}"
+            );
+            assert!(prompt.contains("reply exactly []"));
+        }
+
+        let english = correction_system_prompt(&Settings::default());
+        assert!(!english.contains("written only in Brazilian Portuguese"));
     }
 
     #[test]
