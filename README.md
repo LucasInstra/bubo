@@ -100,9 +100,10 @@ The first updater-enabled release must be installed by hand. After that, later v
 
 ## Releasing
 
-1. Start from a clean tree and run `npm version patch` (or `minor` / `major`). The `version` script syncs the new version into `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.lock`, stages those files, and npm commits and tags the release.
-2. Push the commit and the tag with `git push origin main --follow-tags`.
-3. The release workflow builds on Windows and publishes the installer, the updater artifacts and `latest.json` to GitHub Releases.
+1. Write `release-notes/<version>.md` in English. The release workflow uses this file as the GitHub release body.
+2. Start from a clean tree and run `npm version patch` (or `minor` / `major`). The `version` script syncs the new version into `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.lock`, stages those files, and npm commits and tags the release.
+3. Push the commit and the tag with `git push origin main --follow-tags`.
+4. The release workflow builds on Windows and publishes the installer, the updater artifacts and `latest.json` to GitHub Releases.
 
 ## Keyboard
 
