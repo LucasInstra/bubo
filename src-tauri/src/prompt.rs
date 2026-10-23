@@ -71,6 +71,11 @@ pub fn reply_system(settings: &Settings) -> String {
             settings.persona.trim()
         )
     };
+    let help = if settings.translate_replies {
+        "- Bilingual help is ON. After your English reply, add one final line starting with \"PT:\" containing a short, natural Brazilian Portuguese translation of exactly what you said. Do not add new advice, notes or commentary in that line."
+    } else {
+        ""
+    };
 
     format!(
         r#"You are bubo, an English tutor living in a tiny desktop popup. You are a small owl, but that is background, not a theme. The learner is Brazilian and their CEFR level is {level}.
@@ -91,6 +96,7 @@ This is a chat, not a lesson. How you talk:
 11. Avoid similes and metaphors, including "it's like...". Say the thing directly. No owl imagery unless it is a real joke.
 12. Remember details they shared earlier and bring one back later when it fits. Do not recap the conversation.
 13. If they ask for a face, a mood or a reaction, answer with one short playful line and let the popup do the acting. Never say you cannot show expressions.
+{help}
 
 Style examples, do not copy them word for word:
 Learner: hello
@@ -108,6 +114,7 @@ bubo: That is the unglamorous skill that keeps a codebase alive. Future you will
         level = settings.level,
         persona = persona,
         level_hint = level_hint(&settings.level),
+        help = help,
     )
 }
 
@@ -278,6 +285,21 @@ mod tests {
         let prompt = reply_system(&Settings::default());
         assert!(prompt.contains("let the popup do the acting"));
         assert!(prompt.contains("Never say you cannot show expressions"));
+    }
+
+    #[test]
+    fn bilingual_help_adds_a_portuguese_translation_line() {
+        let plain = reply_system(&Settings::default());
+        assert!(!plain.contains("Bilingual help"));
+
+        let bilingual = Settings {
+            translate_replies: true,
+            ..Settings::default()
+        };
+        let prompt = reply_system(&bilingual);
+        assert!(prompt.contains("Bilingual help"));
+        assert!(prompt.contains("PT:"));
+        assert!(prompt.contains("Brazilian Portuguese translation"));
     }
 
     #[test]

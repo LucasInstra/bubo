@@ -398,6 +398,29 @@ export function SettingsPanel({
           </div>
         </div>
 
+        <div className="field">
+          <span>Ajuda de tradução</span>
+          <div className="levels">
+            <button
+              type="button"
+              className={`chip ${!draft.translateReplies ? "chip-on" : ""}`}
+              onClick={() => patch({ translateReplies: false })}
+            >
+              Só inglês
+            </button>
+            <button
+              type="button"
+              className={`chip ${draft.translateReplies ? "chip-on" : ""}`}
+              onClick={() => patch({ translateReplies: true })}
+            >
+              Inglês + português
+            </button>
+          </div>
+          <span className="hint">
+            O bubo responde em inglês e acrescenta uma tradução curta em português.
+          </span>
+        </div>
+
         <label className="field row">
           <span>Ignorar maiúsculas</span>
           <input
