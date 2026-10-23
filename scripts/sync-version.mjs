@@ -12,6 +12,7 @@ const packagePath = join(root, "package.json");
 const cargoPath = join(root, "src-tauri", "Cargo.toml");
 const configPath = join(root, "src-tauri", "tauri.conf.json");
 const lockPath = join(root, "src-tauri", "Cargo.lock");
+const buildPath = join(root, "src", "lib", "build.ts");
 
 const pkg = JSON.parse(readFileSync(packagePath, "utf8"));
 const version = pkg.version;
@@ -19,6 +20,16 @@ const version = pkg.version;
 if (expected && version !== expected) {
   console.error(`package.json is ${version}, expected ${expected}`);
   process.exit(1);
+}
+
+// A new version starts a new build series. Fix builds of the same version
+// increment the label by hand; `npm version` resets it to build 1.
+const isVersionBump = !checkOnly && process.env.npm_lifecycle_event === "version";
+const buildSource = readFileSync(buildPath, "utf8");
+const buildNext = buildSource.replace(/(BUILD_LABEL\s*=\s*)"build \d+"/, '$1"build 1"');
+if (isVersionBump && buildNext !== buildSource) {
+  writeFileSync(buildPath, buildNext);
+  console.log("reset the display build label to build 1");
 }
 
 const cargo = readFileSync(cargoPath, "utf8");
