@@ -694,287 +694,288 @@ export default function App() {
     >
       <div className="panel">
         <header className="head" data-tauri-drag-region>
-          <button
-            className="brand brand-button"
-            type="button"
-            title="Personalizar o bubo"
-            aria-label="Personalizar o bubo"
-            onClick={() => {
-              setShowSettings(false);
-              setShowProgress(false);
-              setShowHistory(false);
-              setShowBuddy(true);
-            }}
-          >
-            {settings.compact && (
-              <span className="brand-face">
-                <Mascot
-                  state={status}
-                  mood={mood}
-                  size={42}
-                  shape={settings.shape}
-                  color={settings.color}
-                  showMouth={settings.showMouth}
-                  mouthStyle={settings.mouthStyle}
-                  mouthSize={settings.mouthSize}
-                  mouthColor={settings.mouthColor}
-                  eyeStyle={settings.eyeStyle}
-                  eyeSize={settings.eyeSize}
-                  eyeSpacing={settings.eyeSpacing}
-                  eyeTilt={settings.eyeTilt}
-                  eyeColor={settings.eyeColor}
-                />
+          <div className="head-top">
+            <button
+              className="brand brand-button"
+              type="button"
+              title="Personalizar o bubo"
+              aria-label="Personalizar o bubo"
+              onClick={() => {
+                setShowSettings(false);
+                setShowProgress(false);
+                setShowHistory(false);
+                setShowBuddy(true);
+              }}
+            >
+              {settings.compact && (
+                <span className="brand-face">
+                  <Mascot
+                    state={status}
+                    mood={mood}
+                    size={42}
+                    shape={settings.shape}
+                    color={settings.color}
+                    showMouth={settings.showMouth}
+                    mouthStyle={settings.mouthStyle}
+                    mouthSize={settings.mouthSize}
+                    mouthColor={settings.mouthColor}
+                    eyeStyle={settings.eyeStyle}
+                    eyeSize={settings.eyeSize}
+                    eyeSpacing={settings.eyeSpacing}
+                    eyeTilt={settings.eyeTilt}
+                    eyeColor={settings.eyeColor}
+                  />
+                </span>
+              )}
+              <span className="brand-copy">
+                <strong>bubo</strong>
+                <span className="brand-sub">{MOOD_LABEL[mood]}</span>
               </span>
-            )}
-            <span className="brand-copy">
-              <strong>bubo</strong>
-              <span className="brand-sub">{MOOD_LABEL[mood]}</span>
-            </span>
-            <span className="brand-edit" aria-hidden="true">
-              <svg
-                viewBox="0 0 24 24"
-                width="12"
-                height="12"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M4 20h4L18.5 9.5l-4-4L4 16v4z" />
-                <path d="M13.5 6.5l4 4" />
-              </svg>
-            </span>
-          </button>
-          <div className="head-actions">
-            {!settings.compact && (
-              <>
-                <button
-                  className="ghost icon"
-                  title="Nova conversa"
-                  aria-label="Nova conversa"
-                  disabled={status !== "idle"}
-                  onClick={() => void newChat()}
+              <span className="brand-edit" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="12"
+                  height="12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-                    <path
-                      d="M12 5v14M5 12h14"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </button>
-                <button
-                  className="ghost icon"
-                  title="Histórico"
-                  aria-label="Histórico"
-                  disabled={status !== "idle"}
-                  onClick={() => {
-                    setShowSettings(false);
-                    setShowBuddy(false);
-                    setShowProgress(false);
-                    setShowDrill(false);
-                    setShowHistory(true);
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="8.2"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                    />
-                    <path
-                      d="M12 7.5V12l3 1.8"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </button>
-                <button
-                  className="ghost icon"
-                  title="Progresso"
-                  aria-label="Progresso"
-                  onClick={() => {
-                    setShowSettings(false);
-                    setShowBuddy(false);
-                    setShowHistory(false);
-                    setShowDrill(false);
-                    setShowProgress(true);
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-                    <path
-                      d="M5 19v-6M12 19V6M19 19v-9"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </button>
-                <button
-                  className="ghost icon"
-                  title={due > 0 ? `Praticar ${due} correções` : "Praticar correções"}
-                  aria-label="Praticar"
-                  onClick={() => {
-                    setDrillFocus(null);
-                    setShowDrill(true);
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="8.2"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                    />
-                    <circle cx="12" cy="12" r="2.6" fill="currentColor" />
-                  </svg>
-                  {due > 0 && <span className="badge">{due > 9 ? "9+" : due}</span>}
-                </button>
-                <span className="head-sep" aria-hidden="true" />
-              </>
-            )}
-            <button
-              className={`ghost icon ${pinned ? "on" : ""}`}
-              title={
-                pinned
-                  ? "Desafixar (deixar outras janelas cobrirem o bubo)"
-                  : "Manter o bubo no topo"
-              }
-              aria-label="Fixar janela"
-              onClick={togglePin}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                width="15"
-                height="15"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M9 3h6l-1 6 3 3v1H7v-1l3-3-1-6z" />
-                <path d="M12 13v8" />
-              </svg>
+                  <path d="M4 20h4L18.5 9.5l-4-4L4 16v4z" />
+                  <path d="M13.5 6.5l4 4" />
+                </svg>
+              </span>
             </button>
-            <button
-              className={`ghost icon ${settings.compact ? "on" : ""}`}
-              title={settings.compact ? "Modo completo" : "Modo compacto"}
-              aria-label={settings.compact ? "Modo completo" : "Modo compacto"}
-              aria-pressed={settings.compact}
-              onClick={toggleCompact}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                width="15"
-                height="15"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+            <div className="head-actions">
+              <button
+                className={`ghost icon ${pinned ? "on" : ""}`}
+                title={
+                  pinned
+                    ? "Desafixar (deixar outras janelas cobrirem o bubo)"
+                    : "Manter o bubo no topo"
+                }
+                aria-label="Fixar janela"
+                onClick={togglePin}
               >
-                {settings.compact ? (
-                  <path d="M4 9h5V4M20 15h-5v5" />
-                ) : (
-                  <path d="M9 4v5H4M15 20v-5h5" />
-                )}
-              </svg>
-            </button>
-            <button
-              className="ghost icon"
-              title="Modo popup"
-              aria-label="Modo popup"
-              disabled={!hasKey}
-              onClick={enterPopup}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                width="15"
-                height="15"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+                <svg
+                  viewBox="0 0 24 24"
+                  width="15"
+                  height="15"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M9 3h6l-1 6 3 3v1H7v-1l3-3-1-6z" />
+                  <path d="M12 13v8" />
+                </svg>
+              </button>
+              <button
+                className={`ghost icon ${settings.compact ? "on" : ""}`}
+                title={settings.compact ? "Modo completo" : "Modo compacto"}
+                aria-label={settings.compact ? "Modo completo" : "Modo compacto"}
+                aria-pressed={settings.compact}
+                onClick={toggleCompact}
               >
-                <path d="M5 5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-7l-4 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
-              </svg>
-            </button>
-            {!settings.compact && (
+                <svg
+                  viewBox="0 0 24 24"
+                  width="15"
+                  height="15"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  {settings.compact ? (
+                    <path d="M4 9h5V4M20 15h-5v5" />
+                  ) : (
+                    <path d="M9 4v5H4M15 20v-5h5" />
+                  )}
+                </svg>
+              </button>
               <button
                 className="ghost icon"
-                title="Configurações"
-                aria-label="Configurações"
-                onClick={() => {
-                  setShowBuddy(false);
-                  setShowProgress(false);
-                  setShowHistory(false);
-                  setShowSettings(true);
-                }}
+                title="Modo popup"
+                aria-label="Modo popup"
+                disabled={!hasKey}
+                onClick={enterPopup}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="15"
+                  height="15"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-7l-4 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
+                </svg>
+              </button>
+              {!settings.compact && (
+                <button
+                  className="ghost icon"
+                  title="Configurações"
+                  aria-label="Configurações"
+                  onClick={() => {
+                    setShowBuddy(false);
+                    setShowProgress(false);
+                    setShowHistory(false);
+                    setShowSettings(true);
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                    <path
+                      d="M4 7h10M18 7h2M4 17h2M10 17h10"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                    <circle
+                      cx="16"
+                      cy="7"
+                      r="2.2"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                    />
+                    <circle
+                      cx="8"
+                      cy="17"
+                      r="2.2"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                    />
+                  </svg>
+                </button>
+              )}
+              <button
+                className="ghost icon"
+                title={`Ocultar (${settings.hotkey})`}
+                aria-label="Ocultar"
+                onClick={() => void ipc.hideWindow()}
               >
                 <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
                   <path
-                    d="M4 7h10M18 7h2M4 17h2M10 17h10"
+                    d="M6 10l6 6 6-6"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+          {!settings.compact && (
+            <div className="head-learning" role="toolbar" aria-label="Aprendizado">
+              <button
+                className="ghost icon"
+                title="Nova conversa"
+                aria-label="Nova conversa"
+                disabled={status !== "idle"}
+                onClick={() => void newChat()}
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                  <path
+                    d="M12 5v14M5 12h14"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+              <button
+                className="ghost icon"
+                title="Histórico"
+                aria-label="Histórico"
+                disabled={status !== "idle"}
+                onClick={() => {
+                  setShowSettings(false);
+                  setShowBuddy(false);
+                  setShowProgress(false);
+                  setShowDrill(false);
+                  setShowHistory(true);
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="8.2"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                  />
+                  <path
+                    d="M12 7.5V12l3 1.8"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="1.6"
                     strokeLinecap="round"
                   />
-                  <circle
-                    cx="16"
-                    cy="7"
-                    r="2.2"
+                </svg>
+              </button>
+              <button
+                className="ghost icon"
+                title="Progresso"
+                aria-label="Progresso"
+                onClick={() => {
+                  setShowSettings(false);
+                  setShowBuddy(false);
+                  setShowHistory(false);
+                  setShowDrill(false);
+                  setShowProgress(true);
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                  <path
+                    d="M5 19v-6M12 19V6M19 19v-9"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="1.6"
-                  />
-                  <circle
-                    cx="8"
-                    cy="17"
-                    r="2.2"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
                   />
                 </svg>
               </button>
-            )}
-            <button
-              className="ghost icon"
-              title={`Ocultar (${settings.hotkey})`}
-              aria-label="Ocultar"
-              onClick={() => void ipc.hideWindow()}
-            >
-              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-                <path
-                  d="M6 10l6 6 6-6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </div>
+              <button
+                className="ghost icon"
+                title={due > 0 ? `Praticar ${due} correções` : "Praticar correções"}
+                aria-label="Praticar"
+                onClick={() => {
+                  setDrillFocus(null);
+                  setShowDrill(true);
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="8.2"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                  />
+                  <circle cx="12" cy="12" r="2.6" fill="currentColor" />
+                </svg>
+                {due > 0 && <span className="badge">{due > 9 ? "9+" : due}</span>}
+              </button>
+            </div>
+          )}
         </header>
 
         <div className="chat">
-          {!settings.compact && (
+          {!settings.compact && !searchOpen && (
             <div className="chat-stage">
               <Mascot
                 state={status}
@@ -1023,6 +1024,13 @@ export default function App() {
                 autoFocus
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== "Escape") return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setSearchOpen(false);
+                  setSearchQuery("");
+                }}
                 placeholder="buscar nesta conversa"
                 aria-label="Buscar nesta conversa"
                 spellCheck={false}

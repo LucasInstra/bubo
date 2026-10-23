@@ -176,9 +176,9 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
 
         <div className="section-title">Aparência</div>
 
-        <div className="field">
-          <span>Seu bubo</span>
-          <div className="look">
+        <div className="look-section">
+          <span className="look-label">Seu bubo</span>
+          <div className="look look-sticky">
             <div className="look-preview">
               <Mascot
                 state="idle"
@@ -249,205 +249,205 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="field row">
-          <span>Voltar ao rosto original do bubo</span>
-          <button className="ghost" type="button" onClick={resetLook}>
-            Redefinir visual
-          </button>
-        </div>
+          <div className="field row">
+            <span>Voltar ao rosto original do bubo</span>
+            <button className="ghost" type="button" onClick={resetLook}>
+              Redefinir visual
+            </button>
+          </div>
 
-        <div className="field">
-          <span>Olhos</span>
-          <div className="option-box">
-            <div className="eye-grid">
-              {EYE_STYLES.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={`chip ${draft.eyeStyle === value ? "chip-on" : ""}`}
-                  onClick={() => patch({ eyeStyle: value })}
-                >
-                  {EYE_LABELS[value]}
-                </button>
-              ))}
-            </div>
-
-            <div className="option-row">
-              <span className="option-label">Cor</span>
-              <div className="swatches">
-                {EYE_COLORS.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    className={`swatch ${draft.eyeColor === option ? "on" : ""}`}
-                    style={{
-                      background:
-                        option === "auto"
-                          ? "linear-gradient(135deg, #fcfcff 0 50%, #241d33 50% 100%)"
-                          : option,
-                    }}
-                    onClick={() => patch({ eyeColor: option })}
-                    aria-label={
-                      option === "auto" ? "contraste automático" : `cor dos olhos ${option}`
-                    }
-                    title={option === "auto" ? "Contraste automático" : option}
-                  />
-                ))}
-                <label className="swatch-custom" title="Cor dos olhos personalizada">
-                  <input
-                    type="color"
-                    value={draft.eyeColor === "auto" ? "#fcfcff" : draft.eyeColor}
-                    onChange={(event) => patch({ eyeColor: event.target.value })}
-                    aria-label="Cor dos olhos personalizada"
-                  />
-                </label>
-              </div>
-            </div>
-
-            <div className="option-row">
-              <span className="option-label">Tamanho</span>
-              <div className="levels compact">
-                {EYE_SIZES.map((value) => (
+          <div className="field">
+            <span>Olhos</span>
+            <div className="option-box">
+              <div className="eye-grid">
+                {EYE_STYLES.map((value) => (
                   <button
                     key={value}
                     type="button"
-                    className={`chip ${draft.eyeSize === value ? "chip-on" : ""}`}
-                    onClick={() => patch({ eyeSize: value })}
+                    className={`chip ${draft.eyeStyle === value ? "chip-on" : ""}`}
+                    onClick={() => patch({ eyeStyle: value })}
                   >
-                    {value === "small" ? "S" : value === "large" ? "L" : "M"}
+                    {EYE_LABELS[value]}
                   </button>
                 ))}
               </div>
-            </div>
 
-            <div className="option-row">
-              <span className="option-label">Espaçamento</span>
-              <div className="levels compact">
-                {SPACING_LABELS.map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={`chip ${draft.eyeSpacing === value ? "chip-on" : ""}`}
-                    onClick={() => patch({ eyeSpacing: value })}
-                  >
-                    {label}
-                  </button>
-                ))}
+              <div className="option-row">
+                <span className="option-label">Cor</span>
+                <div className="swatches">
+                  {EYE_COLORS.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      className={`swatch ${draft.eyeColor === option ? "on" : ""}`}
+                      style={{
+                        background:
+                          option === "auto"
+                            ? "linear-gradient(135deg, #fcfcff 0 50%, #241d33 50% 100%)"
+                            : option,
+                      }}
+                      onClick={() => patch({ eyeColor: option })}
+                      aria-label={
+                        option === "auto" ? "contraste automático" : `cor dos olhos ${option}`
+                      }
+                      title={option === "auto" ? "Contraste automático" : option}
+                    />
+                  ))}
+                  <label className="swatch-custom" title="Cor dos olhos personalizada">
+                    <input
+                      type="color"
+                      value={draft.eyeColor === "auto" ? "#fcfcff" : draft.eyeColor}
+                      onChange={(event) => patch({ eyeColor: event.target.value })}
+                      aria-label="Cor dos olhos personalizada"
+                    />
+                  </label>
+                </div>
               </div>
-            </div>
 
-            <div className="option-row">
-              <span className="option-label">Inclinação</span>
-              <div className="levels compact">
-                {TILT_LABELS.map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={`chip ${draft.eyeTilt === value ? "chip-on" : ""}`}
-                    onClick={() => patch({ eyeTilt: value })}
-                  >
-                    {label}
-                  </button>
-                ))}
+              <div className="option-row">
+                <span className="option-label">Tamanho</span>
+                <div className="levels compact">
+                  {EYE_SIZES.map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`chip ${draft.eyeSize === value ? "chip-on" : ""}`}
+                      onClick={() => patch({ eyeSize: value })}
+                    >
+                      {value === "small" ? "S" : value === "large" ? "L" : "M"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="option-row">
+                <span className="option-label">Espaçamento</span>
+                <div className="levels compact">
+                  {SPACING_LABELS.map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`chip ${draft.eyeSpacing === value ? "chip-on" : ""}`}
+                      onClick={() => patch({ eyeSpacing: value })}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="option-row">
+                <span className="option-label">Inclinação</span>
+                <div className="levels compact">
+                  {TILT_LABELS.map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`chip ${draft.eyeTilt === value ? "chip-on" : ""}`}
+                      onClick={() => patch({ eyeTilt: value })}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="field">
-          <span>Boca</span>
-          <div className="option-box">
-            <div className="option-row">
-              <span className="option-label">Mostrar</span>
-              <input
-                type="checkbox"
-                checked={draft.showMouth}
-                onChange={(event) => patch({ showMouth: event.target.checked })}
-              />
-            </div>
+          <div className="field">
+            <span>Boca</span>
+            <div className="option-box">
+              <div className="option-row">
+                <span className="option-label">Mostrar</span>
+                <input
+                  type="checkbox"
+                  checked={draft.showMouth}
+                  onChange={(event) => patch({ showMouth: event.target.checked })}
+                />
+              </div>
 
-            <div className="eye-grid">
-              {MOUTH_STYLES.map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={`chip ${draft.mouthStyle === value ? "chip-on" : ""}`}
-                  onClick={() => patch({ mouthStyle: value })}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <div className="option-row">
-              <span className="option-label">Tamanho</span>
-              <div className="levels compact">
-                {MOUTH_SIZES.map(([value, label]) => (
+              <div className="eye-grid">
+                {MOUTH_STYLES.map(([value, label]) => (
                   <button
                     key={value}
                     type="button"
-                    className={`chip ${draft.mouthSize === value ? "chip-on" : ""}`}
-                    onClick={() => patch({ mouthSize: value })}
+                    className={`chip ${draft.mouthStyle === value ? "chip-on" : ""}`}
+                    onClick={() => patch({ mouthStyle: value })}
                   >
                     {label}
                   </button>
                 ))}
               </div>
-            </div>
 
-            <div className="option-row">
-              <span className="option-label">Cor</span>
-              <div className="swatches">
-                {MOUTH_COLORS.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    className={`swatch ${draft.mouthColor === option ? "on" : ""}`}
-                    style={{
-                      background:
-                        option === "auto"
-                          ? `linear-gradient(135deg, ${draft.color} 0 50%, #241d33 50% 100%)`
-                          : option,
-                    }}
-                    onClick={() => patch({ mouthColor: option })}
-                    aria-label={
-                      option === "auto" ? "cor da boca automática" : `cor da boca ${option}`
-                    }
-                    title={option === "auto" ? "Automático (tom do corpo)" : option}
-                  />
-                ))}
-                <label className="swatch-custom" title="Cor da boca personalizada">
-                  <input
-                    type="color"
-                    value={draft.mouthColor === "auto" ? "#241d33" : draft.mouthColor}
-                    onChange={(event) => patch({ mouthColor: event.target.value })}
-                    aria-label="Cor da boca personalizada"
-                  />
-                </label>
+              <div className="option-row">
+                <span className="option-label">Tamanho</span>
+                <div className="levels compact">
+                  {MOUTH_SIZES.map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`chip ${draft.mouthSize === value ? "chip-on" : ""}`}
+                      onClick={() => patch({ mouthSize: value })}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="option-row">
+                <span className="option-label">Cor</span>
+                <div className="swatches">
+                  {MOUTH_COLORS.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      className={`swatch ${draft.mouthColor === option ? "on" : ""}`}
+                      style={{
+                        background:
+                          option === "auto"
+                            ? `linear-gradient(135deg, ${draft.color} 0 50%, #241d33 50% 100%)`
+                            : option,
+                      }}
+                      onClick={() => patch({ mouthColor: option })}
+                      aria-label={
+                        option === "auto" ? "cor da boca automática" : `cor da boca ${option}`
+                      }
+                      title={option === "auto" ? "Automático (tom do corpo)" : option}
+                    />
+                  ))}
+                  <label className="swatch-custom" title="Cor da boca personalizada">
+                    <input
+                      type="color"
+                      value={draft.mouthColor === "auto" ? "#241d33" : draft.mouthColor}
+                      onChange={(event) => patch({ mouthColor: event.target.value })}
+                      aria-label="Cor da boca personalizada"
+                    />
+                  </label>
+                </div>
               </div>
             </div>
           </div>
+
+          <label className="field row">
+            <span>Rótulo de status embaixo do mascote</span>
+            <input
+              type="checkbox"
+              checked={draft.showStatus}
+              onChange={(event) => patch({ showStatus: event.target.checked })}
+            />
+          </label>
+
+          <label className="field row">
+            <span>Usar a cor do mascote no app</span>
+            <input
+              type="checkbox"
+              checked={draft.accentFromMascot}
+              onChange={(event) => patch({ accentFromMascot: event.target.checked })}
+            />
+          </label>
         </div>
-
-        <label className="field row">
-          <span>Rótulo de status embaixo do mascote</span>
-          <input
-            type="checkbox"
-            checked={draft.showStatus}
-            onChange={(event) => patch({ showStatus: event.target.checked })}
-          />
-        </label>
-
-        <label className="field row">
-          <span>Usar a cor do mascote no app</span>
-          <input
-            type="checkbox"
-            checked={draft.accentFromMascot}
-            onChange={(event) => patch({ accentFromMascot: event.target.checked })}
-          />
-        </label>
       </div>
 
       <div className="settings-footer">

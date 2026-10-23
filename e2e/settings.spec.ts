@@ -3,7 +3,8 @@ import { expect, test } from "@playwright/test";
 test("test connection fills the model picker", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await page.getByRole("button", { name: "Configurações" }).click();
-  await expect(page.getByRole("dialog", { name: "Configurações" })).toBeVisible();
+  await page.getByRole("dialog", { name: "Configurações" }).waitFor();
+  await page.getByRole("tab", { name: "Conexão" }).click();
 
   await page.getByRole("button", { name: "Testar conexão" }).click();
   await expect(page.getByText("Connected, 3 model(s) available")).toBeVisible();
@@ -17,6 +18,7 @@ test("test connection fills the model picker", async ({ page }) => {
 test("hotkey recorder captures a chord", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await page.getByRole("button", { name: "Configurações" }).click();
+  await page.getByRole("tab", { name: "Sistema" }).click();
 
   const recorder = page.getByRole("button", { name: "Atalho para mostrar/ocultar" });
   await expect(recorder).toContainText("Ctrl+Alt+B");
@@ -32,6 +34,7 @@ test("hotkey recorder captures a chord", async ({ page }) => {
 test("hotkey recorder cancels with Escape without closing settings", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await page.getByRole("button", { name: "Configurações" }).click();
+  await page.getByRole("tab", { name: "Sistema" }).click();
 
   const recorder = page.getByRole("button", { name: "Atalho para mostrar/ocultar" });
   await recorder.click();
@@ -102,6 +105,7 @@ test("Portuguese replies switch the empty state to Portuguese", async ({ page })
 test("feedback button opens the GitHub issue page", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await page.getByRole("button", { name: "Configurações" }).click();
+  await page.getByRole("tab", { name: "Sistema" }).click();
   await page.getByRole("button", { name: "Abrir uma issue no GitHub" }).click();
 
   await expect
@@ -118,6 +122,7 @@ test("feedback button opens the GitHub issue page", async ({ page }) => {
 test("settings shows the compact update card", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await page.getByRole("button", { name: "Configurações" }).click();
+  await page.getByRole("tab", { name: "Sistema" }).click();
 
   const card = page.locator(".update-card");
   await card.scrollIntoViewIfNeeded();

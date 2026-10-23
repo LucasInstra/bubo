@@ -23,7 +23,8 @@ test("compact mode renders the translation without the PT marker", async ({ page
 test("settings switches provider and base URL", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await page.getByRole("button", { name: "Configurações" }).click();
-  await expect(page.getByRole("dialog", { name: "Configurações" })).toBeVisible();
+  await page.getByRole("dialog", { name: "Configurações" }).waitFor();
+  await page.getByRole("tab", { name: "Conexão" }).click();
 
   await page.getByRole("button", { name: "OpenAI" }).click();
   await expect(page.getByLabel("URL base")).toHaveValue("https://api.openai.com/v1");
@@ -77,6 +78,7 @@ test("practice checks a correct answer", async ({ page }) => {
 test("light theme keeps the send button visible", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await page.getByRole("button", { name: "Configurações" }).click();
+  await page.getByRole("tab", { name: "Aparência" }).click();
   await page.getByRole("button", { name: "Claro" }).click();
   await page.getByRole("button", { name: "Salvar" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
