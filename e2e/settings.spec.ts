@@ -99,6 +99,22 @@ test("Portuguese replies switch the empty state to Portuguese", async ({ page })
   await expect(page.getByText("Fale comigo em inglês.")).toHaveCount(0);
 });
 
+test("feedback button opens the GitHub issue page", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=app");
+  await page.getByRole("button", { name: "Configurações" }).click();
+  await page.getByRole("button", { name: "Abrir uma issue no GitHub" }).click();
+
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as unknown as { __calls: Array<{ cmd: string }> }).__calls.some(
+          (call) => call.cmd === "open_feedback",
+        ),
+      ),
+    )
+    .toBe(true);
+});
+
 test("settings shows the compact update card", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await page.getByRole("button", { name: "Configurações" }).click();

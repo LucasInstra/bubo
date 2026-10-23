@@ -1,14 +1,14 @@
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 const MAX_LOG_BYTES: u64 = 1_000_000;
 
 /// Append-only diagnostics for a background app: the user never sees a console,
 /// so failures must land somewhere readable.
 pub fn write(app: &AppHandle, level: &str, message: &str) {
-    let Ok(dir) = app.path().app_data_dir() else {
+    let Ok(dir) = crate::paths::data_dir(app) else {
         return;
     };
     let _ = std::fs::create_dir_all(&dir);

@@ -369,6 +369,18 @@ export function SettingsPanel({
     }
   };
 
+  const openFeedback = async () => {
+    setError("");
+    setNotice("");
+    try {
+      await ipc.openFeedback();
+    } catch (problem) {
+      setError(
+        typeof problem === "string" ? problem : "Não foi possível abrir a página de feedback.",
+      );
+    }
+  };
+
   return (
     <div
       className="settings"
@@ -848,6 +860,17 @@ export function SettingsPanel({
               Copiar diagnóstico
             </button>
           </div>
+        </div>
+
+        <div className="settings-card">
+          <span className="settings-card-title">Feedback</span>
+          <button className="action-button" onClick={() => void openFeedback()}>
+            Abrir uma issue no GitHub
+          </button>
+          <span className="hint">
+            Encontrou um bug ou tem uma sugestão? Abra uma issue. Se for um bug, copie o diagnóstico
+            acima e cole junto.
+          </span>
         </div>
 
         <div className="section-title">Atualizações</div>

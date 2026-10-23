@@ -70,6 +70,7 @@ export const ipc = {
   backupData: (path: string) => invoke<void>("backup_data", { path }),
   restoreData: (path: string) => invoke<void>("restore_data", { path }),
   openDataFolder: () => invoke<void>("open_data_folder"),
+  openFeedback: () => invoke<void>("open_feedback"),
   diagnostics: () => invoke<string>("diagnostics"),
   deleteMessage: (id: number) => invoke<void>("delete_message", { id }),
   lessonProgress: () => invoke<LessonProgress[]>("lesson_progress"),

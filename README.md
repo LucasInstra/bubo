@@ -143,9 +143,9 @@ The first updater-enabled release must be installed by hand. After that, later v
 | What              | Where                                                   |
 | ----------------- | ------------------------------------------------------- |
 | API key           | Windows Credential Manager (`bubo` / `llm-api-key`)     |
-| History, fixes and lesson progress | `%APPDATA%\com.lucas.bubo\bubo.db`                      |
-| Settings          | `%APPDATA%\com.lucas.bubo\settings.json`                |
-| Diagnostics       | `%APPDATA%\com.lucas.bubo\bubo.log` (rotated, 1 MB cap) |
+| History, fixes and lesson progress | `%APPDATA%\bubo\bubo.db`                      |
+| Settings          | `%APPDATA%\bubo\settings.json`                |
+| Diagnostics       | `%APPDATA%\bubo\bubo.log` (rotated, 1 MB cap) |
 
 Only the text you send is forwarded to your provider. There is no analytics and no third-party service besides the model endpoint you configure.
 
@@ -200,7 +200,7 @@ e2e/                      Playwright harness and tests
 
 - **`401`/`invalid api key`**: paste the key again in Settings → Connection. Keys start with `gsk_`.
 - **Hotkey does nothing**: another app may own the combination. Pick a different one in Settings → Behavior; the app keeps working if registration fails and logs it.
-- **Strange answer or empty reply**: check `%APPDATA%\com.lucas.bubo\bubo.log` for the request and error lines.
+- **Strange answer or empty reply**: check `%APPDATA%\bubo\bubo.log` for the request and error lines.
 - **Practice looks empty**: corrections only appear after a message with a real mistake. The target icon shows how many cards are due.
 
 ## Roadmap

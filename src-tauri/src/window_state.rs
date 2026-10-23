@@ -31,8 +31,7 @@ impl Default for WindowState {
 }
 
 fn state_path(app: &AppHandle) -> Option<PathBuf> {
-    app.path()
-        .app_config_dir()
+    crate::paths::data_dir(app)
         .ok()
         .map(|dir| dir.join(FILE_NAME))
 }
@@ -54,14 +53,14 @@ struct PopupPosition {
 
 /// The popup window has a fixed size, so only its top-left corner needs saving.
 pub fn load_popup(app: &AppHandle) -> Option<PhysicalPosition<i32>> {
-    let dir = app.path().app_config_dir().ok()?;
+    let dir = crate::paths::data_dir(app).ok()?;
     let raw = fs::read_to_string(dir.join(POPUP_FILE_NAME)).ok()?;
     let saved: PopupPosition = serde_json::from_str(&raw).ok()?;
     Some(PhysicalPosition::new(saved.x, saved.y))
 }
 
 pub fn save_popup(app: &AppHandle, position: PhysicalPosition<i32>) {
-    let Ok(dir) = app.path().app_config_dir() else {
+    let Ok(dir) = crate::paths::data_dir(app) else {
         return;
     };
     if fs::create_dir_all(&dir).is_err() {
@@ -88,7 +87,7 @@ pub fn save_popup(app: &AppHandle, position: PhysicalPosition<i32>) {
 }
 
 pub fn save(app: &AppHandle, state: WindowState) {
-    let Ok(dir) = app.path().app_config_dir() else {
+    let Ok(dir) = crate::paths::data_dir(app) else {
         return;
     };
     if fs::create_dir_all(&dir).is_err() {

@@ -1,6 +1,7 @@
 mod config;
 mod llm;
 mod log;
+mod paths;
 mod prompt;
 mod store;
 mod window_state;
@@ -802,12 +803,43 @@ fn restore_data(state: State<'_, AppState>, path: String) -> Result<(), String> 
 
 #[tauri::command]
 fn open_data_folder(app: AppHandle) -> Result<(), String> {
-    let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| error.to_string())?;
+    let dir = paths::data_dir(&app)?;
     std::fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
     open_folder(&dir).map_err(|error| error.to_string())
+}
+
+const FEEDBACK_URL: &str = "https://github.com/LucasInstra/bubo/issues/new";
+
+#[tauri::command]
+fn open_feedback() -> Result<(), String> {
+    open_url(FEEDBACK_URL)
+}
+
+fn open_url(url: &str) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(url)
+            .spawn()
+            .map(|_| ())
+            .map_err(|error| error.to_string())
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(url)
+            .spawn()
+            .map(|_| ())
+            .map_err(|error| error.to_string())
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(url)
+            .spawn()
+            .map(|_| ())
+            .map_err(|error| error.to_string())
+    }
 }
 
 fn open_folder(path: &std::path::Path) -> std::io::Result<()> {
@@ -828,10 +860,7 @@ fn open_folder(path: &std::path::Path) -> std::io::Result<()> {
 
 #[tauri::command]
 fn diagnostics(app: AppHandle) -> Result<String, String> {
-    let data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| error.to_string())?;
+    let data_dir = paths::data_dir(&app)?;
     let settings = config::load_settings(&app).unwrap_or_default();
     let log_path = data_dir.join("bubo.log");
     let log = std::fs::read_to_string(&log_path).unwrap_or_default();
@@ -1040,7 +1069,8 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
-            let data_dir = app.path().app_data_dir()?;
+            paths::migrate_legacy(app.handle())?;
+            let data_dir = paths::data_dir(app.handle())?;
             std::fs::create_dir_all(&data_dir)?;
             let connection = store::open(data_dir.join("bubo.db"))?;
             let settings = config::load_settings(app.handle()).unwrap_or_default();
@@ -1221,6 +1251,7 @@ pub fn run() {
             backup_data,
             restore_data,
             open_data_folder,
+            open_feedback,
             diagnostics,
             drill_stats,
             progress_stats,
@@ -1241,6 +1272,11 @@ pub fn run() {
 #[cfg(test)]
 mod connection_tests {
     use super::parse_model_ids;
+
+    #[test]
+    fn feedback_url_points_at_the_issue_page() {
+        assert!(super::FEEDBACK_URL.starts_with("https://github.com/LucasInstra/bubo/"));
+    }
 
     #[test]
     fn parses_data_ids_in_order_and_dedupes() {
