@@ -12,6 +12,7 @@ import { ipc } from "../lib/ipc";
 import { isBeginnerLevel, STUDY_FOCUSES } from "../lib/lessons";
 import { useModalFocus } from "../lib/modal";
 import { matchProvider, PROVIDERS, type ProviderPreset } from "../lib/providers";
+import { currentHighlights } from "../lib/release-notes";
 import type { DrillStats, Settings } from "../lib/types";
 import { updateLabel } from "../lib/update-label";
 import type { UpdateStatus } from "../lib/updater";
@@ -125,6 +126,8 @@ export function SettingsPanel({
   const testRun = useRef(0);
 
   const highlights = useMemo(() => releaseHighlights(updateNotes), [updateNotes]);
+  const shipped = useMemo(() => currentHighlights(currentVersion), [currentVersion]);
+  const runningVersion = currentVersion.split(" · ")[0];
 
   useModalFocus(dialogRef);
 
@@ -1038,6 +1041,44 @@ export function SettingsPanel({
                 As atualizações são verificadas quando o bubo inicia.
               </span>
             </div>
+
+            {shipped.length > 0 && (
+              <div className="release-card">
+                <div className="update-head">
+                  <span className="update-icon" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" />
+                      <path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z" />
+                    </svg>
+                  </span>
+
+                  <div className="update-copy">
+                    <strong>Novidades da versão {runningVersion}</strong>
+                    <span className="update-status">O que mudou nesta versão do bubo.</span>
+                  </div>
+                </div>
+
+                <div className="update-notes">
+                  <ul>
+                    {shipped.map((highlight) => (
+                      <li key={highlight.text}>
+                        {highlight.label && <strong>{highlight.label}</strong>}
+                        {highlight.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

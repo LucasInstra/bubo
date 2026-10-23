@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import pkg from "../package.json" with { type: "json" };
 
 test("test connection fills the model picker", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
@@ -126,6 +127,17 @@ test("settings shows the compact update card", async ({ page }) => {
 
   const card = page.locator(".update-card");
   await card.scrollIntoViewIfNeeded();
-  await expect(card).toContainText("bubo 0.5.3");
+  await expect(card).toContainText(`bubo ${pkg.version}`);
   await expect(card).toContainText("As atualizações são verificadas quando o bubo inicia.");
+});
+
+test("settings shows what changed in the running version", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=app");
+  await page.getByRole("button", { name: "Configurações" }).click();
+  await page.getByRole("tab", { name: "Atualizações" }).click();
+
+  const card = page.locator(".release-card");
+  await card.scrollIntoViewIfNeeded();
+  await expect(card).toContainText(`Novidades da versão ${pkg.version}`);
+  await expect(card).toContainText("Updates tab");
 });

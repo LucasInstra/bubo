@@ -1077,7 +1077,8 @@ button {
 
 /* update settings card */
 
-.update-card {
+.update-card,
+.release-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1085,6 +1086,12 @@ button {
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
+}
+
+/* the highlights of the version that is actually running */
+.release-card {
+  border-color: rgba(139, 125, 255, 0.24);
+  background: linear-gradient(180deg, var(--accent-soft), rgba(255, 255, 255, 0.02) 72%);
 }
 
 .update-head {
@@ -3123,6 +3130,7 @@ button {
 [data-theme="light"] .history-search,
 [data-theme="light"] .session-main,
 [data-theme="light"] .update-card,
+[data-theme="light"] .release-card,
 [data-theme="light"] .drill-card,
 [data-theme="light"] .progress-tile,
 [data-theme="light"] .goal,
@@ -3265,6 +3273,7 @@ button {
 [data-theme="light"] .session-icon,
 [data-theme="light"] .session-delete,
 [data-theme="light"] .update-card,
+[data-theme="light"] .release-card,
 [data-theme="light"] .goal {
   border-color: rgba(20, 18, 40, 0.1);
   background: #fff;

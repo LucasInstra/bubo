@@ -29,6 +29,7 @@
       import App from "/src/App.tsx";
       import { Drill } from "/src/components/Drill.tsx";
       import { DEFAULT_SETTINGS } from "/src/lib/types.ts";
+      import pkg from "../package.json";
 
       const params = new URLSearchParams(location.search);
       const mode = params.get("case") ?? "app";
@@ -113,7 +114,7 @@
       const handlers = {
         get_settings: () => settings,
         has_api_key: () => true,
-        "plugin:app|version": () => "0.5.3",
+        "plugin:app|version": () => pkg.version,
         history: () => (mode === "empty" ? [] : bilingual ? bilingualStored : stored),
         current_session: () => 1,
         lesson_progress: () => lessonProgress,
