@@ -1,0 +1,691 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bubo ┬╖ English tutor for Windows</title>
+    <meta
+      name="description"
+      content="bubo is a small floating English tutor for Windows. Chat in English at your CEFR level, get quiet corrections, and practice your mistakes with spaced repetition."
+    />
+    <meta name="theme-color" content="#0b0b11" />
+    <meta name="color-scheme" content="dark" />
+
+    <link rel="canonical" href="https://lucasinstra.github.io/bubo/en/" />
+    <link rel="alternate" hreflang="en" href="https://lucasinstra.github.io/bubo/en/" />
+    <link rel="alternate" hreflang="pt-BR" href="https://lucasinstra.github.io/bubo/" />
+    <link rel="alternate" hreflang="x-default" href="https://lucasinstra.github.io/bubo/" />
+    <link rel="icon" type="image/png" href="../assets/icon.png" />
+    <link rel="apple-touch-icon" href="../assets/icon.png" />
+    <link rel="stylesheet" href="../style.css" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="bubo" />
+    <meta property="og:title" content="bubo ┬╖ English tutor for Windows" />
+    <meta
+      property="og:description"
+      content="A small floating English tutor that lives on top of your windows, chats at your level, and turns corrections into spaced practice."
+    />
+    <meta property="og:url" content="https://lucasinstra.github.io/bubo/en/" />
+    <meta property="og:image" content="https://lucasinstra.github.io/bubo/assets/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="bubo social card: the purple mascot next to the headline Your English buddy, always a click away"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="bubo ┬╖ English tutor for Windows" />
+    <meta
+      name="twitter:description"
+      content="A small floating English tutor that lives on top of your windows, chats at your level, and turns corrections into spaced practice."
+    />
+    <meta name="twitter:image" content="https://lucasinstra.github.io/bubo/assets/og.png" />
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header" id="top">
+      <div class="wrap header-inner">
+        <a class="brand" href="#top" aria-label="bubo, back to top">
+          <img src="../assets/icon.png" alt="" width="32" height="32" />
+          <span>bubo</span>
+        </a>
+
+        <nav aria-label="Primary">
+          <ul class="nav-list">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#screenshots">Screenshots</a></li>
+            <li><a href="#install">Install</a></li>
+            <li>
+              <a class="lang-switch" href="../" hreflang="pt-BR" lang="pt-BR" aria-label="Ver este site em português">PT</a>
+            </li>
+            <li>
+              <a class="nav-github" href="https://github.com/LucasInstra/bubo">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path
+                    fill="currentColor"
+                    d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05A9.36 9.36 0 0 1 12 6.84c.85 0 1.71.12 2.51.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"
+                  />
+                </svg>
+                GitHub
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="wrap hero-grid">
+          <div class="hero-copy">
+            <div
+              class="hero-mascot hero-mascot-live"
+              id="bubo-demo"
+              role="img"
+              aria-label="bubo, an interactive purple mascot. Click to boop it or drag a cheek."
+            ></div>
+            <p class="hero-demo-hint">click to boop ┬╖ drag a cheek</p>
+
+            <p class="eyebrow">
+              <span class="dot" aria-hidden="true"></span>
+              Windows 10/11 ┬╖ bring your own model key
+            </p>
+
+            <h1 id="hero-title">
+              Your English buddy,
+              <span class="accent-text">always a click away</span>
+            </h1>
+
+            <p class="lede">
+              A small floating tutor that stays on top of your work, chats in English at your CEFR
+              level, and turns quiet corrections into practice you actually remember.
+            </p>
+
+            <div class="hero-actions">
+              <a
+                class="btn btn-primary"
+                href="https://github.com/LucasInstra/bubo/releases/latest/download/bubo-setup.exe"
+              >
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                  <path
+                    d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                Download for Windows
+              </a>
+
+              <a class="btn btn-ghost" href="https://github.com/LucasInstra/bubo">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path
+                    fill="currentColor"
+                    d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05A9.36 9.36 0 0 1 12 6.84c.85 0 1.71.12 2.51.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"
+                  />
+                </svg>
+                View on GitHub
+              </a>
+            </div>
+
+            <p class="hero-note">
+              Free and local-first. The button downloads the installer directly. It is unsigned, so
+              Windows SmartScreen may ask for confirmation. <a href="#install">Install notes</a>
+            </p>
+          </div>
+
+          <figure class="hero-shot">
+            <a class="shot-link" href="../screenshots/chat.png" data-lightbox>
+              <img
+                src="../screenshots/chat.png"
+                width="420"
+                height="640"
+                alt="bubo chat window showing a learner message, a friendly reply, and a corrections card with three fixes"
+              />
+            </a>
+          </figure>
+        </div>
+      </section>
+
+      <section class="section" id="features" aria-labelledby="features-title">
+        <div class="wrap">
+          <header class="section-head">
+            <p class="kicker">Features</p>
+            <h2 id="features-title">Small window. Real practice.</h2>
+            <p>
+              A conversation partner that corrects without turning every reply into a lesson, then
+              remembers what you got wrong.
+            </p>
+          </header>
+
+          <div class="feature-grid">
+            <article class="feature">
+              <span class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" focusable="false">
+                  <path
+                    d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.6 9.6 0 0 1-3.4-.6L4 21l1.4-4a8.3 8.3 0 0 1-1.4-4.6 8.4 8.4 0 0 1 8.5-8.4A8.4 8.4 0 0 1 21 11.5Z"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
+              <h3>Corrections that don't interrupt</h3>
+              <p>
+                bubo answers first, then shows the fix beside the conversation. You keep talking
+                instead of stopping to study.
+              </p>
+            </article>
+
+            <article class="feature">
+              <span class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" focusable="false">
+                  <path
+                    d="M4.5 9A8 8 0 0 1 18 4.3L20 7M20 4v3h-3M19.5 15A8 8 0 0 1 6 19.7L4 17M4 20v-3h3"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M12 8v4l2.5 1.5"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+              <h3>Spaced practice</h3>
+              <p>
+                Every correction becomes a card on a 1 / 3 / 7 / 21 / 45-day ladder. A miss comes
+                back in ten minutes.
+              </p>
+            </article>
+
+            <article class="feature">
+              <span class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" focusable="false">
+                  <path
+                    d="M4 19V5M4 19h16M8 15l3.5-4 3 2.5L20 7"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+              <h3>Progress that adds up</h3>
+              <p>
+                Streak, accuracy, a 14-day activity strip and the mistakes you practice most, all
+                from your local history.
+              </p>
+            </article>
+
+            <article class="feature">
+              <span class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" focusable="false">
+                  <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7" />
+                  <path
+                    d="M8.5 14.5a4.5 4.5 0 0 0 7 0"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M9 9.5h.01M15 9.5h.01"
+                    stroke="currentColor"
+                    stroke-width="2.2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
+              <h3>A buddy you can shape</h3>
+              <p>
+                Pick a voice from twelve personalities, then tune the shape, eyes, mouth and color.
+                The mascot is yours.
+              </p>
+            </article>
+
+            <article class="feature">
+              <span class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" focusable="false">
+                  <rect
+                    x="3"
+                    y="5"
+                    width="18"
+                    height="14"
+                    rx="2.5"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                  />
+                  <path
+                    d="M3 9h18M7 14h6"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
+              <h3>Compact mode</h3>
+              <p>
+                A 400 ├ù 280 card with the buddy in the header and a one-line composer. The full
+                window is one click away.
+              </p>
+            </article>
+
+            <article class="feature">
+              <span class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" focusable="false">
+                  <rect
+                    x="3"
+                    y="4"
+                    width="18"
+                    height="6"
+                    rx="2"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                  />
+                  <rect
+                    x="3"
+                    y="14"
+                    width="18"
+                    height="6"
+                    rx="2"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                  />
+                  <path
+                    d="M7 7h.01M7 17h.01"
+                    stroke="currentColor"
+                    stroke-width="2.2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
+              <h3>Your provider, your key</h3>
+              <p>
+                Groq, OpenAI, OpenRouter, Ollama or any OpenAI-compatible endpoint. Bring a key and
+                pick the model you like.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="screenshots" aria-labelledby="screenshots-title">
+        <div class="wrap">
+          <header class="section-head">
+            <p class="kicker">Screenshots</p>
+            <h2 id="screenshots-title">A look inside</h2>
+            <p>
+              Real screens from the app: ready-made voices, the buddy editor, a chat with
+              corrections, the practice deck, progress, history and compact mode. Click any
+              screenshot to open it larger.
+            </p>
+          </header>
+
+          <div class="gallery">
+            <figure class="shot">
+              <a class="shot-link" href="../screenshots/buddy.png" data-lightbox>
+                <img
+                  src="../screenshots/buddy.png"
+                  width="420"
+                  height="640"
+                  loading="lazy"
+                  decoding="async"
+                  alt="bubo buddy panel listing twelve ready-made personality voices such as Warm Coach, Dry Wit and Night Owl"
+                />
+              </a>
+              <figcaption>
+                <strong>Ready-made voices</strong>
+                <span
+                  >Twelve personalities, from Warm Coach to Night Owl. Picking one changes only the
+                  tone.</span
+                >
+              </figcaption>
+            </figure>
+
+            <figure class="shot">
+              <a class="shot-link" href="../screenshots/look.png" data-lightbox>
+                <img
+                  src="../screenshots/look.png"
+                  width="420"
+                  height="640"
+                  loading="lazy"
+                  decoding="async"
+                  alt="bubo buddy customization with the default purple round mascot, bars eyes, size L, straight tilt and no mouth, plus shape, color, eye and mouth controls"
+                />
+              </a>
+              <figcaption>
+                <strong>The default bubo</strong>
+                <span
+                  >Purple, round, bars eyes, size L, straight tilt and no mouth. Every part is
+                  editable.</span
+                >
+              </figcaption>
+            </figure>
+
+            <figure class="shot">
+              <a class="shot-link" href="../screenshots/practice.png" data-lightbox>
+                <img
+                  src="../screenshots/practice.png"
+                  width="420"
+                  height="640"
+                  loading="lazy"
+                  decoding="async"
+                  alt="bubo practice screen with a sentence to rewrite, the original context and a check button"
+                />
+              </a>
+              <figcaption>
+                <strong>Practice what tripped you</strong>
+                <span>Rewrite the sentence and get instant feedback.</span>
+              </figcaption>
+            </figure>
+
+            <figure class="shot">
+              <a class="shot-link" href="../screenshots/progress.png" data-lightbox>
+                <img
+                  src="../screenshots/progress.png"
+                  width="420"
+                  height="640"
+                  loading="lazy"
+                  decoding="async"
+                  alt="bubo progress screen with a four-day streak, accuracy, a 14-day chart and most practiced mistakes"
+                />
+              </a>
+              <figcaption>
+                <strong>See the streak grow</strong>
+                <span>Accuracy, activity and your most repeated mistakes.</span>
+              </figcaption>
+            </figure>
+
+            <figure class="shot">
+              <a class="shot-link" href="../screenshots/history.png" data-lightbox>
+                <img
+                  src="../screenshots/history.png"
+                  width="420"
+                  height="640"
+                  loading="lazy"
+                  decoding="async"
+                  alt="bubo history screen listing saved chat sessions with message counts and dates"
+                />
+              </a>
+              <figcaption>
+                <strong>Every chat is a session</strong>
+                <span>Reopen an old conversation or start a new one.</span>
+              </figcaption>
+            </figure>
+
+            <figure class="shot">
+              <a class="shot-link" href="../screenshots/empty.png" data-lightbox>
+                <img
+                  src="../screenshots/empty.png"
+                  width="420"
+                  height="640"
+                  loading="lazy"
+                  decoding="async"
+                  alt="bubo empty state with the mascot, a short introduction and three conversation starters"
+                />
+              </a>
+              <figcaption>
+                <strong>Start with a prompt</strong>
+                <span>Open the app and pick a conversation starter, or type your own.</span>
+              </figcaption>
+            </figure>
+
+            <figure class="shot shot-wide">
+              <a class="shot-link" href="../screenshots/compact.png" data-lightbox>
+                <img
+                  src="../screenshots/compact.png"
+                  width="400"
+                  height="280"
+                  loading="lazy"
+                  decoding="async"
+                  alt="bubo compact mode: a wide card with the mascot in the header and a one-line message composer"
+                />
+              </a>
+              <figcaption>
+                <strong>Compact when you're busy</strong>
+                <span>
+                  A 400 ├ù 280 card that keeps the conversation and the composer on one line.
+                </span>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="install" aria-labelledby="install-title">
+        <div class="wrap">
+          <header class="section-head">
+            <p class="kicker">Install</p>
+            <h2 id="install-title">Running in under a minute</h2>
+            <p>No account, no admin rights and no background service to configure.</p>
+          </header>
+
+          <div class="install-grid">
+            <ol class="steps">
+              <li>
+                <span class="step-num" aria-hidden="true">1</span>
+                <div>
+                  <h3>Download the setup</h3>
+                  <p>
+                    Grab
+                    <a
+                      href="https://github.com/LucasInstra/bubo/releases/latest/download/bubo-setup.exe"
+                      ><code>bubo-setup.exe</code></a
+                    >
+                    directly, or browse
+                    <a href="https://github.com/LucasInstra/bubo/releases">older versions</a>.
+                  </p>
+                </div>
+              </li>
+
+              <li>
+                <span class="step-num" aria-hidden="true">2</span>
+                <div>
+                  <h3>Close bubo first</h3>
+                  <p>
+                    If bubo is already running, quit it from the tray. The installer cannot replace
+                    an open executable.
+                  </p>
+                </div>
+              </li>
+
+              <li>
+                <span class="step-num" aria-hidden="true">3</span>
+                <div>
+                  <h3>Run the setup</h3>
+                  <p>
+                    The build is unsigned, so SmartScreen may say ΓÇ£Windows protected your PCΓÇ¥.
+                    Choose <strong>More info</strong>, then <strong>Run anyway</strong>.
+                  </p>
+                </div>
+              </li>
+
+              <li>
+                <span class="step-num" aria-hidden="true">4</span>
+                <div>
+                  <h3>Launch it</h3>
+                  <p>
+                    Open bubo from the Start menu. If nothing appears, run
+                    <code>%LOCALAPPDATA%\bubo\bubo.exe</code> directly.
+                  </p>
+                </div>
+              </li>
+
+              <li>
+                <span class="step-num" aria-hidden="true">5</span>
+                <div>
+                  <h3>Add an API key</h3>
+                  <p>
+                    Settings opens on first run. Paste a key, pick a model and choose your CEFR
+                    level. <strong>Groq is the default preset</strong>; OpenAI, OpenRouter, Ollama
+                    and custom URLs work too.
+                  </p>
+                </div>
+              </li>
+            </ol>
+
+            <aside class="install-aside" aria-labelledby="install-aside-title">
+              <h3 id="install-aside-title">Good to know</h3>
+              <ul>
+                <li>
+                  Installs per user in <code>%LOCALAPPDATA%\bubo</code>, with no administrator
+                  prompt.
+                </li>
+                <li>
+                  Show or hide the window with
+                  <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>B</kbd></span
+                  >. You can change it in Settings.
+                </li>
+                <li>
+                  Chats, corrections and settings stay on your machine under
+                  <code>%APPDATA%\com.lucas.bubo</code>.
+                </li>
+                <li>Later releases can update from inside the app.</li>
+              </ul>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="section privacy" id="privacy" aria-labelledby="privacy-title">
+        <div class="wrap">
+          <header class="section-head">
+            <p class="kicker">Privacy</p>
+            <h2 id="privacy-title">Your words stay yours</h2>
+            <p>
+              bubo has no backend of its own. There is no account to create and nothing to sync.
+            </p>
+          </header>
+
+          <div class="privacy-grid">
+            <article class="privacy-card">
+              <h3>Only your model sees your messages</h3>
+              <p>
+                The text you send goes to the provider you configure and nowhere else. There is no
+                bubo server in the middle.
+              </p>
+            </article>
+
+            <article class="privacy-card">
+              <h3>Keys live in Windows</h3>
+              <p>
+                Your API key is stored in the Windows Credential Manager as
+                <code>bubo</code> / <code>llm-api-key</code>, not in a plain-text config file.
+              </p>
+            </article>
+
+            <article class="privacy-card">
+              <h3>No analytics, no account</h3>
+              <p>
+                Chat history and corrections live in a local SQLite database. There is no telemetry,
+                and you can delete a session whenever you want.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap footer-inner">
+        <a class="footer-brand" href="#top">
+          <img src="../assets/icon.png" alt="" width="22" height="22" />
+          <span>bubo</span>
+        </a>
+
+        <p class="footer-copy">┬⌐ 2026 LucasInstra. All rights reserved.</p>
+
+        <div class="footer-links">
+          <a href="https://github.com/LucasInstra/bubo">GitHub</a>
+          <a href="#top">Back to top Γåæ</a>
+        </div>
+      </div>
+    </footer>
+
+    <div
+      class="lightbox"
+      id="lightbox"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-label="Screenshot preview"
+    >
+      <button class="lightbox-close" type="button" aria-label="Close preview">├ù</button>
+      <img alt="" />
+      <p class="lightbox-caption"></p>
+    </div>
+
+    <script type="module" src="../demo/bubo-demo.js"></script>
+    <script>
+      (() => {
+        const dialog = document.getElementById("lightbox");
+        if (!dialog) return;
+
+        const image = dialog.querySelector("img");
+        const caption = dialog.querySelector(".lightbox-caption");
+        const close = dialog.querySelector(".lightbox-close");
+        let previous = null;
+
+        const open = (link) => {
+          const thumb = link.querySelector("img");
+          const figure = link.closest("figure");
+          const title = figure?.querySelector("figcaption strong")?.textContent?.trim();
+          const detail = figure?.querySelector("figcaption span")?.textContent?.trim();
+
+          previous = document.activeElement;
+          image.src = link.getAttribute("href");
+          image.alt = thumb?.alt ?? "";
+          caption.textContent = [title, detail].filter(Boolean).join(" ┬╖ ");
+          dialog.hidden = false;
+          document.body.classList.add("lightbox-open");
+          close.focus();
+        };
+
+        const hide = () => {
+          dialog.hidden = true;
+          image.removeAttribute("src");
+          document.body.classList.remove("lightbox-open");
+          if (previous instanceof HTMLElement) previous.focus();
+          previous = null;
+        };
+
+        for (const link of document.querySelectorAll("a[data-lightbox]")) {
+          link.addEventListener("click", (event) => {
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            open(link);
+          });
+        }
+
+        close.addEventListener("click", hide);
+        dialog.addEventListener("click", (event) => {
+          if (event.target === dialog) hide();
+        });
+        dialog.addEventListener("keydown", (event) => {
+          if (event.key === "Tab") {
+            event.preventDefault();
+            close.focus();
+          }
+        });
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape" && !dialog.hidden) hide();
+        });
+      })();
+    </script>
+  </body>
+</html>
