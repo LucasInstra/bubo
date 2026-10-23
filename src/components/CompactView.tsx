@@ -1,4 +1,5 @@
-import { splitTranslation, stripLegacyFixes } from "../lib/format";
+import { useState } from "react";
+import { splitBilingual, splitTranslation, stripLegacyFixes } from "../lib/format";
 import type { Mood, Msg, OrbState, Settings } from "../lib/types";
 import { Composer } from "./Composer";
 import { Mascot } from "./Mascot";
@@ -33,6 +34,8 @@ export function CompactView({
   onSend,
   onStop,
 }: CompactViewProps) {
+  const [englishOpen, setEnglishOpen] = useState<Record<string, boolean>>({});
+  const bilingualMode = settings.replyLanguage === "bilingual";
   const lastUser = [...messages]
     .reverse()
     .find((message) => message.role === "user" && message.content.trim());
@@ -146,21 +149,43 @@ export function CompactView({
 
           {exchange.map((message) => {
             const content = stripLegacyFixes(message.content);
-            const split =
-              message.role === "assistant"
+            const assistant = message.role === "assistant";
+            const bilingual = assistant && bilingualMode ? splitBilingual(content) : null;
+            const legacy =
+              assistant && !bilingualMode
                 ? splitTranslation(content)
                 : { body: content, translation: "" };
+            const primary = bilingual ? bilingual.portuguese || bilingual.english : legacy.body;
+            const english = bilingual?.portuguese ? bilingual.english : "";
+            const englishShown =
+              Boolean(english) && (!settings.translationChallenge || englishOpen[message.id]);
             return (
               <div
                 className={`compact-bubble ${message.role} ${
-                  split.translation ? "has-translation" : ""
+                  english || legacy.translation ? "has-translation" : ""
                 }`}
                 key={message.id}
               >
-                {split.body}
-                {split.translation && (
+                {primary}
+                {english && englishShown && (
+                  <span className="compact-english" lang="en">
+                    {english}
+                  </span>
+                )}
+                {english && !englishShown && !message.streaming && (
+                  <button
+                    type="button"
+                    className="compact-reveal"
+                    onClick={() =>
+                      setEnglishOpen((current) => ({ ...current, [message.id]: true }))
+                    }
+                  >
+                    ver em inglês
+                  </button>
+                )}
+                {!bilingualMode && legacy.translation && (
                   <span className="compact-translation" lang="pt-BR">
-                    {split.translation}
+                    {legacy.translation}
                   </span>
                 )}
                 {message.streaming && <span className="caret" />}

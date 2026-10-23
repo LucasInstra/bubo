@@ -56,7 +56,7 @@ test("reply language offers English, bilingual and Portuguese-only replies", asy
 
   await page.getByRole("button", { name: "Inglês + português", exact: true }).click();
   await expect(
-    page.getByText("O bubo responde em inglês e acrescenta uma tradução curta em português."),
+    page.getByText("O bubo responde em português e deixa a versão em inglês atrás de um botão."),
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Só português", exact: true }).click();
@@ -65,20 +65,23 @@ test("reply language offers English, bilingual and Portuguese-only replies", asy
   await expect(page.getByRole("button", { name: "PT-BR", exact: true })).toHaveClass(/chip-on/);
 });
 
-test("beginner settings expose the translation challenge and study focus", async ({ page }) => {
+test("bilingual settings expose the English challenge and beginner focus", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app&level=A1");
   await page.getByRole("button", { name: "Configurações" }).click();
 
-  await expect(page.getByText("Desafio antes da tradução")).toBeVisible();
   await expect(page.getByText("Foco de estudo")).toBeVisible();
+  await expect(page.getByText("Desafio antes do inglês")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Inglês + português" }).click();
+  await expect(page.getByText("Desafio antes do inglês")).toBeVisible();
 
   await page.getByRole("button", { name: "B1", exact: true }).click();
-  await expect(page.getByText("Desafio antes da tradução")).toHaveCount(0);
   await expect(page.getByText("Foco de estudo")).toHaveCount(0);
+  await expect(page.getByText("Desafio antes do inglês")).toBeVisible();
 });
 
-test("beginner settings open the lessons panel", async ({ page }) => {
-  await page.goto("/e2e/harness.html?case=app&level=A1");
+test("settings open the lessons panel for higher levels", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=app&level=B1");
   await page.getByRole("button", { name: "Configurações" }).click();
   await page.getByRole("button", { name: "Abrir lições de gramática" }).click();
 

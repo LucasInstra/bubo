@@ -9,17 +9,17 @@ async function calls(page: Page): Promise<HarnessCall[]> {
   return page.evaluate(() => (window as unknown as { __calls: HarnessCall[] }).__calls);
 }
 
-test("beginner bilingual replies hide the translation until revealed", async ({ page }) => {
+test("bilingual replies start in Portuguese and reveal the English on demand", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=bilingual-a1");
 
-  const translation = page.locator(".msg-translation");
-  await expect(translation).toHaveCount(0);
+  const bubble = page.locator(".msg-bot .bubble").last();
+  await expect(bubble).toContainText("Isso parece um bom fim de semana");
+  await expect(bubble).not.toContainText("That sounds like a good weekend");
 
-  const reveal = page.getByRole("button", { name: "ver tradução" });
-  await expect(reveal).toBeVisible();
-  await reveal.click();
-
-  await expect(translation).toContainText("Isso parece um bom fim de semana");
+  await bubble.getByRole("button", { name: "ver em inglês" }).click();
+  await expect(bubble.locator(".msg-english")).toContainText(
+    "That sounds like a good weekend",
+  );
 });
 
 test("a completed lesson can set the focus for the conversation", async ({ page }) => {
@@ -72,7 +72,13 @@ test("a beginner lesson walks through steps and saves a wrong answer", async ({ 
 
   await dialog.getByLabel(/She ___ my boss/).fill("are");
   await dialog.getByRole("button", { name: "Conferir" }).click();
-  await expect(dialog.getByText("Quase.")).toBeVisible();
+  await expect(dialog.getByText("Tente mais uma vez.")).toBeVisible();
+  await expect
+    .poll(async () => (await calls(page)).filter((call) => call.cmd === "save_lesson_fix").length)
+    .toBe(0);
+
+  await dialog.getByRole("button", { name: "Conferir de novo" }).click();
+  await expect(dialog.getByText(/Quase\. A resposta é isn't\./)).toBeVisible();
 
   await expect
     .poll(async () => (await calls(page)).filter((call) => call.cmd === "save_lesson_fix").length)
@@ -83,4 +89,13 @@ test("a beginner lesson walks through steps and saves a wrong answer", async ({ 
     right: "isn't",
     note: "Complete no negativo: She ___ my boss. · to be negativo: is not / isn't",
   });
+});
+
+test("higher levels can open their own lessons", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=empty&level=B1");
+
+  await page.getByRole("button", { name: "Mini-lições de gramática" }).click();
+  const dialog = page.getByRole("dialog", { name: "Lições" });
+  await expect(dialog.getByRole("button", { name: /Present perfect/ })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: /Condicionais/ })).toBeVisible();
 });

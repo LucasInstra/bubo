@@ -90,6 +90,13 @@ fn study_focus_hint(focus: &str) -> Option<&'static str> {
         "vocabulary" => {
             Some("The learner is focusing on everyday vocabulary for routine, work and food.")
         }
+        "present_perfect" => {
+            Some("The learner is focusing on the present perfect, including for and since.")
+        }
+        "conditionals" => {
+            Some("The learner is focusing on first and second conditionals, including unless.")
+        }
+        "passive" => Some("The learner is focusing on the passive voice in the present and past."),
         _ => None,
     }
 }
@@ -106,12 +113,15 @@ pub fn reply_system(settings: &Settings) -> String {
     };
     let beginner = is_beginner_level(&settings.level);
     let portuguese = reply_language_is_portuguese(&settings.reply_language);
+    let bilingual = reply_language_is_bilingual(&settings.reply_language);
     let language_rule = if portuguese {
         if beginner {
             "Reply in Brazilian Portuguese like a friend texting, because the learner may not read English yet. When a useful English word or phrase fits naturally, show it and make its meaning clear in Portuguese right away. Do not ask the learner to repeat or say it back, because the phrase is already in front of them. Never answer with a whole English paragraph."
         } else {
             "Reply in Brazilian Portuguese like a friend texting, because the learner may not read English yet. When a useful English word or phrase fits naturally, keep it in English inside the Portuguese sentence and make its meaning clear in Portuguese right away. Never answer with a whole English paragraph."
         }
+    } else if bilingual {
+        "Start your reply in Brazilian Portuguese, like a friend texting, so the learner understands it first. The English version goes in the final line described below."
     } else {
         "Reply in English like a friend texting."
     };
@@ -119,7 +129,7 @@ pub fn reply_system(settings: &Settings) -> String {
         study_focus_hint(&settings.study_focus)
             .map(|hint| {
                 format!(
-                    "{hint} Create natural chances to use it, keep the examples short, and never turn every reply into a drill."
+                    "{hint} Create natural chances to use it only when it fits what the learner just said, keep the examples short, and never turn every reply into a drill or change the subject for it."
                 )
             })
             .unwrap_or_default()
@@ -127,17 +137,17 @@ pub fn reply_system(settings: &Settings) -> String {
         String::new()
     };
     let beginner_rule = if beginner {
-        "- The learner is building confidence. When they ask for a word, a translation or how to say something, give one short hint first (the first word, the tense or a related word) and ask them to try. Only give the full answer if they ask again or say they are stuck. When you introduce a new English phrase, invite them to guess the meaning before you translate it. Never ask the learner to repeat or say back a phrase you just showed them: they can already read it, so the question would make no sense. When you do ask the learner to produce an English sentence or word, the question must not contain that English answer. Keep the target phrase hidden. State the meaning in Portuguese and give one hint that is not the answer. If a hint would reveal the phrase, make it smaller (the tense, the first word or a related word). Good: \"Como você diria 'eu joguei muitos jogos' em inglês? Dica: use o passado de play e uma expressão para 'muitos'.\" Bad: \"Você já tentou dizer 'Can I have a coffee?'? Tente agora.\" Never quote the English sentence and then ask them to guess a word inside it."
+        "- The learner is building confidence. When they ask for a word, a translation or how to say something, give one short hint first (the first word, the tense or a related word) and ask them to try. Only give the full answer if they ask again or say they are stuck. When you introduce a new English phrase, invite them to guess the meaning before you translate it. Never ask the learner to repeat or say back a phrase you just showed them: they can already read it, so the question would make no sense. When you do ask the learner to produce an English sentence or word, the question must not contain that English answer. Keep the target phrase hidden. State the meaning in Portuguese and give one hint that is not the answer. If a hint would reveal the phrase, make it smaller (the tense, the first word or a related word). Good: \"Como você diria 'eu joguei muitos jogos' em inglês? Dica: use o passado de play e uma expressão para 'muitos'.\" Bad: \"Você já tentou dizer 'Can I have a coffee?'? Tente agora.\" Never quote the English sentence and then ask them to guess a word inside it. Always answer what the learner actually sent before anything else. If the message is a greeting, a very short answer or a change of subject, react to it politely and then ask whether they want to learn the words for that topic or just talk about it. Never ignore the message to push a grammar drill or an unrelated subject."
     } else {
         ""
     };
-    let portuguese_note = if portuguese {
+    let portuguese_note = if portuguese || bilingual {
         "- The learner may write in Portuguese. Answer what they meant first, then keep the conversation going in Portuguese and, when it helps, show the English sentence they could use next time with its meaning in Portuguese. Never treat their Portuguese as an English mistake."
     } else {
         ""
     };
-    let help = if reply_language_is_bilingual(&settings.reply_language) {
-        "- Bilingual help is ON. After your English reply, add one final line starting with \"PT:\" containing a short, natural Brazilian Portuguese translation of exactly what you said. Do not add new advice, notes or commentary in that line."
+    let help = if bilingual {
+        "- Bilingual help is ON. Write the reply in Brazilian Portuguese first, like a friend texting. Then add one final line starting with \"EN:\" containing the English version of exactly what you said. Never put the English first. Do not add new advice, notes or commentary in that line. Example: \"Oi, tudo bem? Eu estava aqui pensando na semana.\nEN: Hey, how are you? I was here thinking about the week.\""
     } else {
         ""
     };
@@ -154,6 +164,16 @@ Learner: eu gosto de trabalhar nas telas wpf
 bubo: WPF é onde os pequenos detalhes aparecem rápido. Eu respeito quem gosta disso. "I like working on the WPF screens" quer dizer "eu gosto de trabalhar nas telas WPF", uma boa frase para essa conversa.
 Learner: eu sempre tento seguir o padrão do projeto
 bubo: Essa é a habilidade sem glamour que mantém um código vivo. Você vai agradecer depois."#
+    } else if bilingual {
+        r#"Learner: oi
+bubo: Oi. Boa hora, eu estava aqui vendo a luz mudar na parede e fugindo da minha lista de tarefas. Como está o seu dia?
+EN: Hey. Good timing, I was just watching the light change on the wall and avoiding my to-do list. How is your day going?
+Learner: eu trabalhei até agora
+bubo: Trabalhar até agora cansa. Você parou para comer alguma coisa ou foi direto?
+EN: Working until now is tiring. Did you stop to eat something, or did you go straight through?
+Learner: eu sou estagiário de backend na instramed
+bubo: Backend, boa. Eu trocaria uma API limpa por um botão bonito a qualquer momento, mas sou suspeito.
+EN: Backend, nice. I would trade a clean API for a pretty button any time, but I am biased."#
     } else {
         r#"Learner: hello
 bubo: Hey. Good timing, I was just watching the light change on the wall and avoiding my to-do list. How is your day going?
@@ -402,10 +422,11 @@ mod tests {
         assert!(prompt.contains("Reply in English like a friend texting"));
         assert!(!prompt.contains("Bilingual help"));
         assert!(!prompt.contains("Reply in Brazilian Portuguese"));
+        assert!(!prompt.contains("EN:"));
     }
 
     #[test]
-    fn bilingual_help_adds_a_portuguese_translation_line() {
+    fn bilingual_help_starts_in_portuguese_and_hides_the_english_line() {
         let plain = reply_system(&Settings::default());
         assert!(!plain.contains("Bilingual help"));
 
@@ -415,8 +436,11 @@ mod tests {
         };
         let prompt = reply_system(&bilingual);
         assert!(prompt.contains("Bilingual help"));
-        assert!(prompt.contains("PT:"));
-        assert!(prompt.contains("Brazilian Portuguese translation"));
+        assert!(prompt.contains("Start your reply in Brazilian Portuguese"));
+        assert!(prompt.contains("\"EN:\""));
+        assert!(prompt.contains("Never put the English first"));
+        assert!(prompt.contains("EN: Hey."));
+        assert!(!prompt.contains("PT:"));
     }
 
     #[test]
@@ -431,6 +455,7 @@ mod tests {
         assert!(!prompt.contains("Reply in English like a friend texting"));
         assert!(!prompt.contains("Bilingual help"));
         assert!(!prompt.contains("PT:"));
+        assert!(!prompt.contains("EN:"));
         assert!(!prompt.contains('\u{2014}'));
         assert!(!prompt.contains('\u{2013}'));
     }
@@ -470,6 +495,24 @@ mod tests {
             ..Settings::default()
         };
         assert!(!reply_system(&higher).contains("must not contain that English answer"));
+    }
+
+    #[test]
+    fn beginner_replies_react_to_the_message_before_teaching() {
+        let beginner = Settings {
+            level: "A1".to_string(),
+            ..Settings::default()
+        };
+        let prompt = reply_system(&beginner);
+        assert!(prompt.contains("Always answer what the learner actually sent"));
+        assert!(prompt.contains("greeting, a very short answer or a change of subject"));
+        assert!(prompt.contains("learn the words for that topic or just talk about it"));
+
+        let higher = Settings {
+            level: "B1".to_string(),
+            ..Settings::default()
+        };
+        assert!(!reply_system(&higher).contains("Always answer what the learner actually sent"));
     }
 
     #[test]

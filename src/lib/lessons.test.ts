@@ -1,14 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { isCorrectAnswer } from "./answer";
-import { focusLabel, isBeginnerLevel, LESSONS, STUDY_FOCUSES } from "./lessons";
+import { isCorrectAnswer, normalizeAnswer, noteRevealsAnswer } from "./answer";
+import { displayAnswer, focusLabel, isBeginnerLevel, LESSONS, STUDY_FOCUSES } from "./lessons";
+
+const LEVELS = new Set(["A1", "A2", "B1", "B2"]);
+
+function multiWordAnswers(answers: string[]): string[] {
+  return answers.map(normalizeAnswer).filter((answer) => answer.split(" ").length > 1);
+}
 
 describe("lesson catalog", () => {
-  it("has unique ids and three complete steps", () => {
+  it("has unique ids, valid levels and three complete steps", () => {
     const ids = new Set<string>();
     for (const lesson of LESSONS) {
       expect(ids.has(lesson.id), `${lesson.id} is duplicated`).toBe(false);
       ids.add(lesson.id);
-      expect(isBeginnerLevel(lesson.level), `${lesson.id} is not beginner`).toBe(true);
+      expect(LEVELS.has(lesson.level), `${lesson.id} has level ${lesson.level}`).toBe(true);
       expect(lesson.steps).toHaveLength(3);
       for (const step of lesson.steps) {
         expect(step.title).toBeTruthy();
@@ -16,9 +22,18 @@ describe("lesson catalog", () => {
         expect(step.examples.length).toBeGreaterThan(0);
         expect(step.exercise.prompt).toBeTruthy();
         expect(step.exercise.answers.length).toBeGreaterThan(0);
+        expect(step.exercise.hint).toBeTruthy();
+        expect(step.exercise.explanation).toBeTruthy();
         expect(step.exercise.note).toBeTruthy();
       }
     }
+  });
+
+  it("offers lessons above the beginner levels", () => {
+    const levels = new Set(LESSONS.map((lesson) => lesson.level));
+    expect(levels.has("B1")).toBe(true);
+    expect(levels.has("B2")).toBe(true);
+    expect(LESSONS.some((lesson) => !isBeginnerLevel(lesson.level))).toBe(true);
   });
 
   it("only uses focus ids that the settings know about", () => {
@@ -38,9 +53,46 @@ describe("lesson catalog", () => {
     }
   });
 
+  it("never hands a full answer over in the body or examples", () => {
+    for (const lesson of LESSONS) {
+      for (const step of lesson.steps) {
+        const answers = multiWordAnswers(step.exercise.answers);
+        for (const line of [...step.body, ...step.examples]) {
+          const text = normalizeAnswer(line);
+          for (const answer of answers) {
+            expect(text.includes(answer), `${lesson.id}: "${line}" reveals "${answer}"`).toBe(
+              false,
+            );
+          }
+        }
+      }
+    }
+  });
+
+  it("keeps the hints short of the full answer", () => {
+    for (const lesson of LESSONS) {
+      for (const step of lesson.steps) {
+        for (const answer of multiWordAnswers(step.exercise.answers)) {
+          expect(
+            noteRevealsAnswer(step.exercise.hint, answer),
+            `${lesson.id}: hint reveals "${answer}"`,
+          ).toBe(false);
+        }
+      }
+    }
+  });
+
+  it("fixes the pronoun when showing an answer", () => {
+    expect(displayAnswer("i am a developer")).toBe("I am a developer");
+    expect(displayAnswer("i'm a developer")).toBe("I'm a developer");
+    expect(displayAnswer("isn't")).toBe("isn't");
+  });
+
   it("labels known and unknown focuses", () => {
     expect(focusLabel("to_be")).toBe("To be");
-    expect(focusLabel("past_simple")).toBe("Passado");
+    expect(focusLabel("present_perfect")).toBe("Present perfect");
+    expect(focusLabel("conditionals")).toBe("Condicionais");
+    expect(focusLabel("passive")).toBe("Voz passiva");
     expect(focusLabel("unknown")).toBe("Livre");
   });
 });

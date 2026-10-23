@@ -640,10 +640,12 @@ export default function App() {
   const beginner = isBeginnerLevel(settings.level);
   const portugueseReplies = settings.replyLanguage === "pt";
   const suggestions = portugueseReplies ? SUGGESTIONS_PT : SUGGESTIONS_EN;
+  const showUpdateSpeech =
+    updater.status === "available" && !updateDismissed && !searchOpen && status === "idle";
   const showUpdateBanner =
     updater.status === "downloading" ||
     updater.status === "ready" ||
-    (updater.status === "available" && !updateDismissed);
+    (updater.status === "available" && !updateDismissed && searchOpen);
   const accentVars = {
     "--accent": accent,
     "--accent-soft": withAlpha(accent, 0.16),
@@ -998,6 +1000,34 @@ export default function App() {
               {settings.showStatus && status !== "idle" && (
                 <span className="status-pill">{STATUS_LABEL[status]}</span>
               )}
+              {showUpdateSpeech && (
+                <div className="update-speech" role="status" aria-live="polite">
+                  <span className="update-speech-text">
+                    <strong>
+                      {updater.build > 1
+                        ? `Saiu a versão ${updater.version} · build ${updater.build}.`
+                        : `Saiu a versão ${updater.version}.`}
+                    </strong>{" "}
+                    Quer instalar agora?
+                  </span>
+                  <div className="update-speech-actions">
+                    <button
+                      className="primary"
+                      type="button"
+                      onClick={() => void updater.install()}
+                    >
+                      Instalar e reiniciar
+                    </button>
+                    <button
+                      className="ghost"
+                      type="button"
+                      onClick={() => setUpdateDismissed(true)}
+                    >
+                      Depois
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1067,11 +1097,9 @@ export default function App() {
                 </p>
               )}
               <div className="suggestions">
-                {beginner && (
-                  <button className="chip chip-lesson" onClick={() => setShowLessons(true)}>
-                    Mini-lições de gramática
-                  </button>
-                )}
+                <button className="chip chip-lesson" onClick={() => setShowLessons(true)}>
+                  Mini-lições de gramática
+                </button>
                 {due > 0 && (
                   <button
                     className="chip chip-practice"
@@ -1114,7 +1142,8 @@ export default function App() {
                 <Message
                   key={message.id}
                   message={message}
-                  challengeTranslation={beginner && settings.translationChallenge}
+                  replyLanguage={settings.replyLanguage}
+                  challengeTranslation={settings.translationChallenge}
                   onRetry={message.error ? retry : undefined}
                   onDelete={removeMessage}
                   onPracticeFix={practiceFix}
@@ -1184,14 +1213,10 @@ export default function App() {
               setDrillFocus(null);
               setShowDrill(true);
             }}
-            onLessons={
-              beginner
-                ? () => {
-                    setShowProgress(false);
-                    setShowLessons(true);
-                  }
-                : undefined
-            }
+            onLessons={() => {
+              setShowProgress(false);
+              setShowLessons(true);
+            }}
             goal={settings.dailyGoal}
           />
         )}

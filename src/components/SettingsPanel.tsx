@@ -47,7 +47,7 @@ const REPLY_LANGUAGES = [
 ];
 const REPLY_LANGUAGE_HINTS: Record<string, string> = {
   en: "O bubo responde em inglês, no seu nível.",
-  bilingual: "O bubo responde em inglês e acrescenta uma tradução curta em português.",
+  bilingual: "O bubo responde em português e deixa a versão em inglês atrás de um botão.",
   pt: "O bubo conversa em português e mantém o inglês que você está aprendendo. As correções continuam no inglês que você escreveu.",
 };
 const TEXT_SIZES = [
@@ -513,56 +513,58 @@ export function SettingsPanel({
               )}
             </div>
 
-            {beginner && (
-              <>
-                <div className="field">
-                  <label className="field row">
-                    <span>Desafio antes da tradução</span>
-                    <input
-                      type="checkbox"
-                      checked={draft.translationChallenge}
-                      onChange={(event) => patch({ translationChallenge: event.target.checked })}
-                    />
-                  </label>
-                  <span className="hint">
-                    Esconde a tradução no chat completo até você tentar. Dá para revelar na hora se
-                    travar.
-                  </span>
-                </div>
-
-                <div className="field">
-                  <span>Foco de estudo</span>
-                  <div className="levels wrap focus-grid">
-                    {STUDY_FOCUSES.map(([value, label]) => (
-                      <button
-                        type="button"
-                        key={value}
-                        className={`chip ${draft.studyFocus === value ? "chip-on" : ""}`}
-                        onClick={() => patch({ studyFocus: value })}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  <span className="hint">
-                    O bubo puxa esse assunto e prioriza correções relacionadas.
-                  </span>
-                </div>
-
-                <div className="field">
-                  <span>Mini-lições</span>
-                  <button
-                    type="button"
-                    className="action-button"
-                    disabled={busy}
-                    onClick={() => void openLessons()}
-                  >
-                    Abrir lições de gramática
-                  </button>
-                  <span className="hint">Sete lições curtas, com um exercício por passo.</span>
-                </div>
-              </>
+            {draft.replyLanguage === "bilingual" && (
+              <div className="field">
+                <label className="field row">
+                  <span>Desafio antes do inglês</span>
+                  <input
+                    type="checkbox"
+                    checked={draft.translationChallenge}
+                    onChange={(event) => patch({ translationChallenge: event.target.checked })}
+                  />
+                </label>
+                <span className="hint">
+                  Mostra primeiro o português e deixa o inglês atrás de um botão. Dá para revelar na
+                  hora se quiser.
+                </span>
+              </div>
             )}
+
+            {beginner && (
+              <div className="field">
+                <span>Foco de estudo</span>
+                <div className="levels wrap focus-grid">
+                  {STUDY_FOCUSES.map(([value, label]) => (
+                    <button
+                      type="button"
+                      key={value}
+                      className={`chip ${draft.studyFocus === value ? "chip-on" : ""}`}
+                      onClick={() => patch({ studyFocus: value })}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <span className="hint">
+                  O bubo puxa esse assunto e prioriza correções relacionadas.
+                </span>
+              </div>
+            )}
+
+            <div className="field">
+              <span>Mini-lições</span>
+              <button
+                type="button"
+                className="action-button"
+                disabled={busy}
+                onClick={() => void openLessons()}
+              >
+                Abrir lições de gramática
+              </button>
+              <span className="hint">
+                Dez lições curtas, de A1 a B2, com um exercício por passo.
+              </span>
+            </div>
 
             <label className="field row">
               <span>Ignorar maiúsculas</span>

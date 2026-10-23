@@ -1,23 +1,17 @@
 import { expect, test } from "@playwright/test";
 
-test("bilingual replies render the Portuguese line as a translation block", async ({ page }) => {
-  await page.goto("/e2e/harness.html?case=bilingual");
-
-  const translation = page.locator(".msg-translation");
-  await expect(translation).toHaveCount(1);
-  await expect(translation).toContainText("Isso parece um bom fim de semana");
-  await expect(page.locator(".markdown", { hasText: "PT:" })).toHaveCount(0);
-});
-
-test("compact mode renders the translation without the PT marker", async ({ page }) => {
+test("compact bilingual replies start in Portuguese and reveal the English", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=compact-bilingual");
 
-  const assistant = page.locator(".compact-bubble.assistant");
+  const assistant = page.locator(".compact-bubble.assistant").last();
   await expect(assistant).toBeVisible();
-  await expect(assistant.locator(".compact-translation")).toContainText(
-    "Isso parece um bom fim de semana",
+  await expect(assistant).toContainText("Isso parece um bom fim de semana");
+  await expect(assistant).not.toContainText("That sounds like a good weekend");
+
+  await assistant.getByRole("button", { name: "ver em inglês" }).click();
+  await expect(assistant.locator(".compact-english")).toContainText(
+    "That sounds like a good weekend",
   );
-  await expect(assistant).not.toContainText("PT:");
 });
 
 test("settings switches provider and base URL", async ({ page }) => {
@@ -91,6 +85,17 @@ test("light theme keeps the send button visible", async ({ page }) => {
   });
   expect(colors.background).not.toBe("rgba(0, 0, 0, 0)");
   expect(colors.color).not.toBe(colors.background);
+});
+
+test("the mascot announces an available update", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=update");
+
+  const speech = page.locator(".update-speech");
+  await expect(speech).toContainText("Saiu a versão 0.9.0.");
+  await expect(speech.getByRole("button", { name: "Instalar e reiniciar" })).toBeVisible();
+
+  await speech.getByRole("button", { name: "Depois" }).click();
+  await expect(speech).toHaveCount(0);
 });
 
 test("mascot accepts a drag gesture", async ({ page }) => {

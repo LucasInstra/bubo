@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseStoredFixes, splitTranslation, stripLegacyFixes } from "./format";
+import { parseStoredFixes, splitBilingual, splitTranslation, stripLegacyFixes } from "./format";
 
 describe("stripLegacyFixes", () => {
   it("removes an inline correction block", () => {
@@ -39,6 +39,47 @@ describe("splitTranslation", () => {
   it("keeps an empty translation in the body", () => {
     const content = "That sounds nice.\nPT:";
     expect(splitTranslation(content)).toEqual({ body: content, translation: "" });
+  });
+});
+
+describe("splitBilingual", () => {
+  it("reads the Portuguese-first reply and its English line", () => {
+    expect(
+      splitBilingual(
+        "Isso parece bom. A água estava quente?\nEN: That sounds nice. Was the water warm?",
+      ),
+    ).toEqual({
+      portuguese: "Isso parece bom. A água estava quente?",
+      english: "That sounds nice. Was the water warm?",
+    });
+  });
+
+  it("tolerates blank lines and extra spacing", () => {
+    expect(splitBilingual("Isso parece bom.\n\nEN:   That sounds nice.  ")).toEqual({
+      portuguese: "Isso parece bom.",
+      english: "That sounds nice.",
+    });
+  });
+
+  it("still understands the older English-first format", () => {
+    expect(splitBilingual("That sounds nice.\nPT: Isso parece bom.")).toEqual({
+      portuguese: "Isso parece bom.",
+      english: "That sounds nice.",
+    });
+  });
+
+  it("keeps a reply without markers in the English slot", () => {
+    expect(splitBilingual("Isso parece bom.")).toEqual({
+      portuguese: "",
+      english: "Isso parece bom.",
+    });
+  });
+
+  it("ignores an empty English line", () => {
+    expect(splitBilingual("Isso parece bom.\nEN:")).toEqual({
+      portuguese: "",
+      english: "Isso parece bom.\nEN:",
+    });
   });
 });
 

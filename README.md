@@ -29,8 +29,8 @@ Because the useful part of learning a language is the five minutes between real 
 - **Ready-made personalities**: twelve voices such as Warm Coach, Dry Wit or Hype Friend. Picking one changes only the tutor's tone; the mascot look stays exactly as you customized it. The free-text flavor field stacks on top.
 - **Compact mode**: a 400 x 280 horizontal chat card with the buddy in the header, the current mood under the name and a one-line composer. The full window is one click away.
 - **Bring your own endpoint**: Groq, OpenAI, OpenRouter, Ollama or any OpenAI-compatible URL, with model suggestions, a test connection button, optional proxy and custom CA certificate for company networks.
-- **Conversation first**: replies stream token by token; a separate pass returns corrections as strict JSON, so the card never depends on the model following inline formatting. Replies render Markdown, and a search field filters the current conversation. bubo can reply in English only, in English with a short Portuguese translation, or in Portuguese only when you are still learning to read English.
-- **Beginner mode (A1/A2)**: the Portuguese translation waits behind a “ver tradução” button, bubo gives a small hint before the full answer, and you can choose a study focus (to be, past simple, questions and more) or work through seven short grammar lessons with one exercise per step.
+- **Conversation first**: replies stream token by token; a separate pass returns corrections as strict JSON, so the card never depends on the model following inline formatting. Replies render Markdown, and a search field filters the current conversation. bubo can reply in English only, in Portuguese with the English version behind a “ver em inglês” button, or in Portuguese only when you are still learning to read English.
+- **Beginner mode (A1/A2)**: in bilingual replies the Portuguese comes first and the English waits behind a button, bubo gives a small hint before the full answer, and you can choose a study focus (to be, past simple, questions and more) or work through ten short grammar lessons from A1 to B2 with one exercise per step.
 - **Looks and pace**: dark, light or system theme; a daily review goal; an optional daily reminder notification when cards are due.
 - **Corrections that stick**: every fix is stored, linked to the message that produced it, and scheduled with a 1 / 3 / 7 / 21 / 45 day ladder. A miss comes back in ten minutes.
 - **Practice mode**: rewrite the wrong sentence, get instant feedback, see the original context, and use “I was right” when a valid alternative was marked wrong. Skip the due cards or reset the deck from settings.
@@ -92,7 +92,7 @@ The default model is `openai/gpt-oss-120b`. Any OpenAI-compatible base URL works
 
 ## Updates
 
-bubo checks GitHub Releases when it starts and shows a small banner when a newer version exists. There is also a manual check under Settings → Updates.
+bubo checks GitHub Releases when it starts and shows a small banner when a newer version exists. When you are not in the middle of a reply, the mascot also speaks up with the new version and the install shortcut. There is also a manual check under Settings → Updates.
 
 Updates are matched by version and by build. A new version always wins; the same version is only offered when its build is higher, so a fix build can be published without a new version and still reach installations that already have that version. The build number is `BUILD_NUMBER` in `src/lib/build.ts` and is also written to `latest.json` by `scripts/updater-json.mjs`.
 

@@ -39,6 +39,7 @@
         mode === "bilingual" || mode === "bilingual-a1" || mode === "compact-bilingual";
       const level =
         params.get("level") ?? (mode === "bilingual-a1" ? "A1" : DEFAULT_SETTINGS.level);
+      const updateAvailable = mode === "update";
       const width = popup ? 380 : compact ? 400 : 420;
       const height = popup ? 380 : compact ? 280 : 640;
 
@@ -55,6 +56,7 @@
         hotkey: "Ctrl+Alt+B",
         noteLanguage: "en",
         level,
+        replyLanguage: bilingual ? "bilingual" : DEFAULT_SETTINGS.replyLanguage,
       };
       const stored = [
         {
@@ -80,7 +82,7 @@
           id: 3,
           role: "assistant",
           content:
-            "That sounds like a good weekend. Was the water warm?\nPT: Isso parece um bom fim de semana. A água estava quente?",
+            "Isso parece um bom fim de semana. A água estava quente?\nEN: That sounds like a good weekend. Was the water warm?",
           fixes: null,
           createdAt: 3,
         },
@@ -115,6 +117,17 @@
         get_settings: () => settings,
         has_api_key: () => true,
         "plugin:app|version": () => pkg.version,
+        "plugin:updater|check": () =>
+          updateAvailable
+            ? {
+                rid: 1,
+                currentVersion: pkg.version,
+                version: "0.9.0",
+                date: new Date().toISOString(),
+                body: "## What's new\n\n- The mascot speaks up.",
+                rawJson: { version: "0.9.0", build: 1 },
+              }
+            : null,
         history: () => (mode === "empty" ? [] : bilingual ? bilingualStored : stored),
         current_session: () => 1,
         lesson_progress: () => lessonProgress,

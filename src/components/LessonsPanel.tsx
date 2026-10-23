@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isCorrectAnswer } from "../lib/answer";
 import { ipc } from "../lib/ipc";
-import { focusLabel, LESSONS, type Lesson } from "../lib/lessons";
+import { focusLabel, LESSONS, displayAnswer, type Lesson } from "../lib/lessons";
 import { useModalFocus } from "../lib/modal";
 import type { LessonProgress, Settings } from "../lib/types";
 import { Mascot } from "./Mascot";
@@ -14,7 +14,10 @@ interface LessonsPanelProps {
 }
 
 type Result =
-  { kind: "correct" } | { kind: "wrong"; answer: string } | { kind: "revealed"; answer: string };
+  | { kind: "correct" }
+  | { kind: "hint" }
+  | { kind: "wrong"; answer: string }
+  | { kind: "revealed"; answer: string };
 
 export function LessonsPanel({
   settings,
@@ -27,6 +30,7 @@ export function LessonsPanel({
   const [stepIndex, setStepIndex] = useState(0);
   const [answer, setAnswer] = useState("");
   const [result, setResult] = useState<Result | null>(null);
+  const [attempts, setAttempts] = useState(0);
   const [finished, setFinished] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -85,6 +89,7 @@ export function LessonsPanel({
     setStepIndex(start);
     setAnswer("");
     setResult(null);
+    setAttempts(0);
     setFinished(false);
     setError("");
   };
@@ -93,6 +98,7 @@ export function LessonsPanel({
     setSelected(null);
     setFinished(false);
     setResult(null);
+    setAttempts(0);
     setAnswer("");
   };
 
@@ -108,7 +114,16 @@ export function LessonsPanel({
       return;
     }
 
-    setResult({ kind: "wrong", answer: step.exercise.answers[0] });
+    // First miss earns a hint, not a verdict: the learner gets one more try
+    // before the answer is revealed and the correction joins the practice queue.
+    if (attempts === 0) {
+      setAttempts(1);
+      setResult({ kind: "hint" });
+      requestAnimationFrame(() => inputRef.current?.focus());
+      return;
+    }
+
+    setResult({ kind: "wrong", answer: displayAnswer(step.exercise.answers[0]) });
     const key = `${selected.id}:${stepIndex}`;
     if (savedFixes.current.has(key)) return;
     savedFixes.current.add(key);
@@ -116,7 +131,7 @@ export function LessonsPanel({
     try {
       await ipc.saveLessonFix(
         typed,
-        step.exercise.answers[0],
+        displayAnswer(step.exercise.answers[0]),
         `${step.exercise.prompt} · ${step.exercise.note}`,
       );
       onQueueChanged();
@@ -130,7 +145,8 @@ export function LessonsPanel({
 
   const reveal = () => {
     if (!step) return;
-    setResult({ kind: "revealed", answer: step.exercise.answers[0] });
+    setAttempts(2);
+    setResult({ kind: "revealed", answer: displayAnswer(step.exercise.answers[0]) });
   };
 
   const retry = () => {
@@ -151,8 +167,32 @@ export function LessonsPanel({
     setStepIndex(next);
     setAnswer("");
     setResult(null);
+    setAttempts(0);
     saveProgress(selected, next, progress[selected.id]?.completed ?? false);
   };
+
+  const feedbackFace = (mood: "idle" | "proud" | "sad") => (
+    <span className="lesson-feedback-face" aria-hidden="true">
+      <Mascot
+        state="idle"
+        mood={mood}
+        size={40}
+        canvasPadding={0.5}
+        shape={settings.shape}
+        color={settings.color}
+        showMouth={settings.showMouth}
+        mouthStyle={settings.mouthStyle}
+        mouthSize={settings.mouthSize}
+        mouthColor={settings.mouthColor}
+        eyeStyle={settings.eyeStyle}
+        eyeSize={settings.eyeSize}
+        eyeSpacing={settings.eyeSpacing}
+        eyeTilt={settings.eyeTilt}
+        eyeColor={settings.eyeColor}
+        boopable={false}
+      />
+    </span>
+  );
 
   return (
     <div
@@ -290,6 +330,7 @@ export function LessonsPanel({
                   setStepIndex(0);
                   setAnswer("");
                   setResult(null);
+                  setAttempts(0);
                   setFinished(false);
                 }}
               >
@@ -323,17 +364,58 @@ export function LessonsPanel({
                 value={answer}
                 placeholder={step.exercise.placeholder}
                 aria-label={step.exercise.prompt}
-                disabled={result?.kind === "correct" || busy}
+                disabled={
+                  result?.kind === "correct" ||
+                  result?.kind === "wrong" ||
+                  result?.kind === "revealed" ||
+                  busy
+                }
                 onChange={(event) => setAnswer(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key !== "Enter") return;
                   event.preventDefault();
                   if (result?.kind === "correct") advance();
-                  else if (!result) void check();
+                  else if (!result || result.kind === "hint") void check();
                 }}
               />
 
-              {!result && (
+              {result?.kind === "hint" && (
+                <div className="lesson-feedback hint" role="status">
+                  {feedbackFace("idle")}
+                  <span className="lesson-feedback-copy">
+                    <strong>Tente mais uma vez.</strong> {step.exercise.hint}
+                  </span>
+                </div>
+              )}
+
+              {result && result.kind !== "hint" && (
+                <div
+                  className={`lesson-feedback ${result.kind === "correct" ? "good" : "bad"}`}
+                  role="status"
+                >
+                  {feedbackFace(result.kind === "correct" ? "proud" : "sad")}
+                  <span className="lesson-feedback-copy">
+                    {result.kind === "correct" && (
+                      <>
+                        <strong>Boa.</strong> {step.exercise.explanation}
+                      </>
+                    )}
+                    {result.kind === "wrong" && (
+                      <>
+                        <strong>Quase. A resposta é {result.answer}.</strong>{" "}
+                        {step.exercise.explanation}
+                      </>
+                    )}
+                    {result.kind === "revealed" && (
+                      <>
+                        <strong>A resposta é {result.answer}.</strong> {step.exercise.explanation}
+                      </>
+                    )}
+                  </span>
+                </div>
+              )}
+
+              {(!result || result.kind === "hint") && (
                 <div className="lesson-actions">
                   <button
                     type="button"
@@ -341,7 +423,11 @@ export function LessonsPanel({
                     disabled={!answer.trim() || busy}
                     onClick={() => void check()}
                   >
-                    {busy ? "salvando..." : "Conferir"}
+                    {busy
+                      ? "salvando..."
+                      : result?.kind === "hint"
+                        ? "Conferir de novo"
+                        : "Conferir"}
                   </button>
                   <button type="button" className="ghost" onClick={reveal}>
                     Ver resposta
@@ -349,32 +435,7 @@ export function LessonsPanel({
                 </div>
               )}
 
-              {result && (
-                <div
-                  className={`lesson-feedback ${
-                    result.kind === "correct" ? "good" : result.kind === "wrong" ? "bad" : ""
-                  }`}
-                  role="status"
-                >
-                  {result.kind === "correct" && (
-                    <span>
-                      Boa. <span className="lesson-note">{step.exercise.note}</span>
-                    </span>
-                  )}
-                  {result.kind === "wrong" && (
-                    <span>
-                      Quase. A resposta é <strong>{result.answer}</strong>.
-                    </span>
-                  )}
-                  {result.kind === "revealed" && (
-                    <span>
-                      A resposta é <strong>{result.answer}</strong>.
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {result && result.kind !== "correct" && (
+              {result && (result.kind === "wrong" || result.kind === "revealed") && (
                 <div className="lesson-actions">
                   <button type="button" className="ghost" onClick={retry}>
                     Tentar de novo

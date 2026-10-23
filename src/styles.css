@@ -171,6 +171,58 @@ button {
   animation: fade 0.25s ease-out;
 }
 
+/* bubo speaks up when a new version is waiting */
+.update-speech {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-width: 300px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(139, 125, 255, 0.3);
+  border-radius: 14px;
+  background: rgba(24, 21, 36, 0.97);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+  animation: fade 0.2s ease-out;
+}
+
+.update-speech::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-top: 1px solid rgba(139, 125, 255, 0.3);
+  border-left: 1px solid rgba(139, 125, 255, 0.3);
+  background: rgba(24, 21, 36, 0.97);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.update-speech-text {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.update-speech-text strong {
+  font-weight: 650;
+}
+
+.update-speech-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.update-speech-actions .primary,
+.update-speech-actions .ghost {
+  padding: 5px 9px;
+  font-size: 10.5px;
+}
+
 .brand {
   display: flex;
   flex-direction: row;
@@ -512,6 +564,27 @@ button {
   font-size: 12.5px;
   line-height: 1.5;
   white-space: pre-wrap;
+}
+
+.msg-english {
+  margin-top: 8px;
+  padding: 7px 10px;
+  border-left: 2px solid rgba(139, 125, 255, 0.45);
+  border-radius: 0 8px 8px 0;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.msg-english-label {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
 }
 
 .translation-reveal {
@@ -2196,6 +2269,30 @@ button {
   text-overflow: ellipsis;
 }
 
+.compact-english {
+  display: block;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.compact-reveal {
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+
+.compact-reveal:hover {
+  color: var(--text);
+}
+
 .compact-bubble.user {
   align-self: flex-end;
   border-color: rgba(191, 181, 255, 0.3);
@@ -2845,6 +2942,30 @@ button {
   font-size: 11.5px;
 }
 
+.popup-english {
+  display: block;
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.popup-reveal {
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10.5px;
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+
+.popup-reveal:hover {
+  color: var(--text);
+}
+
 @keyframes popup-in {
   from {
     opacity: 0;
@@ -3104,7 +3225,8 @@ button {
   color: var(--text);
 }
 
-[data-theme="light"] .msg-translation {
+[data-theme="light"] .msg-translation,
+[data-theme="light"] .msg-english {
   border-left-color: var(--accent);
   background: rgba(20, 18, 40, 0.04);
 }
@@ -3114,7 +3236,9 @@ button {
 }
 
 [data-theme="light"] .compact-translation,
-[data-theme="light"] .popup-translation {
+[data-theme="light"] .compact-english,
+[data-theme="light"] .popup-translation,
+[data-theme="light"] .popup-english {
   border-top-color: rgba(20, 18, 40, 0.1);
 }
 
@@ -3311,12 +3435,18 @@ button {
 }
 
 [data-theme="light"] .update-banner,
+[data-theme="light"] .update-speech,
 [data-theme="light"] .status-pill,
 [data-theme="light"] .drill-empty,
 [data-theme="light"] .progress-empty {
   border-color: rgba(20, 18, 40, 0.1);
   background: #fff;
   color: var(--text);
+}
+
+[data-theme="light"] .update-speech::before {
+  border-color: rgba(20, 18, 40, 0.1);
+  background: #fff;
 }
 
 .settings-card {
@@ -3617,12 +3747,34 @@ button {
 }
 
 .lesson-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   padding: 8px 10px;
   border-left: 2px solid transparent;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
   font-size: 11.5px;
   line-height: 1.45;
+}
+
+.lesson-feedback-face {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: -10px 0 -8px -6px;
+}
+
+.lesson-feedback-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.lesson-feedback.hint {
+  border-left-color: var(--accent);
+  color: var(--text);
 }
 
 .lesson-feedback.good {
