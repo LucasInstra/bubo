@@ -36,6 +36,23 @@ jobs:
         shell: bash
         run: node scripts/sync-version.mjs --check --expect="${{ github.ref_name }}"
 
+      - name: Read release notes
+        id: notes
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          file="release-notes/${version}.md"
+          if [ -f "$file" ]; then
+            body="$(cat "$file")"
+          else
+            body="See the assets below. Unsigned build; Windows SmartScreen may warn on first run."
+          fi
+          {
+            echo "body<<EOF"
+            echo "$body"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build and publish release
         uses: tauri-apps/tauri-action@v0
         env:
@@ -45,7 +62,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: bubo ${{ github.ref_name }}
-          releaseBody: "See the assets below. Unsigned build; Windows SmartScreen may warn on first run."
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
