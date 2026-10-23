@@ -122,7 +122,7 @@ test("feedback button opens the GitHub issue page", async ({ page }) => {
 test("settings shows the compact update card", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await page.getByRole("button", { name: "Configurações" }).click();
-  await page.getByRole("tab", { name: "Sistema" }).click();
+  await page.getByRole("tab", { name: "Atualizações" }).click();
 
   const card = page.locator(".update-card");
   await card.scrollIntoViewIfNeeded();

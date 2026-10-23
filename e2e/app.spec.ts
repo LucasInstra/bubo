@@ -78,7 +78,7 @@ test("practice checks a correct answer", async ({ page }) => {
 test("light theme keeps the send button visible", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await page.getByRole("button", { name: "Configurações" }).click();
-  await page.getByRole("tab", { name: "Aparência" }).click();
+  await page.getByRole("tab", { name: "Sistema" }).click();
   await page.getByRole("button", { name: "Claro" }).click();
   await page.getByRole("button", { name: "Salvar" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");

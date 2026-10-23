@@ -876,7 +876,7 @@ export default function App() {
               </button>
             </div>
           </div>
-          {!settings.compact && (
+          {!settings.compact && !searchOpen && (
             <div className="head-learning" role="toolbar" aria-label="Aprendizado">
               <button
                 className="ghost icon"

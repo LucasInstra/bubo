@@ -55,7 +55,7 @@ export function CompactView({
             <Mascot
               state={status}
               mood={mood}
-              size={40}
+              size={52}
               shape={settings.shape}
               color={settings.color}
               showMouth={settings.showMouth}

@@ -2,10 +2,12 @@ import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialo
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
+import { releaseHighlights } from "../lib/highlights";
 import { ipc } from "../lib/ipc";
 import { isBeginnerLevel, STUDY_FOCUSES } from "../lib/lessons";
 import { useModalFocus } from "../lib/modal";
@@ -58,14 +60,14 @@ const THEMES = [
   ["system", "Sistema"],
 ];
 
-type SettingsTab = "learning" | "connection" | "practice" | "look" | "system";
+type SettingsTab = "learning" | "connection" | "practice" | "system" | "updates";
 
 const TABS: [SettingsTab, string][] = [
   ["learning", "Aprendizado"],
   ["connection", "Conexão"],
   ["practice", "Prática"],
-  ["look", "Aparência"],
   ["system", "Sistema"],
+  ["updates", "Atualizações"],
 ];
 
 function modelChoices(source: string[], selected: string): string[] {
@@ -121,6 +123,8 @@ export function SettingsPanel({
   const dialogRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const testRun = useRef(0);
+
+  const highlights = useMemo(() => releaseHighlights(updateNotes), [updateNotes]);
 
   useModalFocus(dialogRef);
 
@@ -820,43 +824,6 @@ export function SettingsPanel({
             </div>
           </>
         )}
-        {tab === "look" && (
-          <>
-            <div className="section-title">Aparência</div>
-
-            <div className="field">
-              <span>Tamanho das mensagens</span>
-              <div className="levels">
-                {TEXT_SIZES.map(([value, label]) => (
-                  <button
-                    type="button"
-                    key={value}
-                    className={`chip ${draft.textSize === value ? "chip-on" : ""}`}
-                    onClick={() => patch({ textSize: value })}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="field">
-              <span>Tema</span>
-              <div className="levels">
-                {THEMES.map(([value, label]) => (
-                  <button
-                    type="button"
-                    key={value}
-                    className={`chip ${draft.theme === value ? "chip-on" : ""}`}
-                    onClick={() => patch({ theme: value })}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
         {tab === "system" && (
           <>
             <div className="section-title">Comportamento</div>
@@ -890,6 +857,41 @@ export function SettingsPanel({
                 oculta a janela.
               </span>
             </div>
+
+            <div className="section-title">Aparência</div>
+
+            <div className="field">
+              <span>Tamanho das mensagens</span>
+              <div className="levels">
+                {TEXT_SIZES.map(([value, label]) => (
+                  <button
+                    type="button"
+                    key={value}
+                    className={`chip ${draft.textSize === value ? "chip-on" : ""}`}
+                    onClick={() => patch({ textSize: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="field">
+              <span>Tema</span>
+              <div className="levels">
+                {THEMES.map(([value, label]) => (
+                  <button
+                    type="button"
+                    key={value}
+                    className={`chip ${draft.theme === value ? "chip-on" : ""}`}
+                    onClick={() => patch({ theme: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="section-title">Dados</div>
 
             <div className="settings-card">
@@ -938,79 +940,103 @@ export function SettingsPanel({
                 diagnóstico acima e cole junto.
               </span>
             </div>
-
+          </>
+        )}
+        {tab === "updates" && (
+          <>
             <div className="section-title">Atualizações</div>
 
             <div className="update-card">
-              <span className="update-icon" aria-hidden="true">
-                <svg
-                  viewBox="0 0 24 24"
-                  width="16"
-                  height="16"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M12 3v11m0 0-4-4m4 4 4-4M5 20h14" />
-                </svg>
-              </span>
-
-              <div className="update-copy">
-                <strong>bubo {currentVersion || "desconhecida"}</strong>
-                <span
-                  className={`update-status ${updateStatus === "error" ? "is-error" : ""}`}
-                  role="status"
-                  aria-live="polite"
-                >
-                  {updateLabel(
-                    updateStatus,
-                    updateVersion,
-                    updateBuild,
-                    updateProgress,
-                    updateError,
-                  )}
-                </span>
-                {updateStatus === "downloading" && updateProgress >= 0 && (
-                  <div className="update-progress" aria-hidden="true">
-                    <span style={{ width: `${updateProgress}%` }} />
-                  </div>
-                )}
-                {updateStatus === "available" && updateNotes && (
-                  <div className="update-notes">{updateNotes}</div>
-                )}
-                <span className="update-hint">
-                  As atualizações são verificadas quando o bubo inicia.
-                </span>
-              </div>
-
-              <div className="update-actions">
-                {updateStatus === "available" ? (
-                  <button className="primary" type="button" onClick={() => void onInstallUpdate()}>
-                    Instalar {updateVersion}
-                  </button>
-                ) : (
-                  <button
-                    className="ghost"
-                    type="button"
-                    onClick={() => void onCheckUpdate()}
-                    disabled={
-                      updateStatus === "checking" ||
-                      updateStatus === "downloading" ||
-                      updateStatus === "ready"
-                    }
+              <div className="update-head">
+                <span className="update-icon" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   >
-                    {updateStatus === "checking"
-                      ? "Verificando..."
-                      : updateStatus === "error"
-                        ? "Tentar de novo"
-                        : updateStatus === "idle"
-                          ? "Verificar atualizações"
-                          : "Verificar de novo"}
-                  </button>
-                )}
+                    <path d="M12 3v11m0 0-4-4m4 4 4-4M5 20h14" />
+                  </svg>
+                </span>
+
+                <div className="update-copy">
+                  <strong>bubo {currentVersion || "desconhecida"}</strong>
+                  <span
+                    className={`update-status ${updateStatus === "error" ? "is-error" : ""}`}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {updateLabel(
+                      updateStatus,
+                      updateVersion,
+                      updateBuild,
+                      updateProgress,
+                      updateError,
+                    )}
+                  </span>
+                </div>
+
+                <div className="update-actions">
+                  {updateStatus === "available" ? (
+                    <button
+                      className="primary"
+                      type="button"
+                      onClick={() => void onInstallUpdate()}
+                    >
+                      Instalar {updateVersion}
+                    </button>
+                  ) : (
+                    <button
+                      className="ghost"
+                      type="button"
+                      onClick={() => void onCheckUpdate()}
+                      disabled={
+                        updateStatus === "checking" ||
+                        updateStatus === "downloading" ||
+                        updateStatus === "ready"
+                      }
+                    >
+                      {updateStatus === "checking"
+                        ? "Verificando..."
+                        : updateStatus === "error"
+                          ? "Tentar de novo"
+                          : updateStatus === "idle"
+                            ? "Verificar atualizações"
+                            : "Verificar de novo"}
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {updateStatus === "downloading" && updateProgress >= 0 && (
+                <div className="update-progress" aria-hidden="true">
+                  <span style={{ width: `${updateProgress}%` }} />
+                </div>
+              )}
+
+              {updateStatus === "available" && highlights.length > 0 && (
+                <div className="update-notes">
+                  <span className="update-notes-title">
+                    O que muda em {updateVersion || "seu bubo"}
+                  </span>
+                  <ul>
+                    {highlights.map((highlight) => (
+                      <li key={highlight.text}>
+                        {highlight.label && <strong>{highlight.label}</strong>}
+                        {highlight.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <span className="update-hint">
+                As atualizações são verificadas quando o bubo inicia.
+              </span>
             </div>
           </>
         )}

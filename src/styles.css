@@ -32,6 +32,33 @@ button {
   font-family: inherit;
 }
 
+/* scrollbars: a slim thumb with a wide, invisible hit area */
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.14);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.26);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background-color: rgba(255, 255, 255, 0.34);
+}
+
 .app {
   height: 100%;
   padding: 0;
@@ -64,9 +91,8 @@ button {
 /* header */
 
 .head {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  position: relative;
+  z-index: 6;
   padding: 8px 10px 8px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -79,11 +105,21 @@ button {
   min-width: 0;
 }
 
+/* The learning actions float under the title instead of growing the top bar. */
 .head-learning {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 12px;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 2px;
-  padding-left: 2px;
+  padding: 3px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  background: rgba(20, 19, 28, 0.78);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
 }
 
 .brand {
@@ -293,19 +329,9 @@ button {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+  overscroll-behavior: contain;
   mask-image: linear-gradient(to bottom, transparent 0, #000 84px);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 84px);
-}
-
-.messages::-webkit-scrollbar {
-  width: 6px;
-}
-
-.messages::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 6px;
 }
 
 .context-hint {
@@ -1053,12 +1079,18 @@ button {
 
 .update-card {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
   padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
+}
+
+.update-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .update-icon {
@@ -1102,14 +1134,55 @@ button {
 }
 
 .update-notes {
-  max-height: 96px;
-  margin-top: 4px;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.update-notes-title {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
   color: var(--muted);
-  font-size: 10px;
+  opacity: 0.75;
+}
+
+.update-notes ul {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.update-notes li {
+  position: relative;
+  padding-left: 11px;
+  font-size: 10.5px;
   line-height: 1.45;
-  white-space: pre-wrap;
-  scrollbar-width: thin;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.update-notes li::before {
+  content: "";
+  position: absolute;
+  top: 0.6em;
+  left: 2px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.update-notes strong {
+  display: block;
+  font-weight: 600;
+  color: var(--text);
 }
 
 .update-progress {
@@ -1217,15 +1290,10 @@ button {
 
 .settings-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   padding: 8px 12px;
-  overflow-x: auto;
-  scrollbar-width: none;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.settings-tabs::-webkit-scrollbar {
-  display: none;
 }
 
 .settings-tab {
@@ -1269,7 +1337,7 @@ button {
   flex-direction: column;
   gap: 12px;
   padding: 14px 14px 18px;
-  scrollbar-width: thin;
+  overscroll-behavior: contain;
 }
 
 .settings-footer {
@@ -1800,7 +1868,7 @@ button {
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: #17161f;
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5);
-  scrollbar-width: thin;
+  overscroll-behavior: contain;
 }
 
 .combo-option {
@@ -2008,8 +2076,8 @@ button {
 .compact-face {
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
+  width: 56px;
+  height: 56px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 50%;
@@ -2100,8 +2168,8 @@ button {
 }
 
 .compact-bubble.assistant {
-  align-self: flex-end;
-  border-bottom-right-radius: 4px;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
   background: rgba(255, 255, 255, 0.07);
 }
 
@@ -2122,9 +2190,9 @@ button {
 }
 
 .compact-bubble.user {
-  align-self: flex-start;
+  align-self: flex-end;
   border-color: rgba(191, 181, 255, 0.3);
-  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
   background: linear-gradient(135deg, var(--accent-soft), rgba(255, 255, 255, 0.045));
 }
 
@@ -2758,8 +2826,7 @@ button {
 .popup-bubble-text {
   min-height: 0;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  overscroll-behavior: contain;
 }
 
 .popup-translation {
@@ -2769,15 +2836,6 @@ button {
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   color: var(--muted);
   font-size: 11.5px;
-}
-
-.popup-bubble-text::-webkit-scrollbar {
-  width: 4px;
-}
-
-.popup-bubble-text::-webkit-scrollbar-thumb {
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.22);
 }
 
 @keyframes popup-in {
@@ -3166,6 +3224,12 @@ button {
 
 [data-theme="light"] .send.stop:hover {
   background: rgba(20, 18, 40, 0.16);
+}
+
+[data-theme="light"] .head-learning {
+  background: rgba(255, 255, 255, 0.86);
+  border-color: rgba(20, 18, 40, 0.08);
+  box-shadow: 0 8px 18px rgba(20, 18, 40, 0.12);
 }
 
 [data-theme="light"] .composer-search {
