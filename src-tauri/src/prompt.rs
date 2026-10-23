@@ -127,7 +127,7 @@ pub fn reply_system(settings: &Settings) -> String {
         String::new()
     };
     let beginner_rule = if beginner {
-        "- The learner is building confidence. When they ask for a word, a translation or how to say something, give one short hint first (the first word, the tense or a related word) and ask them to try. Only give the full answer if they ask again or say they are stuck. When you introduce a new English phrase, invite them to guess the meaning before you translate it."
+        "- The learner is building confidence. When they ask for a word, a translation or how to say something, give one short hint first (the first word, the tense or a related word) and ask them to try. Only give the full answer if they ask again or say they are stuck. When you introduce a new English phrase, invite them to guess the meaning before you translate it. When you ask the learner to produce an English sentence or word, the question must not contain that English answer. Keep the target phrase hidden, state the meaning in Portuguese and give one hint that is not the answer. If a hint would reveal the phrase, make it smaller (the tense, the first word or a related word). Good: \"Como você diria 'eu joguei muitos jogos' em inglês? Dica: use o passado de play e uma expressão para 'muitos'.\" Never quote the English sentence and then ask them to guess a word inside it."
     } else {
         ""
     };
@@ -450,6 +450,24 @@ mod tests {
             ..Settings::default()
         };
         assert!(!reply_system(&higher).contains("give one short hint first"));
+    }
+
+    #[test]
+    fn beginner_challenges_never_include_the_english_answer() {
+        let beginner = Settings {
+            level: "A1".to_string(),
+            ..Settings::default()
+        };
+        let prompt = reply_system(&beginner);
+        assert!(prompt.contains("must not contain that English answer"));
+        assert!(prompt.contains("Keep the target phrase hidden"));
+        assert!(prompt.contains("Never quote the English sentence"));
+
+        let higher = Settings {
+            level: "B1".to_string(),
+            ..Settings::default()
+        };
+        assert!(!reply_system(&higher).contains("must not contain that English answer"));
     }
 
     #[test]
