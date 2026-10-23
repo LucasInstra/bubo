@@ -19,7 +19,7 @@ export default defineConfig({
   },
   build: {
     target: "chrome110",
-    minify: "esbuild",
+    minify: "oxc",
     sourcemap: false,
   },
 });
