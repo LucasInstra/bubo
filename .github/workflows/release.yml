@@ -83,4 +83,4 @@ jobs:
         run: |
           Compress-Archive -Path "src-tauri/target/release/bubo.exe" -DestinationPath "bubo-portable-x64.zip" -Force
           gh release upload "${{ github.ref_name }}" "bubo-portable-x64.zip" --clobber
-          gh release upload "${GITHUB_REF_NAME}" bubo-setup.exe --clobber
+          gh release upload "${{ github.ref_name }}" bubo-setup.exe --clobber
