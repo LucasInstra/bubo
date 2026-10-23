@@ -108,7 +108,7 @@ pub fn reply_system(settings: &Settings) -> String {
     let portuguese = reply_language_is_portuguese(&settings.reply_language);
     let language_rule = if portuguese {
         if beginner {
-            "Reply in Brazilian Portuguese like a friend texting, because the learner may not read English yet. When a useful English word or phrase fits naturally, show it and ask the learner to guess or repeat it before you give the meaning in Portuguese. If they are stuck, give the meaning. Never answer with a whole English paragraph."
+            "Reply in Brazilian Portuguese like a friend texting, because the learner may not read English yet. When a useful English word or phrase fits naturally, show it and make its meaning clear in Portuguese right away. Do not ask the learner to repeat or say it back, because the phrase is already in front of them. Never answer with a whole English paragraph."
         } else {
             "Reply in Brazilian Portuguese like a friend texting, because the learner may not read English yet. When a useful English word or phrase fits naturally, keep it in English inside the Portuguese sentence and make its meaning clear in Portuguese right away. Never answer with a whole English paragraph."
         }
@@ -127,7 +127,7 @@ pub fn reply_system(settings: &Settings) -> String {
         String::new()
     };
     let beginner_rule = if beginner {
-        "- The learner is building confidence. When they ask for a word, a translation or how to say something, give one short hint first (the first word, the tense or a related word) and ask them to try. Only give the full answer if they ask again or say they are stuck. When you introduce a new English phrase, invite them to guess the meaning before you translate it. When you ask the learner to produce an English sentence or word, the question must not contain that English answer. Keep the target phrase hidden, state the meaning in Portuguese and give one hint that is not the answer. If a hint would reveal the phrase, make it smaller (the tense, the first word or a related word). Good: \"Como você diria 'eu joguei muitos jogos' em inglês? Dica: use o passado de play e uma expressão para 'muitos'.\" Never quote the English sentence and then ask them to guess a word inside it."
+        "- The learner is building confidence. When they ask for a word, a translation or how to say something, give one short hint first (the first word, the tense or a related word) and ask them to try. Only give the full answer if they ask again or say they are stuck. When you introduce a new English phrase, invite them to guess the meaning before you translate it. Never ask the learner to repeat or say back a phrase you just showed them: they can already read it, so the question would make no sense. When you do ask the learner to produce an English sentence or word, the question must not contain that English answer. Keep the target phrase hidden. State the meaning in Portuguese and give one hint that is not the answer. If a hint would reveal the phrase, make it smaller (the tense, the first word or a related word). Good: \"Como você diria 'eu joguei muitos jogos' em inglês? Dica: use o passado de play e uma expressão para 'muitos'.\" Bad: \"Você já tentou dizer 'Can I have a coffee?'? Tente agora.\" Never quote the English sentence and then ask them to guess a word inside it."
     } else {
         ""
     };
@@ -462,6 +462,8 @@ mod tests {
         assert!(prompt.contains("must not contain that English answer"));
         assert!(prompt.contains("Keep the target phrase hidden"));
         assert!(prompt.contains("Never quote the English sentence"));
+        assert!(prompt.contains("Never ask the learner to repeat"));
+        assert!(prompt.contains("the question would make no sense"));
 
         let higher = Settings {
             level: "B1".to_string(),
@@ -471,14 +473,15 @@ mod tests {
     }
 
     #[test]
-    fn beginner_portuguese_replies_ask_before_translating() {
+    fn beginner_portuguese_replies_do_not_ask_for_repetition() {
         let settings = Settings {
             level: "A2".to_string(),
             reply_language: "pt".to_string(),
             ..Settings::default()
         };
         let prompt = reply_system(&settings);
-        assert!(prompt.contains("ask the learner to guess or repeat it"));
+        assert!(prompt.contains("Do not ask the learner to repeat or say it back"));
+        assert!(!prompt.contains("ask the learner to guess or repeat it"));
     }
 
     #[test]
