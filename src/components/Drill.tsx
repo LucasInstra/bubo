@@ -24,7 +24,11 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
   const [item, setItem] = useState<DrillItem | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
   const [answer, setAnswer] = useState("");
-  const [result, setResult] = useState<{ correct: boolean; item: DrillItem } | null>(null);
+  const [result, setResult] = useState<{
+    correct: boolean;
+    item: DrillItem;
+    attempt: string;
+  } | null>(null);
   const [ahead, setAhead] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -121,7 +125,7 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
       const correct = !reveal && isCorrectAnswer(text, item.right);
       const updated = await ipc.drillReview(item.id, correct);
       lastAnswered.current = item.id;
-      setResult({ correct, item: updated ?? item });
+      setResult({ correct, item: updated ?? item, attempt: text });
       setPhase("answered");
       void ipc
         .drillStats()
@@ -140,7 +144,7 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
     busy.current = true;
     try {
       const updated = await ipc.drillOverride(item.id);
-      setResult({ correct: true, item: updated ?? item });
+      setResult({ correct: true, item: updated ?? item, attempt: result?.attempt ?? "" });
       void ipc
         .drillStats()
         .then(setStats)
@@ -277,7 +281,18 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
                       <span className="drill-verdict">
                         {result.correct ? "exatamente certo" : "quase"}
                       </span>
-                      <span className="drill-right">{result.item.right}</span>
+                      {!result.correct && result.attempt.trim() && (
+                        <div className="drill-answer-block">
+                          <span className="drill-answer-label">você escreveu</span>
+                          <span className="drill-answer-wrong">{result.attempt}</span>
+                        </div>
+                      )}
+                      <div className="drill-answer-block">
+                        <span className="drill-answer-label">
+                          {result.correct ? "correto" : "correção"}
+                        </span>
+                        <span className="drill-right">{result.item.right}</span>
+                      </div>
                     </div>
                   </div>
                   {result.item.note && <span className="drill-note">{result.item.note}</span>}

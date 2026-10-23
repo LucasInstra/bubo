@@ -186,8 +186,11 @@ export const Message = memo(function Message({
             return (
               <div className="fix" key={`${fix.wrong}-${index}`}>
                 <div className="fix-row">
+                  <span className="fix-label">antes</span>
                   <span className="fix-wrong">{fix.wrong}</span>
-                  <span className="fix-arrow">→</span>
+                </div>
+                <div className="fix-row">
+                  <span className="fix-label">depois</span>
                   <span className="fix-right">{fix.right}</span>
                 </div>
                 {fix.note && <div className="fix-note">{fix.note}</div>}

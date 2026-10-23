@@ -173,9 +173,12 @@ export function ProgressPanel({ onClose, onPractice, goal, onLessons }: Progress
                 <div className="progress-mistakes">
                   {stats.top.map((mistake) => (
                     <div className="progress-mistake" key={`${mistake.wrong}-${mistake.right}`}>
-                      <div className="progress-mistake-row">
+                      <div className="fix-row">
+                        <span className="fix-label">antes</span>
                         <span className="fix-wrong">{mistake.wrong}</span>
-                        <span className="fix-arrow">→</span>
+                      </div>
+                      <div className="fix-row">
+                        <span className="fix-label">depois</span>
                         <span className="fix-right">{mistake.right}</span>
                       </div>
                       {mistake.note && <span className="progress-note">{mistake.note}</span>}

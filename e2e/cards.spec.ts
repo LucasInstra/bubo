@@ -31,6 +31,25 @@ test("practice starts from a correction card", async ({ page }) => {
   await expect(dialog).toHaveCount(0);
 });
 
+test("corrections and drills label the before and after", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=app");
+
+  const fixes = page.locator(".fixes");
+  await expect(fixes.locator(".fix-label").first()).toHaveText("antes");
+  await expect(fixes.locator(".fix-label").nth(1)).toHaveText("depois");
+
+  await page.getByRole("button", { name: "Praticar esta correção" }).click();
+  const dialog = page.getByRole("dialog", { name: "Prática" });
+  await dialog.getByPlaceholder("digite a frase corrigida").fill("i go to the gym yesterday");
+  await dialog.getByRole("button", { name: "Conferir" }).click();
+
+  const result = dialog.locator(".drill-result");
+  await expect(result.locator(".drill-answer-label").first()).toHaveText("você escreveu");
+  await expect(result.locator(".drill-answer-label").nth(1)).toHaveText("correção");
+  await expect(result.locator(".drill-answer-wrong")).toHaveText("i go to the gym yesterday");
+  await expect(result.locator(".drill-right")).toHaveText("I went to the gym yesterday");
+});
+
 test("deletes a correction from the card", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await expect(page.locator(".fixes")).toBeVisible();
