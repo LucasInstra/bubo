@@ -4,6 +4,7 @@ import type {
   DrillItem,
   DrillStats,
   Fix,
+  LessonProgress,
   Msg,
   ProgressStats,
   SessionSummary,
@@ -71,6 +72,11 @@ export const ipc = {
   openDataFolder: () => invoke<void>("open_data_folder"),
   diagnostics: () => invoke<string>("diagnostics"),
   deleteMessage: (id: number) => invoke<void>("delete_message", { id }),
+  lessonProgress: () => invoke<LessonProgress[]>("lesson_progress"),
+  saveLessonProgress: (lessonId: string, step: number, completed: boolean) =>
+    invoke<void>("save_lesson_progress", { lessonId, step, completed }),
+  saveLessonFix: (wrong: string, right: string, note: string) =>
+    invoke<void>("save_lesson_fix", { wrong, right, note }),
   drillStats: () => invoke<DrillStats>("drill_stats"),
   progressStats: () => invoke<ProgressStats>("progress_stats"),
   drillNext: (includeFuture: boolean, excludeId: number | null = null) =>

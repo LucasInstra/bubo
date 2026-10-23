@@ -21,6 +21,8 @@ pub struct Settings {
     pub popup: bool,
     pub ignore_capitalization: bool,
     pub reply_language: String,
+    pub translation_challenge: bool,
+    pub study_focus: String,
     pub daily_goal: i64,
     pub reminders: bool,
     pub theme: String,
@@ -59,6 +61,8 @@ impl Default for Settings {
             popup: false,
             ignore_capitalization: true,
             reply_language: "en".to_string(),
+            translation_challenge: true,
+            study_focus: "free".to_string(),
             daily_goal: 10,
             reminders: true,
             theme: "dark".to_string(),
@@ -127,6 +131,19 @@ fn settings_from_value(mut value: serde_json::Value) -> Settings {
             "replyLanguage".to_string(),
             serde_json::Value::String(language),
         );
+
+        let focus = map
+            .get("studyFocus")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("free")
+            .trim()
+            .to_ascii_lowercase();
+        let focus = match focus.as_str() {
+            "to_be" | "present_simple" | "past_simple" | "questions" | "articles"
+            | "prepositions" | "vocabulary" => focus,
+            _ => "free".to_string(),
+        };
+        map.insert("studyFocus".to_string(), serde_json::Value::String(focus));
     }
 
     serde_json::from_value(value).unwrap_or_default()
@@ -198,6 +215,25 @@ mod tests {
     fn settings_save_the_reply_language_as_camel_case() {
         let value = serde_json::to_value(Settings::default()).expect("settings json");
         assert_eq!(value["replyLanguage"], "en");
+        assert_eq!(value["translationChallenge"], true);
+        assert_eq!(value["studyFocus"], "free");
         assert!(value.get("translateReplies").is_none());
+    }
+
+    #[test]
+    fn older_settings_get_the_new_learning_defaults() {
+        let settings = settings_from_value(serde_json::json!({}));
+        assert!(settings.translation_challenge);
+        assert_eq!(settings.study_focus, "free");
+    }
+
+    #[test]
+    fn unknown_study_focus_falls_back_to_free() {
+        for focus in ["", "to be", "nonsense"] {
+            let settings = settings_from_value(serde_json::json!({ "studyFocus": focus }));
+            assert_eq!(settings.study_focus, "free", "focus {focus:?}");
+        }
+        let known = settings_from_value(serde_json::json!({ "studyFocus": " PAST_SIMPLE " }));
+        assert_eq!(known.study_focus, "past_simple");
     }
 }

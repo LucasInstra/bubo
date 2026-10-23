@@ -69,6 +69,31 @@ fn reply_language_is_bilingual(language: &str) -> bool {
     language.trim().eq_ignore_ascii_case("bilingual")
 }
 
+fn is_beginner_level(level: &str) -> bool {
+    matches!(level.trim(), "A1" | "A2")
+}
+
+/// A short, stable description of the grammar the learner chose to focus on.
+/// Unknown ids (including "free") simply add nothing to the prompt.
+fn study_focus_hint(focus: &str) -> Option<&'static str> {
+    match focus.trim() {
+        "to_be" => Some("The learner is focusing on the verb to be, with am, is and are."),
+        "present_simple" => {
+            Some("The learner is focusing on the present simple, especially the he/she/it -s.")
+        }
+        "past_simple" => Some(
+            "The learner is focusing on the past simple, including the common irregular verbs.",
+        ),
+        "questions" => Some("The learner is focusing on question forms and word order."),
+        "articles" => Some("The learner is focusing on a, an, the and plural forms."),
+        "prepositions" => Some("The learner is focusing on in, on and at for time and place."),
+        "vocabulary" => {
+            Some("The learner is focusing on everyday vocabulary for routine, work and food.")
+        }
+        _ => None,
+    }
+}
+
 pub fn reply_system(settings: &Settings) -> String {
     let tone = personality_tone(&settings.personality);
     let persona = if settings.persona.trim().is_empty() {
@@ -79,11 +104,32 @@ pub fn reply_system(settings: &Settings) -> String {
             settings.persona.trim()
         )
     };
+    let beginner = is_beginner_level(&settings.level);
     let portuguese = reply_language_is_portuguese(&settings.reply_language);
     let language_rule = if portuguese {
-        "Reply in Brazilian Portuguese like a friend texting, because the learner may not read English yet. When a useful English word or phrase fits naturally, keep it in English inside the Portuguese sentence and make its meaning clear in Portuguese right away. Never answer with a whole English paragraph."
+        if beginner {
+            "Reply in Brazilian Portuguese like a friend texting, because the learner may not read English yet. When a useful English word or phrase fits naturally, show it and ask the learner to guess or repeat it before you give the meaning in Portuguese. If they are stuck, give the meaning. Never answer with a whole English paragraph."
+        } else {
+            "Reply in Brazilian Portuguese like a friend texting, because the learner may not read English yet. When a useful English word or phrase fits naturally, keep it in English inside the Portuguese sentence and make its meaning clear in Portuguese right away. Never answer with a whole English paragraph."
+        }
     } else {
         "Reply in English like a friend texting."
+    };
+    let focus = if beginner {
+        study_focus_hint(&settings.study_focus)
+            .map(|hint| {
+                format!(
+                    "{hint} Create natural chances to use it, keep the examples short, and never turn every reply into a drill."
+                )
+            })
+            .unwrap_or_default()
+    } else {
+        String::new()
+    };
+    let beginner_rule = if beginner {
+        "- The learner is building confidence. When they ask for a word, a translation or how to say something, give one short hint first (the first word, the tense or a related word) and ask them to try. Only give the full answer if they ask again or say they are stuck. When you introduce a new English phrase, invite them to guess the meaning before you translate it."
+    } else {
+        ""
     };
     let portuguese_note = if portuguese {
         "- The learner may write in Portuguese. Answer what they meant first, then keep the conversation going in Portuguese and, when it helps, show the English sentence they could use next time with its meaning in Portuguese. Never treat their Portuguese as an English mistake."
@@ -127,6 +173,7 @@ bubo: That is the unglamorous skill that keeps a codebase alive. Future you will
         r#"You are bubo, an English tutor living in a tiny desktop popup. You are a small owl, but that is background, not a theme. The learner is Brazilian and their CEFR level is {level}.
 {persona}
 {level_hint}
+{focus}
 
 This is a chat, not a lesson. How you talk:
 1. {language_rule} One to three short sentences, one or two short paragraphs. No headings and no lists.
@@ -142,6 +189,7 @@ This is a chat, not a lesson. How you talk:
 11. Avoid similes and metaphors, including "it's like...". Say the thing directly. No owl imagery unless it is a real joke.
 12. Remember details they shared earlier and bring one back later when it fits. Do not recap the conversation.
 13. If they ask for a face, a mood or a reaction, answer with one short playful line and let the popup do the acting. Never say you cannot show expressions.
+{beginner_rule}
 {portuguese_note}
 {help}
 
@@ -150,7 +198,9 @@ Style examples, do not copy them word for word:
         level = settings.level,
         persona = persona,
         level_hint = level_hint(&settings.level),
+        focus = focus,
         language_rule = language_rule,
+        beginner_rule = beginner_rule,
         portuguese_note = portuguese_note,
         help = help,
         examples = examples,
@@ -206,6 +256,17 @@ fn corrections_system(settings: &Settings) -> String {
     } else {
         ""
     };
+    let focus_rule = if is_beginner_level(&settings.level) {
+        study_focus_hint(&settings.study_focus)
+            .map(|hint| {
+                format!(
+                    "\n- {hint} Prioritize mistakes in this area, but still include other clear mistakes."
+                )
+            })
+            .unwrap_or_default()
+    } else {
+        String::new()
+    };
 
     format!(
         r#"You are an English correction engine for a Brazilian learner at CEFR level {level}.
@@ -216,7 +277,7 @@ Reply with a JSON array and nothing else. One object per real mistake, at most 4
 
 Rules:
 - Include grammar, word choice, missing words, and phrasing a native would not use.
-{case_rule}{portuguese_rule}
+{case_rule}{portuguese_rule}{focus_rule}
 - Keep "wrong" and "right" as short fragments, never whole paragraphs.
 {note_rule}
 - Correct the learner's message only, never your own replies.
@@ -225,6 +286,7 @@ Rules:
         level = settings.level,
         case_rule = case_rule,
         portuguese_rule = portuguese_rule,
+        focus_rule = focus_rule,
         note_rule = note_rule(&settings.note_language),
     )
 }
@@ -371,6 +433,61 @@ mod tests {
         assert!(!prompt.contains("PT:"));
         assert!(!prompt.contains('\u{2014}'));
         assert!(!prompt.contains('\u{2013}'));
+    }
+
+    #[test]
+    fn beginner_replies_ask_for_a_guess_before_the_answer() {
+        let beginner = Settings {
+            level: "A1".to_string(),
+            ..Settings::default()
+        };
+        let prompt = reply_system(&beginner);
+        assert!(prompt.contains("give one short hint first"));
+        assert!(prompt.contains("invite them to guess the meaning"));
+
+        let higher = Settings {
+            level: "B1".to_string(),
+            ..Settings::default()
+        };
+        assert!(!reply_system(&higher).contains("give one short hint first"));
+    }
+
+    #[test]
+    fn beginner_portuguese_replies_ask_before_translating() {
+        let settings = Settings {
+            level: "A2".to_string(),
+            reply_language: "pt".to_string(),
+            ..Settings::default()
+        };
+        let prompt = reply_system(&settings);
+        assert!(prompt.contains("ask the learner to guess or repeat it"));
+    }
+
+    #[test]
+    fn beginner_focus_reaches_reply_and_correction_prompts() {
+        let settings = Settings {
+            level: "A2".to_string(),
+            study_focus: "past_simple".to_string(),
+            ..Settings::default()
+        };
+        let reply = reply_system(&settings);
+        assert!(reply.contains("focusing on the past simple"));
+        assert!(reply.contains("Create natural chances"));
+
+        let correction = correction_system_prompt(&settings);
+        assert!(correction.contains("focusing on the past simple"));
+        assert!(correction.contains("Prioritize mistakes in this area"));
+    }
+
+    #[test]
+    fn focus_is_ignored_above_beginner_levels() {
+        let settings = Settings {
+            level: "B1".to_string(),
+            study_focus: "past_simple".to_string(),
+            ..Settings::default()
+        };
+        assert!(!reply_system(&settings).contains("focusing on the past simple"));
+        assert!(!correction_system_prompt(&settings).contains("Prioritize mistakes"));
     }
 
     #[test]

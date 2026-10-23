@@ -6,6 +6,7 @@ import type { Fix, Msg } from "../lib/types";
 
 interface MessageProps {
   message: Msg;
+  challengeTranslation?: boolean;
   onRetry?: (message: Msg) => void;
   onDelete?: (message: Msg) => void;
   onPracticeFix?: (message: Msg, fix: Fix) => void;
@@ -18,6 +19,7 @@ function fixKey(fix: Fix): string {
 
 export const Message = memo(function Message({
   message,
+  challengeTranslation = false,
   onRetry,
   onDelete,
   onPracticeFix,
@@ -28,6 +30,7 @@ export const Message = memo(function Message({
   const split = isUser ? { body: fullBody, translation: "" } : splitTranslation(fullBody);
   const body = split.body;
   const fixes = message.fixes ?? [];
+  const [translationVisible, setTranslationVisible] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [confirmingFix, setConfirmingFix] = useState<string | null>(null);
   const [busyFix, setBusyFix] = useState<string | null>(null);
@@ -128,11 +131,21 @@ export const Message = memo(function Message({
                 {body}
               </ReactMarkdown>
             </div>
-            {split.translation && (
-              <div className="msg-translation" lang="pt-BR">
-                {split.translation}
-              </div>
-            )}
+            {split.translation &&
+              (!challengeTranslation || translationVisible ? (
+                <div className="msg-translation" lang="pt-BR">
+                  {split.translation}
+                </div>
+              ) : !message.streaming ? (
+                <button
+                  type="button"
+                  className="translation-reveal"
+                  title="Tente entender primeiro"
+                  onClick={() => setTranslationVisible(true)}
+                >
+                  ver tradução
+                </button>
+              ) : null)}
           </>
         )}
         {message.streaming && <span className="caret" />}

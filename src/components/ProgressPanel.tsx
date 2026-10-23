@@ -7,6 +7,7 @@ interface ProgressPanelProps {
   onClose: () => void;
   onPractice: () => void;
   goal: number;
+  onLessons?: () => void;
 }
 
 function attemptsLabel(mistake: TopMistake): string {
@@ -21,7 +22,7 @@ function attemptsLabel(mistake: TopMistake): string {
   return parts.join(" · ");
 }
 
-export function ProgressPanel({ onClose, onPractice, goal }: ProgressPanelProps) {
+export function ProgressPanel({ onClose, onPractice, goal, onLessons }: ProgressPanelProps) {
   const [stats, setStats] = useState<ProgressStats | null>(null);
   const [error, setError] = useState("");
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -126,6 +127,12 @@ export function ProgressPanel({ onClose, onPractice, goal }: ProgressPanelProps)
             {stats.cards > 0 && (
               <button className="primary progress-practice" onClick={onPractice}>
                 {stats.due > 0 ? `Praticar ${stats.due} pendentes` : "Praticar adiantado"}
+              </button>
+            )}
+
+            {onLessons && (
+              <button className="action-button progress-lessons" onClick={onLessons}>
+                Mini-lições de gramática
               </button>
             )}
 

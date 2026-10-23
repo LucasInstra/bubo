@@ -1,6 +1,7 @@
 import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ipc } from "../lib/ipc";
+import { isBeginnerLevel, STUDY_FOCUSES } from "../lib/lessons";
 import { useModalFocus } from "../lib/modal";
 import { matchProvider, PROVIDERS, type ProviderPreset } from "../lib/providers";
 import type { DrillStats, Settings } from "../lib/types";
@@ -14,6 +15,7 @@ interface SettingsPanelProps {
   onTogglePin: () => void;
   onClose: () => void;
   onSave: (next: Settings, apiKey: string) => Promise<void>;
+  onOpenLessons: () => void;
   onQueueChanged: () => void;
   onCorrectionsCleared: () => void;
   currentVersion: string;
@@ -92,6 +94,7 @@ export function SettingsPanel({
   onTogglePin,
   onClose,
   onSave,
+  onOpenLessons,
   onQueueChanged,
   onCorrectionsCleared,
   currentVersion,
@@ -141,6 +144,7 @@ export function SettingsPanel({
     draft.model,
   );
   const dirty = apiKey.length > 0 || JSON.stringify(draft) !== JSON.stringify(settings);
+  const beginner = isBeginnerLevel(draft.level);
 
   const refreshQueue = useCallback(async () => {
     try {
@@ -243,17 +247,24 @@ export function SettingsPanel({
     }
   };
 
-  const save = async () => {
+  const save = async (): Promise<boolean> => {
     setBusy(true);
     setError("");
     try {
       await onSave(draft, apiKey);
       setApiKey("");
+      return true;
     } catch (problem) {
       setError(typeof problem === "string" ? problem : "Não foi possível salvar as configurações.");
+      return false;
     } finally {
       setBusy(false);
     }
+  };
+
+  const openLessons = async () => {
+    if (dirty && !(await save())) return;
+    onOpenLessons();
   };
 
   const skipDue = async () => {
@@ -438,6 +449,57 @@ export function SettingsPanel({
             <span className="hint">Ainda não lê inglês? Escolha Só português.</span>
           )}
         </div>
+
+        {beginner && (
+          <>
+            <div className="field">
+              <label className="field row">
+                <span>Desafio antes da tradução</span>
+                <input
+                  type="checkbox"
+                  checked={draft.translationChallenge}
+                  onChange={(event) => patch({ translationChallenge: event.target.checked })}
+                />
+              </label>
+              <span className="hint">
+                Esconde a tradução no chat completo até você tentar. Dá para revelar na hora se
+                travar.
+              </span>
+            </div>
+
+            <div className="field">
+              <span>Foco de estudo</span>
+              <div className="levels wrap focus-grid">
+                {STUDY_FOCUSES.map(([value, label]) => (
+                  <button
+                    type="button"
+                    key={value}
+                    className={`chip ${draft.studyFocus === value ? "chip-on" : ""}`}
+                    onClick={() => patch({ studyFocus: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <span className="hint">
+                O bubo puxa esse assunto e prioriza correções relacionadas.
+              </span>
+            </div>
+
+            <div className="field">
+              <span>Mini-lições</span>
+              <button
+                type="button"
+                className="action-button"
+                disabled={busy}
+                onClick={() => void openLessons()}
+              >
+                Abrir lições de gramática
+              </button>
+              <span className="hint">Sete lições curtas, com um exercício por passo.</span>
+            </div>
+          </>
+        )}
 
         <label className="field row">
           <span>Ignorar maiúsculas</span>

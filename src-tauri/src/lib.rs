@@ -535,6 +535,34 @@ fn delete_message(state: State<'_, AppState>, id: i64) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn lesson_progress(state: State<'_, AppState>) -> Result<Vec<store::LessonProgress>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::lesson_progress(&db).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn save_lesson_progress(
+    state: State<'_, AppState>,
+    lesson_id: String,
+    step: i64,
+    completed: bool,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::save_lesson_progress(&db, &lesson_id, step, completed).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn save_lesson_fix(
+    state: State<'_, AppState>,
+    wrong: String,
+    right: String,
+    note: String,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::save_manual_fix(&db, &wrong, &right, &note).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 async fn chat(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -818,7 +846,7 @@ fn diagnostics(app: AppHandle) -> Result<String, String> {
         .join("\n");
 
     Ok(format!(
-        "bubo {version}\nOS: {os} {arch}\ndata: {data}\nbaseUrl: {base}\nmodel: {model}\nlevel: {level}\n\nlog tail:\n{tail}",
+        "bubo {version}\nOS: {os} {arch}\ndata: {data}\nbaseUrl: {base}\nmodel: {model}\nlevel: {level}\nreply: {reply}\nfocus: {focus}\nchallenge: {challenge}\n\nlog tail:\n{tail}",
         version = app.package_info().version,
         os = std::env::consts::OS,
         arch = std::env::consts::ARCH,
@@ -826,6 +854,9 @@ fn diagnostics(app: AppHandle) -> Result<String, String> {
         base = settings.base_url,
         model = settings.model,
         level = settings.level,
+        reply = settings.reply_language,
+        focus = settings.study_focus,
+        challenge = settings.translation_challenge,
         tail = tail,
     ))
 }
@@ -1173,6 +1204,9 @@ pub fn run() {
             set_popup_stage,
             cancel_reply,
             delete_message,
+            lesson_progress,
+            save_lesson_progress,
+            save_lesson_fix,
             chat,
             explain_fix,
             history,

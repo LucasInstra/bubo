@@ -10,6 +10,7 @@ import { BuddyPanel } from "./components/BuddyPanel";
 import { CompactView } from "./components/CompactView";
 import { Drill } from "./components/Drill";
 import { HistoryPanel } from "./components/HistoryPanel";
+import { LessonsPanel } from "./components/LessonsPanel";
 import { Mascot } from "./components/Mascot";
 import { Message } from "./components/Message";
 import { PopupView, type PopupStage } from "./components/PopupView";
@@ -20,6 +21,7 @@ import { BUILD_LABEL } from "./lib/build";
 import { trimContext } from "./lib/context";
 import { parseStoredFixes } from "./lib/format";
 import { ipc } from "./lib/ipc";
+import { focusLabel, isBeginnerLevel } from "./lib/lessons";
 import { moodRequest } from "./lib/mood";
 import type { Fix, Mood, Msg, OrbState, Settings, StoredMessage } from "./lib/types";
 import { DEFAULT_SETTINGS } from "./lib/types";
@@ -78,6 +80,7 @@ export default function App() {
   const [showBuddy, setShowBuddy] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showLessons, setShowLessons] = useState(false);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [mood, setMood] = useState<Mood>("idle");
   const [status, setStatus] = useState<OrbState>("idle");
@@ -221,6 +224,7 @@ export default function App() {
           setDrillFocus(null);
         } else if (showProgress) setShowProgress(false);
         else if (showHistory) setShowHistory(false);
+        else if (showLessons) setShowLessons(false);
         else if (showBuddy) setShowBuddy(false);
         else if (showSettings) setShowSettings(false);
         else void ipc.hideWindow();
@@ -233,6 +237,7 @@ export default function App() {
     showBuddy,
     showProgress,
     showHistory,
+    showLessons,
     showDrill,
     settings.popup,
     popupStage,
@@ -482,6 +487,20 @@ export default function App() {
     [settings.autostart, settings.compact, settings.popup],
   );
 
+  const startFocusPractice = useCallback(
+    async (focus: string) => {
+      const next = { ...settings, studyFocus: focus };
+      try {
+        await ipc.saveSettings(next);
+      } catch (error) {
+        console.error("could not save the lesson focus", error);
+      }
+      setSettings(next);
+      setShowLessons(false);
+    },
+    [settings],
+  );
+
   const enterPopup = useCallback(() => {
     const updated = { ...settings, popup: true, compact: false };
     setSettings(updated);
@@ -618,6 +637,7 @@ export default function App() {
     ? messages.filter((message) => message.content.toLowerCase().includes(normalizedSearch))
     : messages;
   const accent = settings.accentFromMascot ? settings.color : "#8b7dff";
+  const beginner = isBeginnerLevel(settings.level);
   const portugueseReplies = settings.replyLanguage === "pt";
   const suggestions = portugueseReplies ? SUGGESTIONS_PT : SUGGESTIONS_EN;
   const showUpdateBanner =
@@ -1039,6 +1059,11 @@ export default function App() {
                 </p>
               )}
               <div className="suggestions">
+                {beginner && (
+                  <button className="chip chip-lesson" onClick={() => setShowLessons(true)}>
+                    Mini-lições de gramática
+                  </button>
+                )}
                 {due > 0 && (
                   <button
                     className="chip chip-practice"
@@ -1081,6 +1106,7 @@ export default function App() {
                 <Message
                   key={message.id}
                   message={message}
+                  challengeTranslation={beginner && settings.translationChallenge}
                   onRetry={message.error ? retry : undefined}
                   onDelete={removeMessage}
                   onPracticeFix={practiceFix}
@@ -1090,6 +1116,13 @@ export default function App() {
             </div>
           )}
         </div>
+
+        {beginner && settings.studyFocus !== "free" && (
+          <div className="focus-bar">
+            <span className="focus-dot" aria-hidden="true" />
+            Foco: {focusLabel(settings.studyFocus)}
+          </div>
+        )}
 
         {showUpdateBanner && (
           <UpdateBanner
@@ -1143,7 +1176,24 @@ export default function App() {
               setDrillFocus(null);
               setShowDrill(true);
             }}
+            onLessons={
+              beginner
+                ? () => {
+                    setShowProgress(false);
+                    setShowLessons(true);
+                  }
+                : undefined
+            }
             goal={settings.dailyGoal}
+          />
+        )}
+
+        {showLessons && (
+          <LessonsPanel
+            settings={settings}
+            onClose={() => setShowLessons(false)}
+            onQueueChanged={() => void ipc.drillStats().then((stats) => setDue(stats.due))}
+            onStartPractice={(focus) => void startFocusPractice(focus)}
           />
         )}
 
@@ -1165,6 +1215,10 @@ export default function App() {
             onTogglePin={togglePin}
             onClose={() => setShowSettings(false)}
             onSave={saveSettings}
+            onOpenLessons={() => {
+              setShowSettings(false);
+              setShowLessons(true);
+            }}
             onQueueChanged={() => void ipc.drillStats().then((stats) => setDue(stats.due))}
             onCorrectionsCleared={() =>
               setMessages((current) =>

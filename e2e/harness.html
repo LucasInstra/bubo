@@ -34,7 +34,10 @@
       const mode = params.get("case") ?? "app";
       const compact = mode === "compact" || mode === "compact-bilingual";
       const popup = mode === "popup";
-      const bilingual = mode === "bilingual" || mode === "compact-bilingual";
+      const bilingual =
+        mode === "bilingual" || mode === "bilingual-a1" || mode === "compact-bilingual";
+      const level =
+        params.get("level") ?? (mode === "bilingual-a1" ? "A1" : DEFAULT_SETTINGS.level);
       const width = popup ? 380 : compact ? 400 : 420;
       const height = popup ? 380 : compact ? 280 : 640;
 
@@ -50,6 +53,7 @@
         popup,
         hotkey: "Ctrl+Alt+B",
         noteLanguage: "en",
+        level,
       };
       const stored = [
         {
@@ -104,6 +108,7 @@
 
       const now = Date.now();
       const day = 86_400_000;
+      let lessonProgress = [];
 
       const handlers = {
         get_settings: () => settings,
@@ -111,6 +116,13 @@
         "plugin:app|version": () => "0.5.3",
         history: () => (mode === "empty" ? [] : bilingual ? bilingualStored : stored),
         current_session: () => 1,
+        lesson_progress: () => lessonProgress,
+        save_lesson_progress: ({ lessonId, step, completed }) => {
+          lessonProgress = lessonProgress.filter((row) => row.lessonId !== lessonId);
+          lessonProgress.push({ lessonId, step, completed, updatedAt: Date.now() });
+          return null;
+        },
+        save_lesson_fix: () => null,
         list_sessions: () => [
           {
             id: 1,

@@ -36,6 +36,8 @@ export interface Settings {
   popup: boolean;
   ignoreCapitalization: boolean;
   replyLanguage: string;
+  translationChallenge: boolean;
+  studyFocus: string;
   dailyGoal: number;
   reminders: boolean;
   theme: string;
@@ -69,6 +71,13 @@ export interface DrillItem {
 export interface DrillStats {
   total: number;
   due: number;
+}
+
+export interface LessonProgress {
+  lessonId: string;
+  step: number;
+  completed: boolean;
+  updatedAt: number;
 }
 
 export interface DayActivity {
@@ -164,6 +173,8 @@ export const DEFAULT_SETTINGS: Settings = {
   popup: false,
   ignoreCapitalization: true,
   replyLanguage: "en",
+  translationChallenge: true,
+  studyFocus: "free",
   dailyGoal: 10,
   reminders: true,
   theme: "dark",

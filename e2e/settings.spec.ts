@@ -61,6 +61,30 @@ test("reply language offers English, bilingual and Portuguese-only replies", asy
   await expect(page.getByRole("button", { name: "PT-BR", exact: true })).toHaveClass(/chip-on/);
 });
 
+test("beginner settings expose the translation challenge and study focus", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=app&level=A1");
+  await page.getByRole("button", { name: "Configurações" }).click();
+
+  await expect(page.getByText("Desafio antes da tradução")).toBeVisible();
+  await expect(page.getByText("Foco de estudo")).toBeVisible();
+
+  await page.getByRole("button", { name: "B1", exact: true }).click();
+  await expect(page.getByText("Desafio antes da tradução")).toHaveCount(0);
+  await expect(page.getByText("Foco de estudo")).toHaveCount(0);
+});
+
+test("beginner settings open the lessons panel", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=app&level=A1");
+  await page.getByRole("button", { name: "Configurações" }).click();
+  await page.getByRole("button", { name: "Abrir lições de gramática" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Lições" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("Mini-lições")).toBeVisible();
+  await dialog.getByRole("button", { name: "Fechar" }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
 test("Portuguese replies switch the empty state to Portuguese", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=empty");
   await page.getByRole("button", { name: "Configurações" }).click();

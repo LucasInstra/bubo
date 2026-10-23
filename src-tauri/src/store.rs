@@ -50,6 +50,15 @@ pub struct DrillStats {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct LessonProgress {
+    pub lesson_id: String,
+    pub step: i64,
+    pub completed: bool,
+    pub updated_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DayActivity {
     pub date: String,
     pub messages: i64,
@@ -178,6 +187,12 @@ pub(crate) fn init(conn: &Connection) -> rusqlite::Result<()> {
         CREATE TABLE IF NOT EXISTS meta (
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS lesson_progress (
+            lesson_id TEXT PRIMARY KEY,
+            step INTEGER NOT NULL DEFAULT 0,
+            completed INTEGER NOT NULL DEFAULT 0,
+            updated_at INTEGER NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_reviews_fix ON reviews(fix_id);
         CREATE INDEX IF NOT EXISTS idx_reviews_at ON reviews(reviewed_at);
@@ -640,6 +655,57 @@ pub fn drill_stats(conn: &Connection) -> rusqlite::Result<DrillStats> {
             })
         },
     )
+}
+
+pub fn lesson_progress(conn: &Connection) -> rusqlite::Result<Vec<LessonProgress>> {
+    let mut statement = conn.prepare(
+        "SELECT lesson_id, step, completed, updated_at
+         FROM lesson_progress
+         ORDER BY updated_at DESC",
+    )?;
+    let rows = statement.query_map([], |row| {
+        Ok(LessonProgress {
+            lesson_id: row.get(0)?,
+            step: row.get(1)?,
+            completed: row.get::<_, i64>(2)? != 0,
+            updated_at: row.get(3)?,
+        })
+    })?;
+    rows.collect()
+}
+
+pub fn save_lesson_progress(
+    conn: &Connection,
+    lesson_id: &str,
+    step: i64,
+    completed: bool,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "INSERT INTO lesson_progress (lesson_id, step, completed, updated_at)
+         VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT(lesson_id) DO UPDATE SET
+           step = excluded.step,
+           completed = excluded.completed,
+           updated_at = excluded.updated_at",
+        params![lesson_id, step, completed, now()],
+    )?;
+    Ok(())
+}
+
+/// A wrong answer from a lesson goes into the same spaced-repetition queue as
+/// a chat correction, but without a message to link back to.
+pub fn save_manual_fix(
+    conn: &Connection,
+    wrong: &str,
+    right: &str,
+    note: &str,
+) -> rusqlite::Result<()> {
+    let fix = crate::llm::Fix {
+        wrong: wrong.to_string(),
+        right: right.to_string(),
+        note: note.to_string(),
+    };
+    save_fixes_inner(conn, &[fix], None, false)
 }
 
 const STREAK_SQL: &str = "
@@ -1620,5 +1686,43 @@ mod tests {
 
         super::backfill_fixes(&conn).unwrap();
         assert_eq!(super::drill_stats(&conn).unwrap().total, 0);
+    }
+
+    #[test]
+    fn lesson_progress_round_trips() {
+        let conn = memory_db();
+        assert!(super::lesson_progress(&conn).unwrap().is_empty());
+
+        super::save_lesson_progress(&conn, "to_be", 1, false).unwrap();
+        super::save_lesson_progress(&conn, "to_be", 2, true).unwrap();
+        super::save_lesson_progress(&conn, "past_simple", 0, false).unwrap();
+
+        let rows = super::lesson_progress(&conn).unwrap();
+        assert_eq!(rows.len(), 2);
+        let to_be = rows
+            .iter()
+            .find(|row| row.lesson_id == "to_be")
+            .expect("to_be progress");
+        assert_eq!(to_be.step, 2);
+        assert!(to_be.completed);
+    }
+
+    #[test]
+    fn lesson_fix_enters_the_practice_queue() {
+        let conn = memory_db();
+        super::save_manual_fix(&conn, "I go", "I went", "past simple").unwrap();
+        super::save_manual_fix(&conn, "I go", "I went", "past simple").unwrap();
+
+        let stats = super::drill_stats(&conn).unwrap();
+        assert_eq!(stats.total, 1);
+        assert_eq!(stats.due, 1);
+
+        let item = super::next_drill(&conn, false, None)
+            .unwrap()
+            .expect("due lesson card");
+        assert_eq!(item.wrong, "I go");
+        assert_eq!(item.right, "I went");
+        assert_eq!(item.note, "past simple");
+        assert!(item.context.is_none());
     }
 }
