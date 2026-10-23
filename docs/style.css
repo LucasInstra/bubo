@@ -595,6 +595,14 @@ h2 {
   transform: translateY(-2px);
 }
 
+.feature.wide {
+  grid-column: 1 / -1;
+}
+
+.feature.wide p {
+  max-width: 74ch;
+}
+
 .feature-icon {
   display: inline-flex;
   align-items: center;

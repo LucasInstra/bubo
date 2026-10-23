@@ -6,7 +6,7 @@
     <title>bubo · English tutor for Windows</title>
     <meta
       name="description"
-      content="bubo is a small floating English tutor for Windows. Chat in English at your CEFR level, with a Portuguese translation or in Portuguese only if you are still learning to read English. Get quiet corrections and practice your mistakes with spaced repetition."
+      content="bubo is a small floating English tutor for Windows. Chat in English at your CEFR level, with a Portuguese translation or in Portuguese only if you are still learning to read English. At A1/A2, the translation waits until you try and there are short grammar lessons. Get quiet corrections and practice your mistakes with spaced repetition."
     />
     <meta name="theme-color" content="#0b0b11" />
     <meta name="color-scheme" content="dark" />
@@ -322,6 +322,30 @@
                 pick the model you like.
               </p>
             </article>
+            <article class="feature wide">
+              <span class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" focusable="false">
+                  <path
+                    d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5Z"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M4 5.5v16M8 7h8M8 11h6"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
+              <h3>Beginner mode, no shortcuts</h3>
+              <p>
+                At A1/A2, the translation waits until you try. bubo gives a hint before the answer,
+                you can pick a study focus, and work through a three-step mini-lesson with one
+                exercise at a time.
+              </p>
+            </article>
           </div>
         </div>
       </section>
@@ -333,8 +357,8 @@
             <h2 id="screenshots-title">A look inside</h2>
             <p>
               Real screens from the app: ready-made voices, the buddy editor, a chat with
-              corrections, the practice deck, progress, history and compact mode. Click any
-              screenshot to open it larger.
+              corrections, the mini-lessons, the practice deck, progress, history and compact mode.
+              Click any screenshot to open it larger.
             </p>
           </header>
 
@@ -376,6 +400,40 @@
                   >Purple, round, bars eyes, size L, straight tilt and no mouth. Every part is
                   editable.</span
                 >
+              </figcaption>
+            </figure>
+
+            <figure class="shot">
+              <a class="shot-link" href="../screenshots/lessons.png" data-lightbox>
+                <img
+                  src="../screenshots/lessons.png"
+                  width="420"
+                  height="640"
+                  loading="lazy"
+                  decoding="async"
+                  alt="bubo mini-lessons list with seven grammar and vocabulary topics"
+                />
+              </a>
+              <figcaption>
+                <strong>Mini grammar lessons</strong>
+                <span>Seven short rules, one exercise per step.</span>
+              </figcaption>
+            </figure>
+
+            <figure class="shot">
+              <a class="shot-link" href="../screenshots/lesson.png" data-lightbox>
+                <img
+                  src="../screenshots/lesson.png"
+                  width="420"
+                  height="640"
+                  loading="lazy"
+                  decoding="async"
+                  alt="A bubo mini-lesson step explaining the verb to be and asking for a sentence in English"
+                />
+              </a>
+              <figcaption>
+                <strong>One rule at a time</strong>
+                <span>A short explanation, examples and one exercise to try.</span>
               </figcaption>
             </figure>
 
@@ -535,7 +593,8 @@
                   <p>
                     Settings opens on first run. Paste a key, pick a model and choose your CEFR
                     level. <strong>Groq is the default preset</strong>; OpenAI, OpenRouter, Ollama
-                    and custom URLs work too.
+                    and custom URLs work too. At A1/A2, you also get the beginner mode with a study
+                    focus and mini-lessons.
                   </p>
                 </div>
               </li>
