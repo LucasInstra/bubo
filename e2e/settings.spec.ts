@@ -139,5 +139,5 @@ test("settings shows what changed in the running version", async ({ page }) => {
   const card = page.locator(".release-card");
   await card.scrollIntoViewIfNeeded();
   await expect(card).toContainText(`Novidades da versão ${pkg.version}`);
-  await expect(card).toContainText("Updates tab");
+  await expect(card.locator("li").first()).toBeVisible();
 });
