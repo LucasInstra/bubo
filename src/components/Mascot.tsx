@@ -824,6 +824,9 @@ export function Mascot({
         const eye = eyeShape(style, radius, sizeScale);
         const eyeWidth = eye.width;
         const eyeHeight = eye.height * (style === "bars" ? 1 + wonder * 0.1 : 1);
+        // Tall eye shapes grow upward instead of down into the mouth, so a large
+        // eye size never pushes the eyes over the mouth.
+        const eyeLift = Math.max(0, eyeHeight / 2 - radius * 0.26);
         const eyeX =
           side * (sadEyes ? radius * (spacingScale + 0.075) : eyeOffset) + gaze.x * radius * 0.24;
         const closed = winking && side === -1;
@@ -832,7 +835,7 @@ export function Mascot({
         const drawArc = closed || cheerful || style === "arcs";
 
         context.save();
-        context.translate(eyeX, eyeY);
+        context.translate(eyeX, eyeY - eyeLift);
         context.rotate(sadEyes ? side * 0.14 : style === "angry" ? side * 0.34 : side * tiltAngle);
 
         // Mood and blink must reach every eye style, including the arc-based
@@ -887,7 +890,7 @@ export function Mascot({
 
       if (showMouth) {
         const mouthX = gaze.x * radius * 0.14;
-        const mouthY = radius * 0.41 + gaze.y * radius * 0.08;
+        const mouthY = radius * 0.44 + gaze.y * radius * 0.08;
         const mouthInk = mouthColor && mouthColor !== "auto" ? mouthColor : shade(color, 0.3, 0.85);
         const mouthScale = mouthSize === "small" ? 0.82 : mouthSize === "large" ? 1.2 : 1;
         const talking =
