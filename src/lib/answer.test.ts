@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isCorrectAnswer, normalizeAnswer } from "./answer";
+import { isCorrectAnswer, normalizeAnswer, noteRevealsAnswer } from "./answer";
 
 describe("normalizeAnswer", () => {
   it("lowercases, trims and drops punctuation", () => {
@@ -31,5 +31,22 @@ describe("isCorrectAnswer", () => {
 
   it("requires a meaningful target before using substring matching", () => {
     expect(isCorrectAnswer("anything at all", "I")).toBe(false);
+  });
+});
+
+describe("noteRevealsAnswer", () => {
+  it("keeps a note that only names the problem", () => {
+    expect(noteRevealsAnswer("past simple", "I went to the gym yesterday")).toBe(false);
+    expect(noteRevealsAnswer("use an English greeting", "hi")).toBe(false);
+  });
+
+  it("drops a note that contains the correction", () => {
+    expect(noteRevealsAnswer("use 'I went' instead", "I went")).toBe(true);
+    expect(noteRevealsAnswer("HI", "hi")).toBe(true);
+  });
+
+  it("ignores empty notes", () => {
+    expect(noteRevealsAnswer("", "hi")).toBe(false);
+    expect(noteRevealsAnswer("   ", "hi")).toBe(false);
   });
 });

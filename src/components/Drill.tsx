@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { isCorrectAnswer } from "../lib/answer";
+import { isCorrectAnswer, noteRevealsAnswer } from "../lib/answer";
 import { ipc } from "../lib/ipc";
 import { useModalFocus } from "../lib/modal";
 import {
@@ -223,6 +223,14 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
                 <span className="drill-context">você escreveu: “{item.context}”</span>
               )}
               <span className="drill-wrong">{item.wrong}</span>
+              {/* The note says what to fix, so it belongs before the answer.
+                  A note that spells out the correction would give it away. */}
+              {phase === "asking" && item.note && !noteRevealsAnswer(item.note, item.right) && (
+                <span className="drill-hint-before">
+                  <b>dica</b>
+                  {item.note}
+                </span>
+              )}
               {item.streak > 0 && <span className="drill-streak">sequência {item.streak}</span>}
               {item.seen > 1 && <span className="drill-seen">visto {item.seen} vezes</span>}
             </div>

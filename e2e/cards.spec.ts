@@ -19,6 +19,10 @@ test("practice starts from a correction card", async ({ page }) => {
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText("i go to the gym yesterday", { exact: true })).toBeVisible();
 
+  // The hint says what to fix before the user types, without the answer.
+  await expect(dialog.locator(".drill-hint-before")).toHaveText(/past simple/);
+  await expect(dialog.getByText("I went to the gym yesterday")).toHaveCount(0);
+
   expect(await calls(page)).toContainEqual({
     cmd: "drill_focus",
     args: {
