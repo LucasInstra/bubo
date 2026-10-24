@@ -94,5 +94,5 @@ jobs:
           $tag = "${{ github.ref_name }}"
           $version = $tag.TrimStart("v")
           $installer = "src-tauri/target/release/bundle/nsis/bubo_${version}_x64-setup.exe"
-          node scripts/updater-json.mjs --tag=$tag --installer="$installer" --signature="$installer.sig" --notes="release-notes/${version}.md"
+          node scripts/updater-json.mjs --tag=$tag --installer="$installer" --signature="$installer.sig" --notes="release-notes/${version}.md" --notes-pt="release-notes/${version}.pt.md"
           gh release upload $tag latest.json --clobber

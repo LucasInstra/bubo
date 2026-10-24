@@ -83,13 +83,11 @@ async fn post(
             tokio::time::sleep(Duration::from_millis(1200)).await;
         }
 
-        let response = match client
-            .post(&url)
-            .bearer_auth(api_key)
-            .json(body)
-            .send()
-            .await
-        {
+        let mut request = client.post(&url).json(body);
+        if !api_key.trim().is_empty() {
+            request = request.bearer_auth(api_key);
+        }
+        let response = match request.send().await {
             Ok(response) => response,
             Err(error) => {
                 last_error = format!("erro de rede: {error}");

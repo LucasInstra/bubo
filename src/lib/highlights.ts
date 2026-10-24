@@ -22,7 +22,9 @@ function plain(value: string): string {
  */
 export function releaseHighlights(notes: string, limit = 5): Highlight[] {
   const lines = notes.split(/\r?\n/);
-  const heading = lines.findIndex((line) => /^##\s+what'?s new/i.test(line.trim()));
+  const heading = lines.findIndex((line) =>
+    /^##\s+(what'?s new|novidades|o que mudou)\b/i.test(line.trim()),
+  );
   const section = heading === -1 ? lines : lines.slice(heading + 1);
   const bullets: string[] = [];
 

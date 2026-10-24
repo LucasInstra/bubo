@@ -20,6 +20,10 @@ test("bilingual replies start in Portuguese and reveal the English on demand", a
   await expect(bubble.locator(".msg-english")).toContainText(
     "That sounds like a good weekend",
   );
+
+  await bubble.getByRole("button", { name: "esconder inglês" }).click();
+  await expect(bubble.locator(".msg-english")).toHaveCount(0);
+  await expect(bubble.getByRole("button", { name: "ver em inglês" })).toBeVisible();
 });
 
 test("a completed lesson can set the focus for the conversation", async ({ page }) => {
@@ -39,6 +43,9 @@ test("a completed lesson can set the focus for the conversation", async ({ page 
 
   await expect(dialog).toHaveCount(0);
   await expect(page.locator(".focus-bar")).toContainText("Foco: To be");
+  await expect(page.locator(".msg-bot .bubble").last()).toContainText(
+    'We just finished the "Verbo to be" lesson',
+  );
 
   const saved = (await calls(page)).filter((call) => call.cmd === "save_settings");
   expect(saved.at(-1)?.args).toMatchObject({
@@ -98,4 +105,21 @@ test("higher levels can open their own lessons", async ({ page }) => {
   const dialog = page.getByRole("dialog", { name: "Lições" });
   await expect(dialog.getByRole("button", { name: /Present perfect/ })).toBeVisible();
   await expect(dialog.getByRole("button", { name: /Condicionais/ })).toBeVisible();
+});
+
+test("a fill-in exercise accepts the full sentence", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=empty&level=B1");
+  await page.getByRole("button", { name: "Mini-lições de gramática" }).click();
+  const dialog = page.getByRole("dialog", { name: "Lições" });
+
+  await dialog.getByRole("button", { name: /Condicionais/ }).click();
+  await dialog.getByRole("button", { name: "Ver resposta" }).click();
+  await dialog.getByRole("button", { name: "Próximo" }).click();
+  await expect(dialog.getByText("passo 2 de 3")).toBeVisible();
+
+  await dialog
+    .getByLabel(/If I ___ \(have\) more time/)
+    .fill("if i had more time, i would travel");
+  await dialog.getByRole("button", { name: "Conferir" }).click();
+  await expect(dialog.getByText("Boa.")).toBeVisible();
 });

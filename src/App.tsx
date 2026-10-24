@@ -13,6 +13,7 @@ import { HistoryPanel } from "./components/HistoryPanel";
 import { LessonsPanel } from "./components/LessonsPanel";
 import { Mascot } from "./components/Mascot";
 import { Message } from "./components/Message";
+import { Onboarding } from "./components/Onboarding";
 import { PopupView, type PopupStage } from "./components/PopupView";
 import { ProgressPanel } from "./components/ProgressPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
@@ -21,7 +22,7 @@ import { BUILD_LABEL } from "./lib/build";
 import { trimContext } from "./lib/context";
 import { parseStoredFixes } from "./lib/format";
 import { ipc } from "./lib/ipc";
-import { focusLabel, isBeginnerLevel } from "./lib/lessons";
+import { focusLabel, isBeginnerLevel, type Lesson } from "./lib/lessons";
 import { moodRequest } from "./lib/mood";
 import type { Fix, Mood, Msg, OrbState, Settings, StoredMessage } from "./lib/types";
 import { DEFAULT_SETTINGS } from "./lib/types";
@@ -72,10 +73,19 @@ function fromStored(message: StoredMessage): Msg {
   };
 }
 
+/** The first line bubo says when a finished lesson becomes conversation practice. */
+function practiceIntro(lesson: Lesson, replyLanguage: string): string {
+  const portuguese = `Terminamos a lição "${lesson.title}". Quer praticar? Me conta uma coisa do seu dia usando o que você aprendeu.`;
+  if (replyLanguage === "pt") return portuguese;
+  const english = `We just finished the "${lesson.title}" lesson. Want to practice? Tell me something about your day using what you learned.`;
+  return replyLanguage === "bilingual" ? `${portuguese}\nEN: ${english}` : english;
+}
+
 export default function App() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [hasKey, setHasKey] = useState(false);
+  const [ready, setReady] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showBuddy, setShowBuddy] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
@@ -143,11 +153,12 @@ export default function App() {
         } else {
           void ipc.setCompact(loadedSettings.compact);
         }
-        if (!loadedKey) setShowSettings(true);
         const stats = await ipc.drillStats();
         if (alive) setDue(stats.due);
       } catch (error) {
         console.error("bubo failed to load", error);
+      } finally {
+        if (alive) setReady(true);
       }
     })();
     return () => {
@@ -464,7 +475,11 @@ export default function App() {
       await ipc.saveSettings(next);
       if (apiKey.trim()) {
         await ipc.saveApiKey(apiKey.trim());
-        setHasKey(true);
+      }
+      try {
+        setHasKey(await ipc.hasApiKey());
+      } catch {
+        setHasKey(Boolean(apiKey.trim()));
       }
       if (next.autostart !== settings.autostart) {
         await ipc.setAutostart(next.autostart);
@@ -488,8 +503,8 @@ export default function App() {
   );
 
   const startFocusPractice = useCallback(
-    async (focus: string) => {
-      const next = { ...settings, studyFocus: focus };
+    async (lesson: Lesson) => {
+      const next = { ...settings, studyFocus: lesson.focus };
       try {
         await ipc.saveSettings(next);
       } catch (error) {
@@ -497,6 +512,28 @@ export default function App() {
       }
       setSettings(next);
       setShowLessons(false);
+
+      // The lesson ends in a conversation starter, not in an empty chat. The
+      // line is saved like any other assistant message, so history keeps it.
+      const intro: Msg = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: practiceIntro(lesson, next.replyLanguage),
+        fixes: [],
+      };
+      setMessages((current) => {
+        const last = current[current.length - 1];
+        if (last?.role === "assistant" && last.content === intro.content) return current;
+        return [...current, intro];
+      });
+      try {
+        const id = await ipc.saveAssistantMessage(intro.content);
+        setMessages((current) =>
+          current.map((message) => (message.id === intro.id ? { ...message, dbId: id } : message)),
+        );
+      } catch (error) {
+        console.error("could not save the lesson intro", error);
+      }
     },
     [settings],
   );
@@ -651,6 +688,22 @@ export default function App() {
     "--accent-soft": withAlpha(accent, 0.16),
     "--stage-size": `${stageSize}px`,
   } as CSSProperties;
+
+  if (!ready) {
+    return (
+      <div className={`app size-${settings.textSize}`} style={accentVars}>
+        <div className="boot">acendendo o bubo...</div>
+      </div>
+    );
+  }
+
+  if (!hasKey) {
+    return (
+      <div className={`app size-${settings.textSize}`} style={accentVars}>
+        <Onboarding settings={settings} onConnect={saveSettings} />
+      </div>
+    );
+  }
 
   if (settings.popup && hasKey) {
     return (
@@ -1226,7 +1279,7 @@ export default function App() {
             settings={settings}
             onClose={() => setShowLessons(false)}
             onQueueChanged={() => void ipc.drillStats().then((stats) => setDue(stats.due))}
-            onStartPractice={(focus) => void startFocusPractice(focus)}
+            onStartPractice={(lesson) => void startFocusPractice(lesson)}
           />
         )}
 
@@ -1269,6 +1322,7 @@ export default function App() {
             updateVersion={updater.version}
             updateBuild={updater.build}
             updateNotes={updater.notes}
+            updateNotesPt={updater.notesPt}
             updateProgress={updater.progress}
             updateError={updater.error}
             onCheckUpdate={updater.checkNow}

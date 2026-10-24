@@ -12,6 +12,10 @@ test("compact bilingual replies start in Portuguese and reveal the English", asy
   await expect(assistant.locator(".compact-english")).toContainText(
     "That sounds like a good weekend",
   );
+
+  await assistant.getByRole("button", { name: "esconder inglês" }).click();
+  await expect(assistant.locator(".compact-english")).toHaveCount(0);
+  await expect(assistant.getByRole("button", { name: "ver em inglês" })).toBeVisible();
 });
 
 test("settings switches provider and base URL", async ({ page }) => {

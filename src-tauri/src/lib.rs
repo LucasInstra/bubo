@@ -401,9 +401,19 @@ fn set_popup_stage(
     set_popup_region(&window, next != PopupStage::Face)
 }
 
+fn is_local_endpoint(base_url: &str) -> bool {
+    let url = base_url.trim().to_lowercase();
+    ["://localhost", "://127.0.0.1", "://[::1]", "://0.0.0.0"]
+        .iter()
+        .any(|host| url.contains(host))
+}
+
 #[tauri::command]
-fn has_api_key() -> Result<bool, String> {
-    Ok(config::load_api_key()?.is_some())
+fn has_api_key(app: AppHandle) -> Result<bool, String> {
+    if config::load_api_key()?.is_some() {
+        return Ok(true);
+    }
+    Ok(is_local_endpoint(&config::load_settings(&app)?.base_url))
 }
 
 #[tauri::command]
@@ -564,6 +574,12 @@ fn save_lesson_fix(
 }
 
 #[tauri::command]
+fn save_assistant_message(state: State<'_, AppState>, content: String) -> Result<i64, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::insert(&db, "assistant", &content, None).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 async fn chat(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -572,8 +588,7 @@ async fn chat(
 ) -> Result<String, String> {
     let settings = config::load_settings(&app)?;
     let client = http_client(&settings)?;
-    let api_key = config::load_api_key()?
-        .ok_or("Ainda não há chave de API. Abra as configurações e cole sua chave.")?;
+    let api_key = config::load_api_key()?.unwrap_or_default();
 
     let user_row = messages
         .iter()
@@ -710,8 +725,7 @@ async fn explain_fix(
 ) -> Result<String, String> {
     let settings = config::load_settings(&app)?;
     let client = http_client(&settings)?;
-    let api_key = config::load_api_key()?
-        .ok_or("Ainda não há chave de API. Abra as configurações e cole sua chave.")?;
+    let api_key = config::load_api_key()?.unwrap_or_default();
 
     let body = prompt::explain_body(&settings, &wrong, &right, &note);
     let text = llm::complete(&app, &client, &settings, &api_key, body).await?;
@@ -813,6 +827,18 @@ const FEEDBACK_URL: &str = "https://github.com/LucasInstra/bubo/issues/new";
 #[tauri::command]
 fn open_feedback() -> Result<(), String> {
     open_url(FEEDBACK_URL)
+}
+
+#[tauri::command]
+fn open_provider_site(provider: String) -> Result<(), String> {
+    let url = match provider.as_str() {
+        "groq" => "https://console.groq.com/keys",
+        "openai" => "https://platform.openai.com/api-keys",
+        "openrouter" => "https://openrouter.ai/keys",
+        "ollama" => "https://ollama.com/download",
+        _ => return Err("Provedor desconhecido".to_string()),
+    };
+    open_url(url)
 }
 
 fn open_url(url: &str) -> Result<(), String> {
@@ -1237,6 +1263,7 @@ pub fn run() {
             lesson_progress,
             save_lesson_progress,
             save_lesson_fix,
+            save_assistant_message,
             chat,
             explain_fix,
             history,
@@ -1252,6 +1279,7 @@ pub fn run() {
             restore_data,
             open_data_folder,
             open_feedback,
+            open_provider_site,
             diagnostics,
             drill_stats,
             progress_stats,
@@ -1296,6 +1324,15 @@ mod connection_tests {
         assert!(parse_model_ids("{}").is_empty());
         assert!(parse_model_ids(r#"{"data":"nope"}"#).is_empty());
         assert!(parse_model_ids(r#"{"data":[{"name":"x"}]}"#).is_empty());
+    }
+
+    #[test]
+    fn local_endpoints_count_as_configured_without_a_key() {
+        assert!(super::is_local_endpoint("http://localhost:11434/v1"));
+        assert!(super::is_local_endpoint("http://127.0.0.1:1234/v1"));
+        assert!(super::is_local_endpoint("http://[::1]:8080/v1"));
+        assert!(!super::is_local_endpoint("https://api.groq.com/openai/v1"));
+        assert!(!super::is_local_endpoint(""));
     }
 }
 

@@ -35,6 +35,16 @@ describe("releaseHighlights", () => {
     expect(text).not.toContain("build");
   });
 
+  it("reads the Portuguese Novidades section too", () => {
+    const [first] = releaseHighlights(
+      "## Novidades\n\n- **Fala do mascote**: o bubo avisa quando há versão nova.\n\n## Build\n\n- nada",
+    );
+    expect(first).toEqual({
+      label: "Fala do mascote",
+      text: "o bubo avisa quando há versão nova.",
+    });
+  });
+
   it("strips bold, code and links", () => {
     const [first] = releaseHighlights(
       "## What's new\n\n- **Use `Escape`** to close, see [the docs](https://x).",

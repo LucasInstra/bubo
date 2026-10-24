@@ -59,3 +59,13 @@ export function matchProvider(baseUrl: string): ProviderPreset {
     PROVIDERS.find((preset) => preset.baseUrl && normalize(preset.baseUrl) === target) ?? CUSTOM
   );
 }
+
+/** Guesses the provider from the shape of a pasted key, when possible. */
+export function providerFromKey(key: string): ProviderPreset | null {
+  const value = key.trim();
+  if (value.startsWith("gsk_")) return PROVIDERS.find((preset) => preset.id === "groq") ?? null;
+  if (value.startsWith("sk-or-"))
+    return PROVIDERS.find((preset) => preset.id === "openrouter") ?? null;
+  if (value.startsWith("sk-")) return PROVIDERS.find((preset) => preset.id === "openai") ?? null;
+  return null;
+}

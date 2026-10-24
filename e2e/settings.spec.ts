@@ -123,6 +123,31 @@ test("feedback button opens the GitHub issue page", async ({ page }) => {
     .toBe(true);
 });
 
+test("first run connects through onboarding", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=onboarding");
+  const dialog = page.getByRole("dialog", { name: "Configurar o bubo" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Vamos colocar o bubo para conversar");
+
+  await dialog.getByLabel("Cole sua chave da Groq").fill("gsk_test_123");
+  await dialog.getByRole("button", { name: "Começar a conversar" }).click();
+
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByPlaceholder("Digite em inglês...")).toBeVisible();
+});
+
+test("onboarding can connect a local Ollama without a key", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=onboarding");
+  const dialog = page.getByRole("dialog", { name: "Configurar o bubo" });
+
+  await dialog.getByRole("tab", { name: /Rodar no PC/ }).click();
+  await expect(dialog).toContainText("Nenhuma chave necessária para o Ollama.");
+  await dialog.getByRole("button", { name: "Começar a conversar" }).click();
+
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByPlaceholder("Digite em inglês...")).toBeVisible();
+});
+
 test("settings shows the compact update card", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await page.getByRole("button", { name: "Configurações" }).click();
@@ -143,4 +168,16 @@ test("settings shows what changed in the running version", async ({ page }) => {
   await card.scrollIntoViewIfNeeded();
   await expect(card).toContainText(`Novidades da versão ${pkg.version}`);
   await expect(card.locator("li").first()).toBeVisible();
+  await expect(card).toContainText("bubo avisa sobre atualizações");
+});
+
+test("an available update shows its Portuguese highlights", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=update");
+  await page.getByRole("button", { name: "Configurações" }).click();
+  await page.getByRole("tab", { name: "Atualizações" }).click();
+
+  const card = page.locator(".update-card");
+  await card.scrollIntoViewIfNeeded();
+  await expect(card).toContainText("Fala do mascote");
+  await expect(card).not.toContainText("The mascot speaks up");
 });

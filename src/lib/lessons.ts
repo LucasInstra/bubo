@@ -2,6 +2,8 @@ export interface LessonExercise {
   prompt: string;
   placeholder: string;
   answers: string[];
+  /** Full-sentence forms accepted for fill-in-the-blank exercises. */
+  sentences?: string[];
   hint: string;
   explanation: string;
   note: string;
@@ -83,6 +85,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete no negativo: She ___ my boss.",
           placeholder: "Verbo to be + not",
           answers: ["isn't", "is not", "isnt"],
+          sentences: ["She isn't my boss.", "She is not my boss."],
           hint: "O sujeito é she. Use o verbo to be no negativo e contraia se quiser.",
           explanation:
             "Para negar com to be, colocamos not depois do verbo: she is not. A contração is not → isn't é a forma mais comum na fala.",
@@ -127,6 +130,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: He ___ here. (work)",
           placeholder: "Verbo com -s",
           answers: ["works"],
+          sentences: ["He works here."],
           hint: "O sujeito é he. No presente simples, a terceira pessoa ganha -s.",
           explanation:
             "Com he, she e it, o verbo recebe -s no presente simples: work → works. Com I, you, we e they, ele fica igual: work.",
@@ -144,6 +148,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete no negativo: He ___ tea. (not / like)",
           placeholder: "Auxiliar + verbo base",
           answers: ["doesn't like", "does not like", "doesnt like"],
+          sentences: ["He doesn't like tea.", "He does not like tea."],
           hint: "Negativa com he: use doesn't antes do verbo e deixe o verbo na forma base.",
           explanation:
             "Para negar no presente com he, she ou it, usamos doesn't + verbo base. O -s sai do verbo e vai para o auxiliar: he doesn't like.",
@@ -187,6 +192,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: I ___ late yesterday. (work)",
           placeholder: "Verbo no passado",
           answers: ["worked"],
+          sentences: ["I worked late yesterday."],
           hint: "O verbo é regular. Para o passado, acrescente -ed.",
           explanation:
             "No passado simples, verbos regulares recebem -ed: work → worked. O passado fica igual para todas as pessoas.",
@@ -221,6 +227,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete no negativo: I ___ to the party. (not / go)",
           placeholder: "Auxiliar + verbo base",
           answers: ["didn't go", "did not go", "didnt go"],
+          sentences: ["I didn't go to the party.", "I did not go to the party."],
           hint: "Negativa no passado: didn't + verbo base. O verbo não vai para o passado.",
           explanation:
             "Para negar no passado, usamos didn't + verbo base. Como did já marca o passado, go continua go: didn't go.",
@@ -247,6 +254,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: ___ you like pizza?",
           placeholder: "Auxiliar",
           answers: ["do", "do you like pizza"],
+          sentences: ["Do you like pizza?"],
           hint: "A pergunta é sobre gostar. Use o auxiliar Do no começo.",
           explanation:
             "Perguntas de sim ou não no presente começam com Do ou Does. Com you, o auxiliar é Do e o verbo fica na forma base.",
@@ -307,6 +315,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: I need ___ umbrella.",
           placeholder: "a / an / the",
           answers: ["an", "an umbrella"],
+          sentences: ["I need an umbrella."],
           hint: "Pense no som da primeira letra de umbrella. Ela começa com som de vogal.",
           explanation:
             "Usamos an antes de som de vogal e a antes de som de consoante. Umbrella começa com som de vogal, então an.",
@@ -324,6 +333,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: There are two ___ here. (child)",
           placeholder: "Plural de child",
           answers: ["children"],
+          sentences: ["There are two children here."],
           hint: "Child tem plural irregular. Ele não termina em -s.",
           explanation:
             "Alguns plurais são irregulares e não seguem a regra do -s. Child vira children.",
@@ -371,6 +381,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: The meeting is ___ Monday.",
           placeholder: "in / on / at",
           answers: ["on", "on monday"],
+          sentences: ["The meeting is on Monday."],
           hint: "Monday é um dia da semana. Para dias, use on.",
           explanation:
             "Para tempo, usamos in com meses e anos, on com dias e datas, e at com horas. Monday pede on.",
@@ -388,6 +399,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: I am ___ home.",
           placeholder: "in / on / at",
           answers: ["at", "at home"],
+          sentences: ["I am at home."],
           hint: "Home é um ponto de referência, não um espaço fechado. Use at.",
           explanation:
             "At aparece em expressões fixas de lugar, como at home e at work. In indica dentro de um espaço e on uma superfície.",
@@ -409,6 +421,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: She lives ___ Brazil.",
           placeholder: "in / on / at",
           answers: ["in", "in brazil"],
+          sentences: ["She lives in Brazil."],
           hint: "Brazil é um país. Para países, use in.",
           explanation:
             "Usamos in antes de cidades, países e espaços fechados: in Brazil, in Japan. On fica para superfícies e at para pontos específicos.",
@@ -495,6 +508,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: She ___ (finish) the report.",
           placeholder: "has + particípio",
           answers: ["has finished"],
+          sentences: ["She has finished the report."],
           hint: "O sujeito é she. Use has e o particípio de finish.",
           explanation:
             "Com she, usamos has + particípio. O particípio de finish é finished, então a frase fica has finished.",
@@ -516,6 +530,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: I have lived here ___ 2019.",
           placeholder: "for / since",
           answers: ["since"],
+          sentences: ["I have lived here since 2019."],
           hint: "2019 é um ponto de partida, não um período.",
           explanation:
             "Since marca quando algo começou; for marca quanto tempo durou. 2019 é um ponto no tempo, então usamos since.",
@@ -537,6 +552,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: ___ you ever eaten sushi?",
           placeholder: "Have / Has",
           answers: ["have"],
+          sentences: ["Have you ever eaten sushi?"],
           hint: "O sujeito é you. O auxiliar do present perfect é have.",
           explanation:
             "Perguntas no present perfect começam com Have ou Has. Com you, usamos Have: Have you ever eaten sushi?",
@@ -567,6 +583,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: If it rains, I ___ (stay) home.",
           placeholder: "will + verbo base",
           answers: ["will stay"],
+          sentences: ["If it rains, I will stay home."],
           hint: "A condição está no presente. O resultado usa will + verbo base.",
           explanation:
             "Na primeira condicional, a parte com if fica no presente e a consequência usa will + verbo base: will stay.",
@@ -588,6 +605,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: If I ___ (have) more time, I would travel.",
           placeholder: "Passado de have",
           answers: ["had"],
+          sentences: ["If I had more time, I would travel."],
           hint: "A consequência usa would. A condição imaginária pede o passado de have.",
           explanation:
             "Na segunda condicional, a parte com if vai para o passado simples: I had. O resultado usa would + verbo base.",
@@ -609,6 +627,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: You will miss the bus ___ you hurry.",
           placeholder: "if / unless",
           answers: ["unless"],
+          sentences: ["You will miss the bus unless you hurry."],
           hint: "A frase diz que você perde o ônibus se não correr. Use a palavra que significa 'a menos que'.",
           explanation:
             "Unless introduz a condição negativa: unless you hurry = if you do not hurry.",
@@ -639,6 +658,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: The report ___ (write) every week.",
           placeholder: "is + particípio",
           answers: ["is written"],
+          sentences: ["The report is written every week."],
           hint: "O sujeito é the report, singular. Use is e o particípio de write.",
           explanation:
             "No presente passivo, usamos is + particípio com sujeito singular. O particípio de write é written.",
@@ -660,6 +680,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: The bridge ___ (build) in 1990.",
           placeholder: "was + particípio",
           answers: ["was built"],
+          sentences: ["The bridge was built in 1990."],
           hint: "O sujeito é singular e o tempo é passado. Use was e o particípio de build.",
           explanation:
             "No passado passivo, usamos was + particípio para sujeito singular. Build é irregular: build → built.",
@@ -681,6 +702,7 @@ export const LESSONS: Lesson[] = [
           prompt: "Complete: My bike ___ (steal) yesterday.",
           placeholder: "was + particípio",
           answers: ["was stolen"],
+          sentences: ["My bike was stolen yesterday."],
           hint: "O sujeito é my bike, singular, e o tempo é passado. Use was e o particípio de steal.",
           explanation:
             "My bike sofre a ação, então usamos o passivo: was stolen. Steal é irregular: steal → stole → stolen.",

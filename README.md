@@ -28,6 +28,7 @@ Because the useful part of learning a language is the five minutes between real 
 - **A mascot with a face**: 12 shapes, 9 colors plus a custom picker, 9 eye styles, eye color, spacing and tilt, plus an optional mouth with six shapes and three sizes. Spring physics, drag jelly, idle look-arounds, blinks, pointer gaze and a hop when you click it. The little mascot in the header opens its customization panel.
 - **Ready-made personalities**: twelve voices such as Warm Coach, Dry Wit or Hype Friend. Picking one changes only the tutor's tone; the mascot look stays exactly as you customized it. The free-text flavor field stacks on top.
 - **Compact mode**: a 400 x 280 horizontal chat card with the buddy in the header, the current mood under the name and a one-line composer. The full window is one click away.
+- **Setup without jargon**: the first launch explains what an API key is, walks through a free Groq key with a numbered tutorial, recognizes pasted Groq, OpenAI and OpenRouter keys, and offers a no-key Ollama path for a local model.
 - **Bring your own endpoint**: Groq, OpenAI, OpenRouter, Ollama or any OpenAI-compatible URL, with model suggestions, a test connection button, optional proxy and custom CA certificate for company networks.
 - **Conversation first**: replies stream token by token; a separate pass returns corrections as strict JSON, so the card never depends on the model following inline formatting. Replies render Markdown, and a search field filters the current conversation. bubo can reply in English only, in Portuguese with the English version behind a “ver em inglês” button, or in Portuguese only when you are still learning to read English.
 - **Beginner mode (A1/A2)**: in bilingual replies the Portuguese comes first and the English waits behind a button, bubo gives a small hint before the full answer, and you can choose a study focus (to be, past simple, questions and more) or work through ten short grammar lessons from A1 to B2 with one exercise per step.
@@ -85,8 +86,9 @@ Updater artifacts are enabled, so a local installer build also needs `TAURI_SIGN
 
 ## First run
 
-1. Settings opens automatically. Paste a Groq API key from [console.groq.com/keys](https://console.groq.com/keys). It is stored in the Windows Credential Manager.
-2. Pick your CEFR level. `B1` is a good default. Then choose the reply language: English only, English with a Portuguese translation, or Portuguese only if you cannot read English yet. At A1/A2, bubo also offers a translation challenge, a study focus and seven mini-lessons.3. Press `Ctrl+Alt+B` (or use the tray icon) to show bubo, and say hello.
+1. The setup screen opens on the first launch. Choose **Groq** for a free key with a numbered tutorial, **Já tenho uma chave** to paste an existing Groq, OpenAI or OpenRouter key, or **Rodar no PC** to use Ollama without any key. Keys are stored in the Windows Credential Manager.
+2. Pick your CEFR level. `B1` is a good default. Then choose the reply language: English only, Portuguese with the English behind a button, or Portuguese only if you cannot read English yet. At A1/A2, bubo also offers a translation challenge, a study focus and ten mini-lessons from A1 to B2.
+3. Press `Ctrl+Alt+B` (or use the tray icon) to show bubo, and say hello.
 
 The default model is `openai/gpt-oss-120b`. Any OpenAI-compatible base URL works if you prefer another provider.
 
@@ -102,7 +104,7 @@ The first updater-enabled release must be installed by hand. After that, later v
 
 ## Releasing
 
-1. Write `release-notes/<version>.md` in English. The release workflow uses this file as the GitHub release body.
+1. Write `release-notes/<version>.md` in English. The release workflow uses this file as the GitHub release body. Add `release-notes/<version>.pt.md` with the Portuguese highlights for the app's Updates tab; the updater manifest carries it as `notes_pt`.
 2. Start from a clean tree and run `npm version patch` (or `minor` / `major`). The `version` script syncs the new version into `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.lock`, resets `BUILD_NUMBER` to 1, stages those files, and npm commits and tags the release.
 3. Push the commit and the tag with `git push origin main --follow-tags`.
 4. The release workflow builds on Windows and publishes the installer, the updater artifacts and `latest.json` (including the build number) to GitHub Releases.

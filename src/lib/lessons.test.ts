@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { isCorrectAnswer, normalizeAnswer, noteRevealsAnswer } from "./answer";
-import { displayAnswer, focusLabel, isBeginnerLevel, LESSONS, STUDY_FOCUSES } from "./lessons";
+import {
+  displayAnswer,
+  focusLabel,
+  isBeginnerLevel,
+  LESSONS,
+  STUDY_FOCUSES,
+  type LessonExercise,
+} from "./lessons";
 
 const LEVELS = new Set(["A1", "A2", "B1", "B2"]);
 
@@ -51,6 +58,33 @@ describe("lesson catalog", () => {
         }
       }
     }
+  });
+
+  it("accepts the full sentence for fill-in-the-blank exercises", () => {
+    const accepts = (typed: string, exercise: LessonExercise) =>
+      exercise.answers.some((target) => isCorrectAnswer(typed, target)) ||
+      (exercise.sentences ?? []).some((target) => isCorrectAnswer(typed, target));
+
+    for (const lesson of LESSONS) {
+      for (const step of lesson.steps) {
+        if (!step.exercise.prompt.includes("___")) continue;
+        expect(
+          step.exercise.sentences?.length,
+          `${lesson.id}: fill-in exercise without full sentences`,
+        ).toBeGreaterThan(0);
+        for (const sentence of step.exercise.sentences ?? []) {
+          expect(accepts(sentence, step.exercise), `${lesson.id}: ${sentence}`).toBe(true);
+        }
+      }
+    }
+
+    const conditionals = LESSONS.find((lesson) => lesson.id === "conditionals");
+    const second = conditionals?.steps[1].exercise;
+    if (!second) throw new Error("conditionals lesson is missing");
+    expect(accepts("if i had more time, i would travel", second)).toBe(true);
+    expect(accepts("If I had more time I would travel", second)).toBe(true);
+    expect(accepts("had", second)).toBe(true);
+    expect(accepts("have", second)).toBe(false);
   });
 
   it("never hands a full answer over in the body or examples", () => {

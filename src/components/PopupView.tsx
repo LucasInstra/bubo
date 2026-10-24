@@ -233,9 +233,20 @@ export function PopupView({
               <div className="popup-bubble-text">
                 {primary}
                 {english && (englishShown || !settings.translationChallenge) && (
-                  <span className="popup-english" lang="en">
-                    {english}
-                  </span>
+                  <>
+                    <span className="popup-english" lang="en">
+                      {english}
+                    </span>
+                    {englishShown && (
+                      <button
+                        type="button"
+                        className="popup-reveal"
+                        onClick={() => setEnglishFor(null)}
+                      >
+                        esconder inglês
+                      </button>
+                    )}
+                  </>
                 )}
                 {english &&
                   !englishShown &&

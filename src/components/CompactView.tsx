@@ -168,9 +168,22 @@ export function CompactView({
               >
                 {primary}
                 {english && englishShown && (
-                  <span className="compact-english" lang="en">
-                    {english}
-                  </span>
+                  <>
+                    <span className="compact-english" lang="en">
+                      {english}
+                    </span>
+                    {settings.translationChallenge && englishOpen[message.id] && (
+                      <button
+                        type="button"
+                        className="compact-reveal"
+                        onClick={() =>
+                          setEnglishOpen((current) => ({ ...current, [message.id]: false }))
+                        }
+                      >
+                        esconder inglês
+                      </button>
+                    )}
+                  </>
                 )}
                 {english && !englishShown && !message.streaming && (
                   <button

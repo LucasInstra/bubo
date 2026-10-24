@@ -112,10 +112,17 @@
       const now = Date.now();
       const day = 86_400_000;
       let lessonProgress = [];
+      let savedKey = mode !== "onboarding";
 
       const handlers = {
         get_settings: () => settings,
-        has_api_key: () => true,
+        has_api_key: () =>
+          savedKey ||
+          /(?:localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)/i.test(settings.baseUrl),
+        save_api_key: ({ key }) => {
+          savedKey = Boolean(key);
+          return null;
+        },
         "plugin:app|version": () => pkg.version,
         "plugin:updater|check": () =>
           updateAvailable
@@ -125,7 +132,11 @@
                 version: "0.9.0",
                 date: new Date().toISOString(),
                 body: "## What's new\n\n- The mascot speaks up.",
-                rawJson: { version: "0.9.0", build: 1 },
+                rawJson: {
+                  version: "0.9.0",
+                  build: 1,
+                  notes_pt: "## Novidades\n\n- **Fala do mascote**: o bubo avisa quando há uma versão nova.",
+                },
               }
             : null,
         history: () => (mode === "empty" ? [] : bilingual ? bilingualStored : stored),
@@ -137,6 +148,7 @@
           return null;
         },
         save_lesson_fix: () => null,
+        save_assistant_message: () => 99,
         list_sessions: () => [
           {
             id: 1,
@@ -175,7 +187,10 @@
         set_popup_stage: () => null,
         "plugin:window|outer_position": () => ({ x: 0, y: 0 }),
         "plugin:window|set_position": () => null,
-        save_settings: () => null,
+        save_settings: ({ settings: next }) => {
+          Object.assign(settings, next);
+          return null;
+        },
         open_feedback: () => null,
         progress_stats: () => ({
           streak: 4,

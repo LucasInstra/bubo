@@ -14,12 +14,19 @@ function normalize(version: string): string {
   return version.trim().match(/^v?(\d+\.\d+\.\d+)/)?.[1] ?? "";
 }
 
-/** The bundled release notes for a version, or an empty string when missing. */
-export function releaseNotes(version: string): string {
+export type NoteLanguage = "pt" | "en";
+
+/**
+ * The bundled release notes for a version. The app UI is Portuguese, so the
+ * `<version>.pt.md` highlights win and the English body is only a fallback.
+ */
+export function releaseNotes(version: string, language: NoteLanguage = "pt"): string {
   const wanted = normalize(version);
   if (!wanted) return "";
-  const path = Object.keys(NOTES).find((file) => file.endsWith(`/${wanted}.md`));
-  return path ? NOTES[path] : "";
+  const suffix = language === "pt" ? ".pt" : "";
+  const path = Object.keys(NOTES).find((file) => file.endsWith(`/${wanted}${suffix}.md`));
+  if (path) return NOTES[path];
+  return language === "pt" ? releaseNotes(wanted, "en") : "";
 }
 
 /** The "What's new" bullets for a version, ready for the card. */

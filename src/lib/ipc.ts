@@ -71,6 +71,7 @@ export const ipc = {
   restoreData: (path: string) => invoke<void>("restore_data", { path }),
   openDataFolder: () => invoke<void>("open_data_folder"),
   openFeedback: () => invoke<void>("open_feedback"),
+  openProviderSite: (provider: string) => invoke<void>("open_provider_site", { provider }),
   diagnostics: () => invoke<string>("diagnostics"),
   deleteMessage: (id: number) => invoke<void>("delete_message", { id }),
   lessonProgress: () => invoke<LessonProgress[]>("lesson_progress"),
@@ -78,6 +79,7 @@ export const ipc = {
     invoke<void>("save_lesson_progress", { lessonId, step, completed }),
   saveLessonFix: (wrong: string, right: string, note: string) =>
     invoke<void>("save_lesson_fix", { wrong, right, note }),
+  saveAssistantMessage: (content: string) => invoke<number>("save_assistant_message", { content }),
   drillStats: () => invoke<DrillStats>("drill_stats"),
   progressStats: () => invoke<ProgressStats>("progress_stats"),
   drillNext: (includeFuture: boolean, excludeId: number | null = null) =>

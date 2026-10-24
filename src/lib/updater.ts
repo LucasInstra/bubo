@@ -14,6 +14,7 @@ export interface UpdaterState {
   version: string;
   build: number;
   notes: string;
+  notesPt: string;
   progress: number;
   error: string;
   checkNow: () => Promise<void>;
@@ -32,6 +33,7 @@ export function useUpdater(): UpdaterState {
   const [version, setVersion] = useState("");
   const [build, setBuild] = useState(0);
   const [notes, setNotes] = useState("");
+  const [notesPt, setNotesPt] = useState("");
   const [progress, setProgress] = useState(-1);
   const [error, setError] = useState("");
 
@@ -72,12 +74,15 @@ export function useUpdater(): UpdaterState {
         setVersion(offered.version);
         setBuild(readBuild(offered.rawJson));
         setNotes(offered.body ?? "");
+        const translated = offered.rawJson?.notes_pt;
+        setNotesPt(typeof translated === "string" ? translated : "");
         setProgress(-1);
         setStatus("available");
       } else {
         setVersion("");
         setBuild(0);
         setNotes("");
+        setNotesPt("");
         setProgress(-1);
         setStatus("current");
       }
@@ -160,6 +165,7 @@ export function useUpdater(): UpdaterState {
     version,
     build,
     notes,
+    notesPt,
     progress,
     error,
     checkNow,

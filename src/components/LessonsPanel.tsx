@@ -10,7 +10,7 @@ interface LessonsPanelProps {
   settings: Settings;
   onClose: () => void;
   onQueueChanged: () => void;
-  onStartPractice: (focus: string) => void;
+  onStartPractice: (lesson: Lesson) => void;
 }
 
 type Result =
@@ -108,7 +108,9 @@ export function LessonsPanel({
     if (!selected || !step) return;
     const typed = answer.trim();
     if (!typed) return;
-    const correct = step.exercise.answers.some((target) => isCorrectAnswer(typed, target));
+    const correct =
+      step.exercise.answers.some((target) => isCorrectAnswer(typed, target)) ||
+      (step.exercise.sentences ?? []).some((target) => isCorrectAnswer(typed, target));
     if (correct) {
       setResult({ kind: "correct" });
       return;
@@ -313,11 +315,7 @@ export function LessonsPanel({
               Se você errou algum exercício, ele foi para a fila de prática espaçada.
             </p>
             <div className="lesson-actions">
-              <button
-                type="button"
-                className="primary"
-                onClick={() => onStartPractice(selected.focus)}
-              >
+              <button type="button" className="primary" onClick={() => onStartPractice(selected)}>
                 Praticar na conversa
               </button>
               <button type="button" className="ghost" onClick={backToList}>

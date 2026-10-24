@@ -20,11 +20,12 @@ const tag = arg("tag", `v${JSON.parse(readFileSync(join(root, "package.json"), "
 const installer = arg("installer");
 const signaturePath = arg("signature");
 const notesPath = arg("notes");
+const notesPtPath = arg("notes-pt");
 const out = arg("out", "latest.json");
 const repo = arg("repo", process.env.GITHUB_REPOSITORY ?? "LucasInstra/bubo");
 
 if (!installer || !signaturePath) {
-  console.error("usage: node scripts/updater-json.mjs --installer=<exe> --signature=<sig> [--tag=v0.8.2] [--notes=<md>]");
+  console.error("usage: node scripts/updater-json.mjs --installer=<exe> --signature=<sig> [--tag=v0.8.2] [--notes=<md>] [--notes-pt=<md>]");
   process.exit(1);
 }
 
@@ -44,10 +45,15 @@ const notes =
     ? readFileSync(notesFile, "utf8").trim()
     : "See the assets below. Unsigned build; Windows SmartScreen may warn on first run.";
 
+const notesPtFile = notesPtPath ? join(root, notesPtPath) : null;
+const notesPt =
+  notesPtFile && existsSync(notesPtFile) ? readFileSync(notesPtFile, "utf8").trim() : "";
+
 const manifest = {
   version,
   build,
   notes,
+  ...(notesPt ? { notes_pt: notesPt } : {}),
   pub_date: new Date().toISOString(),
   platforms: {
     "windows-x86_64": {

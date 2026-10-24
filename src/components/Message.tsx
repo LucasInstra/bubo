@@ -142,10 +142,21 @@ export const Message = memo(function Message({
               bilingual &&
               hasBothLanguages &&
               (englishVisible || !challengeTranslation ? (
-                <div className="msg-english" lang="en">
-                  <span className="msg-english-label">EN</span>
-                  {bilingual.english}
-                </div>
+                <>
+                  <div className="msg-english" lang="en">
+                    <span className="msg-english-label">EN</span>
+                    {bilingual.english}
+                  </div>
+                  {englishVisible && (
+                    <button
+                      type="button"
+                      className="translation-reveal"
+                      onClick={() => setEnglishVisible(false)}
+                    >
+                      esconder inglês
+                    </button>
+                  )}
+                </>
               ) : !message.streaming ? (
                 <button
                   type="button"

@@ -33,6 +33,7 @@ interface SettingsPanelProps {
   updateVersion: string;
   updateBuild: number;
   updateNotes: string;
+  updateNotesPt: string;
   updateProgress: number;
   updateError: string;
   onCheckUpdate: () => Promise<void>;
@@ -99,6 +100,7 @@ export function SettingsPanel({
   updateVersion,
   updateBuild,
   updateNotes,
+  updateNotesPt,
   updateProgress,
   updateError,
   onCheckUpdate,
@@ -125,7 +127,10 @@ export function SettingsPanel({
   const bodyRef = useRef<HTMLDivElement>(null);
   const testRun = useRef(0);
 
-  const highlights = useMemo(() => releaseHighlights(updateNotes), [updateNotes]);
+  const highlights = useMemo(
+    () => releaseHighlights(updateNotesPt || updateNotes),
+    [updateNotesPt, updateNotes],
+  );
   const shipped = useMemo(() => currentHighlights(currentVersion), [currentVersion]);
   const runningVersion = currentVersion.split(" · ")[0];
 

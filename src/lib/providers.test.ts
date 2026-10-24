@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PROVIDERS, matchProvider } from "./providers";
+import { PROVIDERS, matchProvider, providerFromKey } from "./providers";
 
 describe("providers", () => {
   it("has unique ids and a base URL for every preset except custom", () => {
@@ -19,5 +19,14 @@ describe("providers", () => {
   it("falls back to custom for anything else", () => {
     expect(matchProvider("https://example.test/v1").id).toBe("custom");
     expect(matchProvider("").id).toBe("custom");
+  });
+
+  it("recognizes the main key prefixes", () => {
+    expect(providerFromKey("gsk_abc")?.id).toBe("groq");
+    expect(providerFromKey("sk-or-v1-abc")?.id).toBe("openrouter");
+    expect(providerFromKey("sk-proj-abc")?.id).toBe("openai");
+    expect(providerFromKey("  gsk_abc  ")?.id).toBe("groq");
+    expect(providerFromKey("hello")).toBeNull();
+    expect(providerFromKey("")).toBeNull();
   });
 });
