@@ -168,7 +168,7 @@ test("settings shows what changed in the running version", async ({ page }) => {
   await card.scrollIntoViewIfNeeded();
   await expect(card).toContainText(`Novidades da versão ${pkg.version}`);
   await expect(card.locator("li").first()).toBeVisible();
-  await expect(card).toContainText("bubo avisa sobre atualizações");
+  await expect(card).toContainText("Primeiro acesso guiado");
 });
 
 test("an available update shows its Portuguese highlights", async ({ page }) => {

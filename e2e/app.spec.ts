@@ -95,7 +95,7 @@ test("the mascot announces an available update", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=update");
 
   const speech = page.locator(".update-speech");
-  await expect(speech).toContainText("Saiu a versão 0.9.0.");
+  await expect(speech).toContainText("Saiu a versão 0.9.1.");
   await expect(speech.getByRole("button", { name: "Instalar e reiniciar" })).toBeVisible();
 
   await speech.getByRole("button", { name: "Depois" }).click();
