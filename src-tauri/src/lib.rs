@@ -1081,7 +1081,14 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--hidden"]),
         ))
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(
+            tauri_plugin_updater::Builder::new()
+                // The default comparator only accepts a greater version, which would
+                // hide fix builds of the running version. Accept the same version
+                // too and let the build number decide in the frontend.
+                .default_version_comparator(|current, release| release.version >= current)
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_process::init())

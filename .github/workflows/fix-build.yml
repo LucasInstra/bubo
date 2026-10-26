@@ -69,6 +69,18 @@ jobs:
           $installer = Get-ChildItem "src-tauri/target/release/bundle/nsis/bubo_*_x64-setup.exe" | Select-Object -First 1
           gh release upload "${{ inputs.tag }}" "bubo-setup.exe" $installer.FullName "$($installer.FullName).sig" "latest.json" --clobber
 
+      - name: Mark the release title with this build
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "${{ inputs.tag }}"
+          $version = $tag.TrimStart("v")
+          $source = Get-Content src/lib/build.ts -Raw
+          $build = [regex]::Match($source, 'BUILD_NUMBER\s*=\s*(\d+)').Groups[1].Value
+          $body = Get-Content "release-notes/${version}.md" -Raw
+          gh release edit $tag --title "bubo $tag build $build" --notes "Build $build of $tag.`n`n$body"
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
