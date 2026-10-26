@@ -1211,6 +1211,9 @@ export default function App() {
           <div className="focus-bar">
             <span className="focus-dot" aria-hidden="true" />
             Foco: {focusLabel(settings.studyFocus)}
+            {settings.replyLanguage !== "en" && (
+              <span className="focus-nudge">· tente usar em inglês</span>
+            )}
           </div>
         )}
 

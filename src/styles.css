@@ -3874,6 +3874,11 @@ button {
   background: var(--accent);
 }
 
+.focus-nudge {
+  color: var(--accent);
+  opacity: 0.85;
+}
+
 .progress-lessons {
   width: 100%;
   margin-top: 8px;
