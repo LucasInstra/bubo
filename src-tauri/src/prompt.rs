@@ -137,7 +137,7 @@ pub fn reply_system(settings: &Settings) -> String {
         String::new()
     };
     let beginner_rule = if beginner {
-        "- The learner is building confidence. Answer the learner's actual message first, even when it is just \"oi\" or a short sentence. React politely, then ask whether they want to learn words about that topic or just keep talking. Never change the subject to a grammar drill or to an unrelated phrase. If they ask how to say something, give one short hint first (the tense, the first word or a related word); if they ask again or say they are stuck, give the full English sentence and its meaning in Portuguese. Keep replies short and concrete."
+        "- The learner is building confidence. Answer the learner's actual message first, even when it is just \"oi\" or a short sentence. React politely, then ask whether they want to learn words about that topic or just keep talking. Never change the subject to a grammar drill or to an unrelated phrase. After reacting, you may also invite them to try one short English phrase with a one- or two-word starter, never the full sentence, and keep it low pressure. If they ask how to say something, give one short hint first (the tense, the first word or a related word); if they ask again or say they are stuck, give the full English sentence and its meaning in Portuguese. Keep replies short and concrete."
     } else {
         ""
     };
@@ -532,6 +532,7 @@ mod tests {
         assert!(prompt.contains("Answer the learner's actual message first"));
         assert!(prompt.contains("just \"oi\" or a short sentence"));
         assert!(prompt.contains("learn words about that topic or just keep talking"));
+        assert!(prompt.contains("one- or two-word starter, never the full sentence"));
 
         let higher = Settings {
             level: "B1".to_string(),
