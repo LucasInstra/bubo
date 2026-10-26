@@ -141,13 +141,18 @@ pub fn reply_system(settings: &Settings) -> String {
     } else {
         ""
     };
+    let coaching_rule = if beginner {
+        ""
+    } else {
+        "- The learner can handle English. When they write in Portuguese, answer what they meant, then invite them to say the same idea in English. Give one concrete idea and a sentence starter of at most three words, never the complete sentence. Example: \"Agora tenta em inglês: o que você jogou? Comece com 'I played...'.\" If they write in English, react and ask one concrete follow-up in English. Do not just translate their message and stop."
+    };
     let portuguese_note = if portuguese || bilingual {
         "- The learner may write in Portuguese. Answer what they meant first, then keep the conversation going in Portuguese and, when it helps, show the English sentence they could use next time with its meaning in Portuguese. Never treat their Portuguese as an English mistake."
     } else {
         ""
     };
     let help = if bilingual {
-        "- Bilingual help is ON. Write the reply in Brazilian Portuguese first, like a friend texting. Then add one final line starting with \"EN:\" containing the English version of exactly what you said. Never put the English first. Do not add new advice, notes or commentary in that line. Example: \"Oi, tudo bem? Eu estava aqui pensando na semana.\nEN: Hey, how are you? I was here thinking about the week.\""
+        "- Bilingual help is ON. Write the reply in Brazilian Portuguese first, like a friend texting. Then add one final line starting with \"EN:\" containing the English version of exactly what you said. Never put the English first. Do not put the full English translation inside the Portuguese paragraph; keep the body Portuguese, except for a short starter like 'I played...' when inviting the learner to try. Do not add new advice, notes or commentary in the EN line. Example: \"Oi, tudo bem? Eu estava aqui pensando na semana.\nEN: Hey, how are you? I was here thinking about the week.\""
     } else {
         ""
     };
@@ -211,6 +216,7 @@ This is a chat, not a lesson. How you talk:
 13. If they ask for a face, a mood or a reaction, answer with one short playful line and let the popup do the acting. Never say you cannot show expressions.
 14. This chat is for conversation, not production drills. Never ask the learner to say, repeat, translate or produce an English sentence. Do not ask "como você diria...?" or "tente dizer...". The lessons and practice cards handle production. Do not volunteer a random English phrase or translation the learner did not ask about, and never put the target English sentence inside a question.
 {beginner_rule}
+{coaching_rule}
 {portuguese_note}
 {help}
 
@@ -222,6 +228,7 @@ Style examples, do not copy them word for word:
         focus = focus,
         language_rule = language_rule,
         beginner_rule = beginner_rule,
+        coaching_rule = coaching_rule,
         portuguese_note = portuguese_note,
         help = help,
         examples = examples,
@@ -441,6 +448,9 @@ mod tests {
         assert!(prompt.contains("\"EN:\""));
         assert!(prompt.contains("Never put the English first"));
         assert!(prompt.contains("EN: Hey."));
+        assert!(prompt
+            .contains("Do not put the full English translation inside the Portuguese paragraph"));
+        assert!(prompt.contains("short starter"));
         assert!(!prompt.contains("PT:"));
     }
 
@@ -492,6 +502,24 @@ mod tests {
             assert!(prompt.contains("never put the target English sentence inside a question"));
             assert!(prompt.contains("Do not volunteer a random English phrase"));
         }
+    }
+
+    #[test]
+    fn higher_levels_get_an_english_nudge_without_the_full_answer() {
+        let advanced = Settings {
+            level: "B1".to_string(),
+            ..Settings::default()
+        };
+        let prompt = reply_system(&advanced);
+        assert!(prompt.contains("invite them to say the same idea in English"));
+        assert!(prompt.contains("at most three words, never the complete sentence"));
+        assert!(prompt.contains("Do not just translate their message and stop"));
+
+        let beginner = Settings {
+            level: "A1".to_string(),
+            ..Settings::default()
+        };
+        assert!(!reply_system(&beginner).contains("invite them to say the same idea in English"));
     }
 
     #[test]
