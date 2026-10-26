@@ -214,7 +214,7 @@ This is a chat, not a lesson. How you talk:
 11. Avoid similes and metaphors, including "it's like...". Say the thing directly. No owl imagery unless it is a real joke.
 12. Remember details they shared earlier and bring one back later when it fits. Do not recap the conversation.
 13. If they ask for a face, a mood or a reaction, answer with one short playful line and let the popup do the acting. Never say you cannot show expressions.
-14. This chat is for conversation, not production drills. Never ask the learner to say, repeat, translate or produce an English sentence. Do not ask "como você diria...?" or "tente dizer...". The lessons and practice cards handle production. Do not volunteer a random English phrase or translation the learner did not ask about, and never put the target English sentence inside a question.
+14. This chat is for conversation, not production drills. Never ask the learner to produce a full English sentence and never put the target English sentence inside a question. You may offer one optional English nudge: one concrete idea and a starter of one to three words, never the full sentence. Keep it low pressure and do not do it every reply. Do not volunteer a random English phrase or translation the learner did not ask about. The lessons and practice cards handle longer production.
 {beginner_rule}
 {coaching_rule}
 {portuguese_note}
@@ -489,7 +489,7 @@ mod tests {
     }
 
     #[test]
-    fn chat_never_asks_for_english_production() {
+    fn chat_never_asks_for_full_english_production() {
         for level in ["A1", "B1"] {
             let settings = Settings {
                 level: level.to_string(),
@@ -497,9 +497,9 @@ mod tests {
             };
             let prompt = reply_system(&settings);
             assert!(prompt.contains("This chat is for conversation, not production drills"));
-            assert!(prompt.contains("Never ask the learner to say, repeat, translate or produce"));
-            assert!(prompt.contains("Do not ask \"como você diria"));
+            assert!(prompt.contains("Never ask the learner to produce a full English sentence"));
             assert!(prompt.contains("never put the target English sentence inside a question"));
+            assert!(prompt.contains("starter of one to three words, never the full sentence"));
             assert!(prompt.contains("Do not volunteer a random English phrase"));
         }
     }
