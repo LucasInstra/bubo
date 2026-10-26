@@ -137,7 +137,7 @@ pub fn reply_system(settings: &Settings) -> String {
         String::new()
     };
     let beginner_rule = if beginner {
-        "- The learner is building confidence. When they ask for a word, a translation or how to say something, give one short hint first (the first word, the tense or a related word) and ask them to try. Only give the full answer if they ask again or say they are stuck. When you introduce a new English phrase, invite them to guess the meaning before you translate it. Never ask the learner to repeat or say back a phrase you just showed them: they can already read it, so the question would make no sense. When you do ask the learner to produce an English sentence or word, the question must not contain that English answer. Keep the target phrase hidden. State the meaning in Portuguese and give one hint that is not the answer. If a hint would reveal the phrase, make it smaller (the tense, the first word or a related word). Good: \"Como você diria 'eu joguei muitos jogos' em inglês? Dica: use o passado de play e uma expressão para 'muitos'.\" Bad: \"Você já tentou dizer 'Can I have a coffee?'? Tente agora.\" Never quote the English sentence and then ask them to guess a word inside it. Always answer what the learner actually sent before anything else. If the message is a greeting, a very short answer or a change of subject, react to it politely and then ask whether they want to learn the words for that topic or just talk about it. Never ignore the message to push a grammar drill or an unrelated subject."
+        "- This is a conversation, not a lesson. Answer the learner's actual message first, even when it is just \"oi\" or a short sentence. React politely, then ask whether they want to learn words about that topic or just keep talking. Never change the subject to a grammar drill or to an unrelated phrase. Never ask the learner to say, repeat, translate or produce an English sentence in the chat. Do not ask \"como você diria...?\" or \"tente dizer...\". The lessons and practice cards handle production. If they ask how to say something, give one short hint first (the tense, the first word or a related word). If they ask again or say they are stuck, give the full English sentence and its meaning in Portuguese. Do not volunteer random English phrases, and never put the target English sentence inside a question."
     } else {
         ""
     };
@@ -461,14 +461,14 @@ mod tests {
     }
 
     #[test]
-    fn beginner_replies_ask_for_a_guess_before_the_answer() {
+    fn beginner_replies_give_a_hint_before_the_answer() {
         let beginner = Settings {
             level: "A1".to_string(),
             ..Settings::default()
         };
         let prompt = reply_system(&beginner);
         assert!(prompt.contains("give one short hint first"));
-        assert!(prompt.contains("invite them to guess the meaning"));
+        assert!(prompt.contains("If they ask again or say they are stuck"));
 
         let higher = Settings {
             level: "B1".to_string(),
@@ -478,23 +478,22 @@ mod tests {
     }
 
     #[test]
-    fn beginner_challenges_never_include_the_english_answer() {
+    fn beginner_chat_never_asks_for_english_production() {
         let beginner = Settings {
             level: "A1".to_string(),
             ..Settings::default()
         };
         let prompt = reply_system(&beginner);
-        assert!(prompt.contains("must not contain that English answer"));
-        assert!(prompt.contains("Keep the target phrase hidden"));
-        assert!(prompt.contains("Never quote the English sentence"));
-        assert!(prompt.contains("Never ask the learner to repeat"));
-        assert!(prompt.contains("the question would make no sense"));
+        assert!(prompt.contains("Never ask the learner to say, repeat, translate or produce"));
+        assert!(prompt.contains("Do not ask \"como você diria"));
+        assert!(prompt.contains("never put the target English sentence inside a question"));
+        assert!(prompt.contains("Do not volunteer random English phrases"));
 
         let higher = Settings {
             level: "B1".to_string(),
             ..Settings::default()
         };
-        assert!(!reply_system(&higher).contains("must not contain that English answer"));
+        assert!(!reply_system(&higher).contains("Never ask the learner to say, repeat"));
     }
 
     #[test]
@@ -504,15 +503,15 @@ mod tests {
             ..Settings::default()
         };
         let prompt = reply_system(&beginner);
-        assert!(prompt.contains("Always answer what the learner actually sent"));
-        assert!(prompt.contains("greeting, a very short answer or a change of subject"));
-        assert!(prompt.contains("learn the words for that topic or just talk about it"));
+        assert!(prompt.contains("Answer the learner's actual message first"));
+        assert!(prompt.contains("just \"oi\" or a short sentence"));
+        assert!(prompt.contains("learn words about that topic or just keep talking"));
 
         let higher = Settings {
             level: "B1".to_string(),
             ..Settings::default()
         };
-        assert!(!reply_system(&higher).contains("Always answer what the learner actually sent"));
+        assert!(!reply_system(&higher).contains("Answer the learner's actual message first"));
     }
 
     #[test]

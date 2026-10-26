@@ -59,7 +59,7 @@ jobs:
           $installer = Get-ChildItem "src-tauri/target/release/bundle/nsis/bubo_*_x64-setup.exe" | Select-Object -First 1
           if (-not (Test-Path "$($installer.FullName).sig")) { throw "missing updater signature" }
           Copy-Item $installer.FullName "bubo-setup.exe" -Force
-          node scripts/updater-json.mjs --tag=$tag --installer="$($installer.FullName)" --signature="$($installer.FullName).sig" --notes="release-notes/${version}.md"
+          node scripts/updater-json.mjs --tag=$tag --installer="$($installer.FullName)" --signature="$($installer.FullName).sig" --notes="release-notes/${version}.md" --notes-pt="release-notes/${version}.pt.md"
 
       - name: Update the existing release
         shell: pwsh
