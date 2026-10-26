@@ -137,7 +137,7 @@ pub fn reply_system(settings: &Settings) -> String {
         String::new()
     };
     let beginner_rule = if beginner {
-        "- This is a conversation, not a lesson. Answer the learner's actual message first, even when it is just \"oi\" or a short sentence. React politely, then ask whether they want to learn words about that topic or just keep talking. Never change the subject to a grammar drill or to an unrelated phrase. Never ask the learner to say, repeat, translate or produce an English sentence in the chat. Do not ask \"como você diria...?\" or \"tente dizer...\". The lessons and practice cards handle production. If they ask how to say something, give one short hint first (the tense, the first word or a related word). If they ask again or say they are stuck, give the full English sentence and its meaning in Portuguese. Do not volunteer random English phrases, and never put the target English sentence inside a question."
+        "- The learner is building confidence. Answer the learner's actual message first, even when it is just \"oi\" or a short sentence. React politely, then ask whether they want to learn words about that topic or just keep talking. Never change the subject to a grammar drill or to an unrelated phrase. If they ask how to say something, give one short hint first (the tense, the first word or a related word); if they ask again or say they are stuck, give the full English sentence and its meaning in Portuguese. Keep replies short and concrete."
     } else {
         ""
     };
@@ -209,6 +209,7 @@ This is a chat, not a lesson. How you talk:
 11. Avoid similes and metaphors, including "it's like...". Say the thing directly. No owl imagery unless it is a real joke.
 12. Remember details they shared earlier and bring one back later when it fits. Do not recap the conversation.
 13. If they ask for a face, a mood or a reaction, answer with one short playful line and let the popup do the acting. Never say you cannot show expressions.
+14. This chat is for conversation, not production drills. Never ask the learner to say, repeat, translate or produce an English sentence. Do not ask "como você diria...?" or "tente dizer...". The lessons and practice cards handle production. Do not volunteer a random English phrase or translation the learner did not ask about, and never put the target English sentence inside a question.
 {beginner_rule}
 {portuguese_note}
 {help}
@@ -468,7 +469,7 @@ mod tests {
         };
         let prompt = reply_system(&beginner);
         assert!(prompt.contains("give one short hint first"));
-        assert!(prompt.contains("If they ask again or say they are stuck"));
+        assert!(prompt.contains("if they ask again or say they are stuck"));
 
         let higher = Settings {
             level: "B1".to_string(),
@@ -478,22 +479,19 @@ mod tests {
     }
 
     #[test]
-    fn beginner_chat_never_asks_for_english_production() {
-        let beginner = Settings {
-            level: "A1".to_string(),
-            ..Settings::default()
-        };
-        let prompt = reply_system(&beginner);
-        assert!(prompt.contains("Never ask the learner to say, repeat, translate or produce"));
-        assert!(prompt.contains("Do not ask \"como você diria"));
-        assert!(prompt.contains("never put the target English sentence inside a question"));
-        assert!(prompt.contains("Do not volunteer random English phrases"));
-
-        let higher = Settings {
-            level: "B1".to_string(),
-            ..Settings::default()
-        };
-        assert!(!reply_system(&higher).contains("Never ask the learner to say, repeat"));
+    fn chat_never_asks_for_english_production() {
+        for level in ["A1", "B1"] {
+            let settings = Settings {
+                level: level.to_string(),
+                ..Settings::default()
+            };
+            let prompt = reply_system(&settings);
+            assert!(prompt.contains("This chat is for conversation, not production drills"));
+            assert!(prompt.contains("Never ask the learner to say, repeat, translate or produce"));
+            assert!(prompt.contains("Do not ask \"como você diria"));
+            assert!(prompt.contains("never put the target English sentence inside a question"));
+            assert!(prompt.contains("Do not volunteer a random English phrase"));
+        }
     }
 
     #[test]
