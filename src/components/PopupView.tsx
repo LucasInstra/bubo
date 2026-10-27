@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { splitBilingual, splitTranslation, stripLegacyFixes } from "../lib/format";
+import { splitReply, stripLegacyFixes } from "../lib/format";
 import type { Mood, Msg, OrbState, Settings } from "../lib/types";
 import { Composer } from "./Composer";
 import { Mascot } from "./Mascot";
@@ -41,7 +41,7 @@ export function PopupView({
   const clickTimer = useRef<number | null>(null);
   const frame = useRef<number | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [englishFor, setEnglishFor] = useState<string | null>(null);
+  const [translationFor, setTranslationFor] = useState<string | null>(null);
   const motion = useRef({
     active: false,
     x: 0,
@@ -206,11 +206,11 @@ export function PopupView({
   };
 
   const replyContent = lastAssistant ? stripLegacyFixes(lastAssistant.content) : "";
-  const bilingual = settings.replyLanguage === "bilingual" ? splitBilingual(replyContent) : null;
-  const reply = splitTranslation(replyContent);
-  const primary = bilingual ? bilingual.portuguese || bilingual.english : reply.body;
-  const english = bilingual?.portuguese ? bilingual.english : "";
-  const englishShown = englishFor === lastAssistant?.id;
+  const reply = splitReply(replyContent, settings.replyLanguage);
+  const primary = reply.primary;
+  const translation = reply.translation;
+  const translationLang = reply.translationLang;
+  const translationShown = translationFor === lastAssistant?.id;
   const tail = (
     <svg className="popup-tail" viewBox="0 0 20 14" aria-hidden="true">
       <path d="M2 0 H18 V4 L10 14 L2 4 Z" fill="rgba(23, 19, 34, 0.97)" />
@@ -232,39 +232,37 @@ export function PopupView({
             <div className={`popup-bubble assistant ${lastAssistant.error ? "error" : ""}`}>
               <div className="popup-bubble-text">
                 {primary}
-                {english && (englishShown || !settings.translationChallenge) && (
+                {translation && (translationShown || !settings.translationChallenge) && (
                   <>
-                    <span className="popup-english" lang="en">
-                      {english}
+                    <span
+                      className={translationLang === "en" ? "popup-english" : "popup-translation"}
+                      lang={translationLang === "en" ? "en" : "pt-BR"}
+                    >
+                      {translation}
                     </span>
-                    {englishShown && (
+                    {translationShown && (
                       <button
                         type="button"
                         className="popup-reveal"
-                        onClick={() => setEnglishFor(null)}
+                        onClick={() => setTranslationFor(null)}
                       >
-                        esconder inglês
+                        {translationLang === "en" ? "esconder inglês" : "esconder tradução"}
                       </button>
                     )}
                   </>
                 )}
-                {english &&
-                  !englishShown &&
+                {translation &&
+                  !translationShown &&
                   settings.translationChallenge &&
                   !lastAssistant.streaming && (
                     <button
                       type="button"
                       className="popup-reveal"
-                      onClick={() => setEnglishFor(lastAssistant.id)}
+                      onClick={() => setTranslationFor(lastAssistant.id)}
                     >
-                      ver em inglês
+                      {translationLang === "en" ? "ver em inglês" : "ver tradução"}
                     </button>
                   )}
-                {!bilingual && reply.translation && (
-                  <span className="popup-translation" lang="pt-BR">
-                    {reply.translation}
-                  </span>
-                )}
                 {lastAssistant.streaming && <span className="caret" />}
               </div>
               {tail}

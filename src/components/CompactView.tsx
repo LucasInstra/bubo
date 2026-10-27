@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { splitBilingual, splitTranslation, stripLegacyFixes } from "../lib/format";
+import { splitReply, stripLegacyFixes } from "../lib/format";
 import type { Mood, Msg, OrbState, Settings } from "../lib/types";
 import { Composer } from "./Composer";
 import { Mascot } from "./Mascot";
@@ -34,8 +34,7 @@ export function CompactView({
   onSend,
   onStop,
 }: CompactViewProps) {
-  const [englishOpen, setEnglishOpen] = useState<Record<string, boolean>>({});
-  const bilingualMode = settings.replyLanguage === "bilingual";
+  const [translationsOpen, setTranslationsOpen] = useState<Record<string, boolean>>({});
   const lastUser = [...messages]
     .reverse()
     .find((message) => message.role === "user" && message.content.trim());
@@ -150,56 +149,52 @@ export function CompactView({
           {exchange.map((message) => {
             const content = stripLegacyFixes(message.content);
             const assistant = message.role === "assistant";
-            const bilingual = assistant && bilingualMode ? splitBilingual(content) : null;
-            const legacy =
-              assistant && !bilingualMode
-                ? splitTranslation(content)
-                : { body: content, translation: "" };
-            const primary = bilingual ? bilingual.portuguese || bilingual.english : legacy.body;
-            const english = bilingual?.portuguese ? bilingual.english : "";
-            const englishShown =
-              Boolean(english) && (!settings.translationChallenge || englishOpen[message.id]);
+            const reply = assistant ? splitReply(content, settings.replyLanguage) : null;
+            const primary = reply ? reply.primary : content;
+            const translation = reply?.translation ?? "";
+            const translationLang = reply?.translationLang ?? null;
+            const open = Boolean(translationsOpen[message.id]);
+            const translationShown =
+              Boolean(translation) && (!settings.translationChallenge || open);
             return (
               <div
-                className={`compact-bubble ${message.role} ${
-                  english || legacy.translation ? "has-translation" : ""
-                }`}
+                className={`compact-bubble ${message.role} ${translation ? "has-translation" : ""}`}
                 key={message.id}
               >
                 {primary}
-                {english && englishShown && (
+                {translation && translationShown && (
                   <>
-                    <span className="compact-english" lang="en">
-                      {english}
+                    <span
+                      className={
+                        translationLang === "en" ? "compact-english" : "compact-translation"
+                      }
+                      lang={translationLang === "en" ? "en" : "pt-BR"}
+                    >
+                      {translation}
                     </span>
-                    {settings.translationChallenge && englishOpen[message.id] && (
+                    {settings.translationChallenge && open && (
                       <button
                         type="button"
                         className="compact-reveal"
                         onClick={() =>
-                          setEnglishOpen((current) => ({ ...current, [message.id]: false }))
+                          setTranslationsOpen((current) => ({ ...current, [message.id]: false }))
                         }
                       >
-                        esconder inglês
+                        {translationLang === "en" ? "esconder inglês" : "esconder tradução"}
                       </button>
                     )}
                   </>
                 )}
-                {english && !englishShown && !message.streaming && (
+                {translation && !translationShown && !message.streaming && (
                   <button
                     type="button"
                     className="compact-reveal"
                     onClick={() =>
-                      setEnglishOpen((current) => ({ ...current, [message.id]: true }))
+                      setTranslationsOpen((current) => ({ ...current, [message.id]: true }))
                     }
                   >
-                    ver em inglês
+                    {translationLang === "en" ? "ver em inglês" : "ver tradução"}
                   </button>
-                )}
-                {!bilingualMode && legacy.translation && (
-                  <span className="compact-translation" lang="pt-BR">
-                    {legacy.translation}
-                  </span>
                 )}
                 {message.streaming && <span className="caret" />}
               </div>

@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { splitBilingual, stripLegacyFixes, splitTranslation } from "../lib/format";
+import { splitReply, stripLegacyFixes } from "../lib/format";
 import { ipc } from "../lib/ipc";
 import type { Fix, Msg } from "../lib/types";
 
@@ -29,15 +29,12 @@ export const Message = memo(function Message({
 }: MessageProps) {
   const fullBody = stripLegacyFixes(message.content);
   const isUser = message.role === "user";
-  const split = isUser ? { body: fullBody, translation: "" } : splitTranslation(fullBody);
-  const body = split.body;
-  const bilingualMode = !isUser && replyLanguage === "bilingual";
-  const bilingual = bilingualMode ? splitBilingual(fullBody) : null;
-  const mainBody = bilingual ? bilingual.portuguese || bilingual.english : body;
-  const hasBothLanguages = Boolean(bilingual?.portuguese && bilingual?.english);
+  const reply = isUser ? null : splitReply(fullBody, replyLanguage);
+  const body = reply ? reply.primary : fullBody;
+  const translation = reply?.translation ?? "";
+  const translationLang = reply?.translationLang ?? null;
   const fixes = message.fixes ?? [];
   const [translationVisible, setTranslationVisible] = useState(false);
-  const [englishVisible, setEnglishVisible] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [confirmingFix, setConfirmingFix] = useState<string | null>(null);
   const [busyFix, setBusyFix] = useState<string | null>(null);
@@ -129,31 +126,35 @@ export const Message = memo(function Message({
           body
         ) : (
           <>
-            <div className="markdown" lang={bilingual?.portuguese ? "pt-BR" : undefined}>
+            <div className="markdown" lang={reply?.primaryLang === "pt" ? "pt-BR" : undefined}>
               <ReactMarkdown
                 components={{
                   a: ({ children }) => <span className="md-link">{children}</span>,
                 }}
               >
-                {mainBody}
+                {body}
               </ReactMarkdown>
             </div>
-            {bilingualMode &&
-              bilingual &&
-              hasBothLanguages &&
-              (englishVisible || !challengeTranslation ? (
+            {translation &&
+              (!challengeTranslation || translationVisible ? (
                 <>
-                  <div className="msg-english" lang="en">
-                    <span className="msg-english-label">EN</span>
-                    {bilingual.english}
-                  </div>
-                  {englishVisible && (
+                  {translationLang === "en" ? (
+                    <div className="msg-english" lang="en">
+                      <span className="msg-english-label">EN</span>
+                      {translation}
+                    </div>
+                  ) : (
+                    <div className="msg-translation" lang="pt-BR">
+                      {translation}
+                    </div>
+                  )}
+                  {translationVisible && (
                     <button
                       type="button"
                       className="translation-reveal"
-                      onClick={() => setEnglishVisible(false)}
+                      onClick={() => setTranslationVisible(false)}
                     >
-                      esconder inglês
+                      {translationLang === "en" ? "esconder inglês" : "esconder tradução"}
                     </button>
                   )}
                 </>
@@ -161,26 +162,10 @@ export const Message = memo(function Message({
                 <button
                   type="button"
                   className="translation-reveal"
-                  title="Ver a versão original em inglês"
-                  onClick={() => setEnglishVisible(true)}
-                >
-                  ver em inglês
-                </button>
-              ) : null)}
-            {!bilingualMode &&
-              split.translation &&
-              (!challengeTranslation || translationVisible ? (
-                <div className="msg-translation" lang="pt-BR">
-                  {split.translation}
-                </div>
-              ) : !message.streaming ? (
-                <button
-                  type="button"
-                  className="translation-reveal"
                   title="Tente entender primeiro"
                   onClick={() => setTranslationVisible(true)}
                 >
-                  ver tradução
+                  {translationLang === "en" ? "ver em inglês" : "ver tradução"}
                 </button>
               ) : null)}
           </>

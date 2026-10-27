@@ -28,13 +28,16 @@
       import { createRoot } from "react-dom/client";
       import App from "/src/App.tsx";
       import { Drill } from "/src/components/Drill.tsx";
+      import { PopupView } from "/src/components/PopupView.tsx";
       import { DEFAULT_SETTINGS } from "/src/lib/types.ts";
       import pkg from "../package.json";
 
       const params = new URLSearchParams(location.search);
       const mode = params.get("case") ?? "app";
-      const compact = mode === "compact" || mode === "compact-bilingual";
-      const popup = mode === "popup";
+      const compact =
+        mode === "compact" || mode === "compact-bilingual" || mode === "compact-switched";
+      const popup = mode === "popup" || mode === "popup-reply";
+      const switched = mode === "switched" || mode === "compact-switched";
       const bilingual =
         mode === "bilingual" || mode === "bilingual-a1" || mode === "compact-bilingual";
       const level =
@@ -85,6 +88,26 @@
             "Isso parece um bom fim de semana. A água estava quente?\nEN: That sounds like a good weekend. Was the water warm?",
           fixes: null,
           createdAt: 3,
+        },
+      ];
+
+      const switchedStored = [
+        ...stored,
+        {
+          id: 3,
+          role: "assistant",
+          content:
+            "Isso parece um bom fim de semana. A água estava quente?\nEN: That sounds like a good weekend. Was the water warm?",
+          fixes: null,
+          createdAt: 3,
+        },
+        {
+          id: 4,
+          role: "assistant",
+          content:
+            "That sounds like a good weekend.\nPT: Isso parece um bom fim de semana.",
+          fixes: null,
+          createdAt: 4,
         },
       ];
 
@@ -139,7 +162,8 @@
                 },
               }
             : null,
-        history: () => (mode === "empty" ? [] : bilingual ? bilingualStored : stored),
+        history: () =>
+          mode === "empty" ? [] : bilingual ? bilingualStored : switched ? switchedStored : stored,
         current_session: () => 1,
         lesson_progress: () => lessonProgress,
         save_lesson_progress: ({ lessonId, step, completed }) => {
@@ -255,6 +279,20 @@
       const root = createRoot(rootElement);
       if (mode === "practice") {
         root.render(React.createElement(Drill, { onClose: () => {} }));
+      } else if (mode === "popup-reply") {
+        root.render(
+          React.createElement(PopupView, {
+            settings,
+            messages: switchedStored,
+            status: "idle",
+            mood: "happy",
+            stage: "reply",
+            onShowInput: () => {},
+            onSend: () => false,
+            onStop: () => {},
+            onOpenChat: () => {},
+          }),
+        );
       } else {
         root.render(React.createElement(App));
       }
