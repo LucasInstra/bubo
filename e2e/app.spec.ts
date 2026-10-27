@@ -1,4 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
+import pkg from "../package.json" with { type: "json" };
+
+const nextVersion = (() => {
+  const [major, minor] = pkg.version.split(".");
+  return `${major}.${Number(minor) + 1}.0`;
+})();
 
 test("compact bilingual replies start in Portuguese and reveal the English", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=compact-bilingual");
@@ -95,7 +101,7 @@ test("the mascot announces an available update", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=update");
 
   const speech = page.locator(".update-speech");
-  await expect(speech).toContainText("Saiu a versão 0.9.2.");
+  await expect(speech).toContainText(`Saiu a versão ${nextVersion}.`);
   await expect(speech.getByRole("button", { name: "Instalar e reiniciar" })).toBeVisible();
 
   await speech.getByRole("button", { name: "Depois" }).click();

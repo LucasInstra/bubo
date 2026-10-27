@@ -34,6 +34,10 @@
 
       const params = new URLSearchParams(location.search);
       const mode = params.get("case") ?? "app";
+      const nextVersion = (() => {
+        const [major, minor] = pkg.version.split(".");
+        return `${major}.${Number(minor) + 1}.0`;
+      })();
       const compact =
         mode === "compact" ||
         mode === "compact-bilingual" ||
@@ -154,16 +158,18 @@
           return null;
         },
         "plugin:app|version": () => pkg.version,
+        // Always offer one minor above the running version, so the update
+        // surfaces stay testable across releases.
         "plugin:updater|check": () =>
           updateAvailable
             ? {
                 rid: 1,
                 currentVersion: pkg.version,
-                version: "0.9.2",
+                version: nextVersion,
                 date: new Date().toISOString(),
                 body: "## What's new\n\n- The mascot speaks up.",
                 rawJson: {
-                  version: "0.9.2",
+                  version: nextVersion,
                   build: 1,
                   notes_pt: "## Novidades\n\n- **Fala do mascote**: o bubo avisa quando há uma versão nova.",
                 },
