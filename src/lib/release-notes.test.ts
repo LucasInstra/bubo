@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { currentHighlights, releaseNotes } from "./release-notes";
+import {
+  buildHighlights,
+  buildNotes,
+  currentHighlights,
+  hasBuildNotes,
+  releaseNotes,
+} from "./release-notes";
 
 describe("releaseNotes", () => {
   it("prefers the Portuguese notes for the app", () => {
@@ -34,5 +40,25 @@ describe("releaseNotes", () => {
     const highlights = currentHighlights("0.9.1");
     expect(highlights.length).toBeGreaterThan(1);
     expect(highlights[0].label).toBe("Atualizações de build");
+  });
+
+  it("reads the notes for one fix build", () => {
+    expect(buildNotes("0.9.1", 6)).toContain("## Novidades");
+    expect(buildNotes("0.9.1", 6)).toContain("Avaliação");
+    expect(buildNotes("0.9.1", 6, "en")).toContain("## What's new");
+    expect(buildNotes("0.9.1", 6, "en")).toContain("Answer checking");
+  });
+
+  it("uses build notes for the running build", () => {
+    const highlights = buildHighlights("0.9.1", 6);
+    expect(highlights.length).toBeGreaterThan(1);
+    expect(highlights[0].label).toBe("Avaliação");
+    expect(hasBuildNotes("0.9.1", 6)).toBe(true);
+  });
+
+  it("falls back to version notes for a build without its own notes", () => {
+    expect(hasBuildNotes("0.9.1", 5)).toBe(false);
+    expect(buildHighlights("0.9.1", 5)[0].label).toBe("Atualizações de build");
+    expect(buildHighlights("0.9.1", 1)[0].label).toBe("Atualizações de build");
   });
 });

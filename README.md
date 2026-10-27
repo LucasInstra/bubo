@@ -111,7 +111,7 @@ The first updater-enabled release must be installed by hand. After that, later v
 
 ### Fix builds
 
-A single fix does not get a new version or tag. Bump `BUILD_NUMBER` in `src/lib/build.ts` by hand, commit it, and run the **Fix build** workflow from Actions with the current release tag. It builds the NSIS installer with the same version, replaces the stable `bubo-setup.exe` asset, the versioned installer and its signature, and regenerates `latest.json` with the new build number, so installations on that version update from inside the app. The release notes stay as they are; mention the fix there if it is worth telling the user.
+A single fix does not get a new version or tag. Bump `BUILD_NUMBER` in `src/lib/build.ts` by hand, add `release-notes/<version>.build<N>.md` and `.pt.md` describing exactly what changed in that build, commit both, and run the **Fix build** workflow from Actions with the current release tag. It builds the NSIS installer with the same version, replaces the stable `bubo-setup.exe` asset, the versioned installer and its signature, and regenerates `latest.json` from the build notes, so the update card and the public release body say what changed in that build. The workflow refuses to run when either build-notes file is missing.
 
 ## Keyboard
 

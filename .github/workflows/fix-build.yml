@@ -6,7 +6,7 @@ on:
       tag:
         description: Existing release tag to update
         required: true
-        default: v0.8.2
+        default: v0.9.1
 
 permissions:
   contents: write
@@ -44,6 +44,10 @@ jobs:
           $build = [regex]::Match($source, 'BUILD_NUMBER\s*=\s*(\d+)').Groups[1].Value
           Write-Host "bubo $version build $build into $tag"
           if ($version -ne $tag.TrimStart("v")) { throw "package.json is $version, the tag is $tag" }
+          $notes = "release-notes/${version}.build${build}.md"
+          $notesPt = "release-notes/${version}.build${build}.pt.md"
+          if (-not (Test-Path $notes)) { throw "missing $notes for build $build" }
+          if (-not (Test-Path $notesPt)) { throw "missing $notesPt for build $build" }
 
       - name: Build installer
         env:
@@ -56,10 +60,14 @@ jobs:
         run: |
           $tag = "${{ inputs.tag }}"
           $version = $tag.TrimStart("v")
+          $source = Get-Content src/lib/build.ts -Raw
+          $build = [regex]::Match($source, 'BUILD_NUMBER\s*=\s*(\d+)').Groups[1].Value
+          $notes = "release-notes/${version}.build${build}.md"
+          $notesPt = "release-notes/${version}.build${build}.pt.md"
           $installer = Get-ChildItem "src-tauri/target/release/bundle/nsis/bubo_*_x64-setup.exe" | Select-Object -First 1
           if (-not (Test-Path "$($installer.FullName).sig")) { throw "missing updater signature" }
           Copy-Item $installer.FullName "bubo-setup.exe" -Force
-          node scripts/updater-json.mjs --tag=$tag --installer="$($installer.FullName)" --signature="$($installer.FullName).sig" --notes="release-notes/${version}.md" --notes-pt="release-notes/${version}.pt.md"
+          node scripts/updater-json.mjs --tag=$tag --installer="$($installer.FullName)" --signature="$($installer.FullName).sig" --notes="$notes" --notes-pt="$notesPt"
 
       - name: Update the existing release
         shell: pwsh
@@ -78,8 +86,9 @@ jobs:
           $version = $tag.TrimStart("v")
           $source = Get-Content src/lib/build.ts -Raw
           $build = [regex]::Match($source, 'BUILD_NUMBER\s*=\s*(\d+)').Groups[1].Value
-          $body = Get-Content "release-notes/${version}.md" -Raw
-          $body = $body -replace 'build \*\*\d+\*\*', "build **$build**"
+          $notes = "release-notes/${version}.build${build}.md"
+          if (-not (Test-Path $notes)) { throw "missing $notes for build $build" }
+          $body = Get-Content $notes -Raw
           gh release edit $tag --title "bubo $tag build $build" --notes "Build $build of $tag.`n`n$body"
 
       - name: Upload build artifact

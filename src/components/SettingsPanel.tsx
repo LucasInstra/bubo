@@ -8,11 +8,12 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { releaseHighlights } from "../lib/highlights";
+import { BUILD_NUMBER } from "../lib/build";
 import { ipc } from "../lib/ipc";
 import { isBeginnerLevel, STUDY_FOCUSES } from "../lib/lessons";
 import { useModalFocus } from "../lib/modal";
 import { matchProvider, PROVIDERS, type ProviderPreset } from "../lib/providers";
-import { currentHighlights } from "../lib/release-notes";
+import { buildHighlights, hasBuildNotes } from "../lib/release-notes";
 import type { DrillStats, Settings } from "../lib/types";
 import { updateLabel } from "../lib/update-label";
 import type { UpdateStatus } from "../lib/updater";
@@ -131,8 +132,9 @@ export function SettingsPanel({
     () => releaseHighlights(updateNotesPt || updateNotes),
     [updateNotesPt, updateNotes],
   );
-  const shipped = useMemo(() => currentHighlights(currentVersion), [currentVersion]);
+  const shipped = useMemo(() => buildHighlights(currentVersion, BUILD_NUMBER), [currentVersion]);
   const runningVersion = currentVersion.split(" · ")[0];
+  const showBuildNotes = BUILD_NUMBER > 1 && hasBuildNotes(currentVersion, BUILD_NUMBER);
 
   useModalFocus(dialogRef);
 
@@ -1069,8 +1071,16 @@ export function SettingsPanel({
                   </span>
 
                   <div className="update-copy">
-                    <strong>Novidades da versão {runningVersion}</strong>
-                    <span className="update-status">O que mudou nesta versão do bubo.</span>
+                    <strong>
+                      {showBuildNotes
+                        ? `Novidades do build ${BUILD_NUMBER}`
+                        : `Novidades da versão ${runningVersion}`}
+                    </strong>
+                    <span className="update-status">
+                      {showBuildNotes
+                        ? `O que mudou no build ${BUILD_NUMBER} da versão ${runningVersion}.`
+                        : "O que mudou nesta versão do bubo."}
+                    </span>
                   </div>
                 </div>
 

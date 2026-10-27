@@ -12,3 +12,9 @@ English body when a translation is missing. The updater manifest also carries
 the Portuguese body as `notes_pt`, so the update card is translated before the
 new version is installed.
 
+Fix builds have their own notes: `<version>.build<N>.md` and
+`<version>.build<N>.pt.md`. The Fix build workflow requires both, uses them as
+the release body and the updater manifest notes, and the app shows “Novidades
+do build N” for the running build. A new version (build 1) uses the version
+notes instead.
+

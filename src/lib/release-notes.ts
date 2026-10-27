@@ -33,3 +33,29 @@ export function releaseNotes(version: string, language: NoteLanguage = "pt"): st
 export function currentHighlights(version: string, limit = 8): Highlight[] {
   return releaseHighlights(releaseNotes(version), limit);
 }
+
+/**
+ * The notes for one fix build, e.g. `0.9.1.build6.md`. Version builds (build 1)
+ * use the version notes instead.
+ */
+export function buildNotes(version: string, build: number, language: NoteLanguage = "pt"): string {
+  const wanted = normalize(version);
+  if (!wanted || build <= 1) return "";
+  const suffix = language === "pt" ? ".pt" : "";
+  const path = Object.keys(NOTES).find((file) =>
+    file.endsWith(`/${wanted}.build${build}${suffix}.md`),
+  );
+  if (path) return NOTES[path];
+  return language === "pt" ? buildNotes(wanted, build, "en") : "";
+}
+
+/** Whether a build has its own notes, so the card can say "build N". */
+export function hasBuildNotes(version: string, build: number): boolean {
+  return buildNotes(version, build).length > 0;
+}
+
+/** Highlights for the running build: build notes first, version notes as fallback. */
+export function buildHighlights(version: string, build: number, limit = 8): Highlight[] {
+  const notes = buildNotes(version, build);
+  return notes ? releaseHighlights(notes, limit) : currentHighlights(version, limit);
+}

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import pkg from "../package.json" with { type: "json" };
+import { BUILD_NUMBER } from "../src/lib/build";
 
 test("test connection fills the model picker", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
@@ -166,9 +167,9 @@ test("settings shows what changed in the running version", async ({ page }) => {
 
   const card = page.locator(".release-card");
   await card.scrollIntoViewIfNeeded();
-  await expect(card).toContainText(`Novidades da versão ${pkg.version}`);
+  await expect(card).toContainText(`Novidades do build ${BUILD_NUMBER}`);
   await expect(card.locator("li").first()).toBeVisible();
-  await expect(card).toContainText("Atualizações de build");
+  await expect(card).toContainText("Avaliação");
 });
 
 test("an available update shows its Portuguese highlights", async ({ page }) => {
