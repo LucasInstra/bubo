@@ -200,14 +200,19 @@ test("settings shows what changed in the running version", async ({ page }) => {
 
   const card = page.locator(".release-card");
   await card.scrollIntoViewIfNeeded();
-  await expect(card).toContainText(`Novidades do build ${BUILD_NUMBER}`);
+  const title =
+    BUILD_NUMBER > 1
+      ? `Novidades do build ${BUILD_NUMBER}`
+      : `Novidades da versão ${pkg.version}`;
+  await expect(card).toContainText(title);
   await expect(card.locator("li").first()).toBeVisible();
 
-  // The card must show this build's own notes, not the version-level fallback.
-  const notes = readFileSync(
-    `release-notes/${pkg.version}.build${BUILD_NUMBER}.pt.md`,
-    "utf8",
-  );
+  // The card must show this release's own notes, not an older fallback.
+  const notesFile =
+    BUILD_NUMBER > 1
+      ? `release-notes/${pkg.version}.build${BUILD_NUMBER}.pt.md`
+      : `release-notes/${pkg.version}.pt.md`;
+  const notes = readFileSync(notesFile, "utf8");
   const firstHighlight = /^- \*\*(.+?)\*\*/m.exec(notes)?.[1] ?? "";
   expect(firstHighlight).not.toBe("");
   await expect(card).toContainText(firstHighlight);
