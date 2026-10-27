@@ -3,6 +3,11 @@ import { readFileSync } from "node:fs";
 import pkg from "../package.json" with { type: "json" };
 import { BUILD_NUMBER } from "../src/lib/build";
 
+interface HarnessCall {
+  cmd: string;
+  args: unknown;
+}
+
 test("test connection fills the model picker", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await page.getByRole("button", { name: "Configurações" }).click();
@@ -136,6 +141,33 @@ test("first run connects through onboarding", async ({ page }) => {
 
   await expect(dialog).toHaveCount(0);
   await expect(page.getByPlaceholder("Digite em inglês...")).toBeVisible();
+});
+
+test("pinning from the settings header is not undone by saving", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=app");
+  await page.getByRole("button", { name: "Configurações" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Configurações" });
+  await dialog.waitFor();
+
+  // A pending change makes the save button active, which is when a stale pin
+  // used to travel with the draft.
+  await dialog.getByRole("tab", { name: "Sistema" }).click();
+  await dialog.getByRole("button", { name: "Claro" }).click();
+  await dialog.getByRole("button", { name: "Fixar janela" }).click();
+  await dialog.getByRole("button", { name: "Salvar" }).click();
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const calls = (window as unknown as { __calls: HarnessCall[] }).__calls.filter(
+          (call) => call.cmd === "save_settings",
+        );
+        const last = calls.at(-1)?.args as { settings?: { pinned?: boolean } } | undefined;
+        return last?.settings?.pinned;
+      }),
+    )
+    .toBe(false);
 });
 
 test("onboarding can connect a local Ollama without a key", async ({ page }) => {

@@ -111,6 +111,14 @@ export function LessonsPanel({
     const correct = isCorrectExerciseAnswer(typed, step.exercise);
     if (correct) {
       setResult({ kind: "correct" });
+      // Earn the step now, not when "Próximo" is pressed: closing the panel
+      // after a right answer used to restart the lesson at the same step.
+      const next = stepIndex + 1;
+      saveProgress(
+        selected,
+        Math.min(next, selected.steps.length),
+        next >= selected.steps.length || (progress[selected.id]?.completed ?? false),
+      );
       return;
     }
 

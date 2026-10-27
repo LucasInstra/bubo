@@ -224,4 +224,15 @@ describe("noteRevealsAnswer", () => {
     expect(noteRevealsAnswer("homework for tomorrow", "home")).toBe(false);
     expect(noteRevealsAnswer("meetings are useful", "meeting")).toBe(false);
   });
+
+  it("sees through contractions in both the note and the answer", () => {
+    expect(noteRevealsAnswer("use I am a developer", "I'm a developer")).toBe(true);
+    expect(noteRevealsAnswer("use I'm a developer", "I am a developer")).toBe(true);
+    expect(noteRevealsAnswer("I will not go", "I won't go")).toBe(true);
+    expect(noteRevealsAnswer("I don't know", "I do not know")).toBe(true);
+  });
+
+  it("keeps a short contraction hint that does not spell the answer", () => {
+    expect(noteRevealsAnswer("contração: I'm", "I'm going to the gym")).toBe(false);
+  });
 });

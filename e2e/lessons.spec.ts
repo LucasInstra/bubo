@@ -98,6 +98,31 @@ test("a beginner lesson walks through steps and saves a wrong answer", async ({ 
   });
 });
 
+test("a correct step is kept even before advancing", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=empty&level=A1");
+
+  await page.getByRole("button", { name: "Mini-lições de gramática" }).click();
+  const dialog = page.getByRole("dialog", { name: "Lições" });
+  await dialog.getByRole("button", { name: /Verbo to be/ }).click();
+
+  await dialog.getByLabel("Traduza: Eu sou desenvolvedor.").fill("I am a developer");
+  await dialog.getByRole("button", { name: "Conferir" }).click();
+  await expect(dialog.getByText("Boa.")).toBeVisible();
+
+  const progressCalls = (await calls(page)).filter((call) => call.cmd === "save_lesson_progress");
+  expect(progressCalls.at(-1)?.args).toMatchObject({
+    lessonId: "to_be",
+    step: 1,
+    completed: false,
+  });
+
+  // Closing without pressing "Próximo" must not restart the lesson at step 1.
+  await dialog.getByRole("button", { name: "Fechar" }).click();
+  await page.getByRole("button", { name: "Mini-lições de gramática" }).click();
+  const list = page.getByRole("dialog", { name: "Lições" });
+  await expect(list.getByRole("button", { name: /Verbo to be/ })).toContainText("Passo 2 de 3");
+});
+
 test("higher levels can open their own lessons", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=empty&level=B1");
 

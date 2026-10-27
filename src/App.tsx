@@ -483,7 +483,10 @@ export default function App() {
 
   const saveSettings = useCallback(
     async (nextSettings: Settings, apiKey: string) => {
-      const next = nextSettings.popup ? { ...nextSettings, compact: false } : nextSettings;
+      // Pinning is driven by the header button, never by a settings draft, so a
+      // draft opened before the toggle must not write the old value back.
+      const base = { ...nextSettings, pinned };
+      const next = base.popup ? { ...base, compact: false } : base;
       await ipc.saveSettings(next);
       if (apiKey.trim()) {
         await ipc.saveApiKey(apiKey.trim());
@@ -511,7 +514,7 @@ export default function App() {
       setShowSettings(false);
       setShowBuddy(false);
     },
-    [settings.autostart, settings.compact, settings.popup],
+    [settings.autostart, settings.compact, settings.popup, pinned],
   );
 
   const startFocusPractice = useCallback(

@@ -182,8 +182,16 @@ export const noteRevealsAnswer = (note: string, target: string) => {
   const shortTarget = expectedTokens.length === 1 && expected.length < MIN_REVEAL_LENGTH;
   if (shortTarget) return false;
 
-  return (
-    containsSequence(hintTokens, expectedTokens) || containsSequence(expectedTokens, hintTokens)
+  // A note that expands or contracts the answer still gives it away:
+  // "I am a developer" reveals "I'm a developer".
+  const hintVariants = variantsOf(hintTokens);
+  const expectedVariants = variantsOf(expectedTokens);
+  return hintVariants.some((hintSequence) =>
+    expectedVariants.some(
+      (targetSequence) =>
+        containsSequence(hintSequence, targetSequence) ||
+        containsSequence(targetSequence, hintSequence),
+    ),
   );
 };
 

@@ -101,6 +101,11 @@ fn study_focus_hint(focus: &str) -> Option<&'static str> {
     }
 }
 
+/// The learner only needs an English nudge when the message they just sent is
+/// in Portuguese. After an English message it repeats what they already did and
+/// can hand their own sentence back as if it were a target.
+const NUDGE_GUARD: &str = "Offer that English nudge only when their last message was in Portuguese: never ask for English after they wrote in English, and never reuse their own sentence as the target.";
+
 pub fn reply_system(settings: &Settings) -> String {
     let tone = personality_tone(&settings.personality);
     let persona = if settings.persona.trim().is_empty() {
@@ -115,15 +120,16 @@ pub fn reply_system(settings: &Settings) -> String {
     let portuguese = reply_language_is_portuguese(&settings.reply_language);
     let bilingual = reply_language_is_bilingual(&settings.reply_language);
     let language_rule = if portuguese {
-        if beginner {
+        let base = if beginner {
             "Reply in Brazilian Portuguese like a friend texting, because the learner may not read English yet. When a useful English word or phrase fits naturally, show it and make its meaning clear in Portuguese right away. You may invite them to try one short English starter, never the full sentence. Never answer with a whole English paragraph."
         } else {
             "Reply in Brazilian Portuguese like a friend texting, because the learner may not read English yet. When a useful English word or phrase fits naturally, keep it in English inside the Portuguese sentence and make its meaning clear in Portuguese right away. You may invite them to try one short English starter, never the full sentence. Never answer with a whole English paragraph."
-        }
+        };
+        format!("{base} {NUDGE_GUARD}")
     } else if bilingual {
-        "Start your reply in Brazilian Portuguese, like a friend texting, so the learner understands it first. The English version goes in the final line described below."
+        "Start your reply in Brazilian Portuguese, like a friend texting, so the learner understands it first. The English version goes in the final line described below.".to_string()
     } else {
-        "Reply in English like a friend texting."
+        "Reply in English like a friend texting.".to_string()
     };
     let focus = if beginner {
         study_focus_hint(&settings.study_focus)
@@ -137,14 +143,16 @@ pub fn reply_system(settings: &Settings) -> String {
         String::new()
     };
     let beginner_rule = if beginner {
-        "- The learner is building confidence. Answer the learner's actual message first, even when it is just \"oi\" or a short sentence. React politely, then ask whether they want to learn words about that topic or just keep talking. Never change the subject to a grammar drill or to an unrelated phrase. After reacting, you may also invite them to try one short English starter of one to three words, never the full sentence, and keep it low pressure. If they ask how to say something, give one short hint first (the tense, the first word or a related word); if they ask again or say they are stuck, give the full English sentence and explain it in the language you are replying in. Keep replies short and concrete."
+        format!(
+            "- The learner is building confidence. Answer the learner's actual message first, even when it is just \"oi\" or a short sentence. React politely, then ask whether they want to learn words about that topic or just keep talking. Never change the subject to a grammar drill or to an unrelated phrase. After reacting, you may also invite them to try one short English starter of one to three words, never the full sentence, and keep it low pressure. {NUDGE_GUARD} If they ask how to say something, give one short hint first (the tense, the first word or a related word); if they ask again or say they are stuck, give the full English sentence and explain it in the language you are replying in. Keep replies short and concrete."
+        )
     } else {
-        ""
+        String::new()
     };
     let coaching_rule = if beginner {
-        ""
+        String::new()
     } else {
-        "- The learner can handle English. When they write in Portuguese, answer what they meant, then invite one short English try: one concrete idea and a starter of one to three words, never the complete sentence. Example: \"Agora tenta em inglês: o que você jogou? Comece com 'I played...'.\" If they write in English, react and ask one concrete follow-up in English. Do not just translate their message and stop."
+        "- The learner can handle English. When they write in Portuguese, answer what they meant, then invite one short English try: one concrete idea and a starter of one to three words, never the complete sentence. Example: \"Agora tenta em inglês: o que você jogou? Comece com 'I played...'.\" If they write in English, react and ask one concrete follow-up in English, never inviting them to say it again in English. Do not just translate their message and stop.".to_string()
     };
     let portuguese_note = if portuguese || bilingual {
         let bilingual_direct = if beginner {
@@ -168,7 +176,7 @@ pub fn reply_system(settings: &Settings) -> String {
         };
 
         format!(
-            "- The learner may write in Portuguese. Answer what they meant first, then keep the conversation going in Brazilian Portuguese. When it helps, you may offer one optional English nudge: one concrete idea and a starter of one to three words, never the full sentence.{direct_request} Otherwise, do not put a full English sentence in the Portuguese body. Never treat their Portuguese as an English mistake.{bilingual_note}"
+            "- The learner may write in Portuguese. Answer what they meant first, then keep the conversation going in Brazilian Portuguese. When it helps, you may offer one optional English nudge: one concrete idea and a starter of one to three words, never the full sentence. {NUDGE_GUARD}{direct_request} Otherwise, do not put a full English sentence in the Portuguese body. Never treat their Portuguese as an English mistake.{bilingual_note}"
         )
     } else {
         String::new()
@@ -243,7 +251,7 @@ This is a chat, not a lesson. How you talk:
 11. Avoid similes and metaphors, including "it's like...". Say the thing directly. No owl imagery unless it is a real joke.
 12. Remember details they shared earlier and bring one back later when it fits. Do not recap the conversation.
 13. If they ask for a face, a mood or a reaction, answer with one short playful line and let the popup do the acting. Never say you cannot show expressions.
-14. This chat is for conversation, not production drills. Never ask the learner to produce a full English sentence and never put the target English sentence inside a question. You may offer one optional English nudge: one concrete idea and a starter of one to three words, never the full sentence. Keep it low pressure and do not do it every reply. Do not volunteer a random English phrase or translation the learner did not ask about. The lessons and practice cards handle longer production.
+14. This chat is for conversation, not production drills. Never ask the learner to produce a full English sentence and never put the target English sentence inside a question. You may offer one optional English nudge: one concrete idea and a starter of one to three words, never the full sentence. {nudge_guard} Keep it low pressure and do not do it every reply. Do not volunteer a random English phrase or translation the learner did not ask about. The lessons and practice cards handle longer production.
 {beginner_rule}
 {coaching_rule}
 {portuguese_note}
@@ -261,12 +269,84 @@ Style examples, do not copy them word for word:
         portuguese_note = portuguese_note,
         help = help,
         examples = examples,
+        nudge_guard = NUDGE_GUARD,
     )
 }
 
+/// Common English function words. Portuguese is checked first through its
+/// diacritics and its own markers, so a mixed message leans toward "not
+/// English" and the nudge stays optional.
+const ENGLISH_WORDS: &[&str] = &[
+    "i", "i'm", "i've", "i'd", "you", "you're", "your", "the", "my", "me", "is", "was", "are",
+    "were", "and", "to", "it", "it's", "we", "they", "he", "she", "this", "that", "with", "for",
+    "have", "had", "do", "did", "don't", "can't", "what", "how", "when", "where", "there", "just",
+    "not",
+];
+
+const PORTUGUESE_WORDS: &[&str] = &[
+    "eu", "não", "nao", "você", "voce", "que", "de", "do", "da", "um", "uma", "meu", "minha",
+    "foi", "com", "para", "por", "muito", "mais", "estou", "sou", "hoje", "ontem", "amanhã",
+    "amanha", "também", "tambem", "mas", "tem", "vou", "ser", "ele", "ela", "nós", "nos", "eles",
+];
+
+fn words_of(text: &str) -> Vec<String> {
+    text.to_lowercase()
+        .split(|ch: char| !ch.is_alphanumeric() && ch != '\'' && ch != '-')
+        .filter(|word| !word.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// True when the learner's message reads as English. Deliberately conservative:
+/// a false negative only keeps the English nudge optional, which is the safe
+/// direction, while a false positive would hide a useful nudge.
+fn looks_english(text: &str) -> bool {
+    if text.chars().any(|ch| "ãõçáâàéêíóôú".contains(ch)) {
+        return false;
+    }
+    let words = words_of(text);
+    let english = words
+        .iter()
+        .filter(|word| ENGLISH_WORDS.contains(&word.as_str()))
+        .count();
+    let portuguese = words
+        .iter()
+        .filter(|word| PORTUGUESE_WORDS.contains(&word.as_str()))
+        .count();
+    english > 0 && english > portuguese
+}
+
+/// The nudge only makes sense when the message it would answer is not English
+/// already. Computed here so the model does not have to judge the language.
+fn nudge_state(settings: &Settings, messages: &[ChatMsg]) -> Option<&'static str> {
+    if reply_language_is_english_mode(&settings.reply_language) {
+        return None;
+    }
+    let last = messages
+        .iter()
+        .rev()
+        .find(|message| message.role == "user")?;
+    if looks_english(&last.content) {
+        Some(
+            "The learner's last message is already in English. Do not invite them to say it in English, and never repeat their sentence back as a target.",
+        )
+    } else {
+        Some(
+            "The learner's last message is not in English. If you nudge them toward English, offer only a one to three word starter, never their full sentence.",
+        )
+    }
+}
+
+fn reply_language_is_english_mode(language: &str) -> bool {
+    !reply_language_is_portuguese(language) && !reply_language_is_bilingual(language)
+}
+
 pub fn reply_body(settings: &Settings, messages: &[ChatMsg]) -> Value {
-    let mut out = Vec::with_capacity(messages.len() + 1);
+    let mut out = Vec::with_capacity(messages.len() + 2);
     out.push(json!({ "role": "system", "content": reply_system(settings) }));
+    if let Some(state) = nudge_state(settings, messages) {
+        out.push(json!({ "role": "system", "content": state }));
+    }
     for message in messages {
         out.push(json!({ "role": message.role, "content": message.content }));
     }
@@ -549,6 +629,86 @@ mod tests {
             ..Settings::default()
         };
         assert!(!reply_system(&beginner).contains("invite one short English try"));
+    }
+
+    #[test]
+    fn the_english_nudge_only_follows_a_portuguese_message() {
+        for reply_language in ["pt", "bilingual"] {
+            for level in ["A1", "A2", "B1"] {
+                let settings = Settings {
+                    level: level.to_string(),
+                    reply_language: reply_language.to_string(),
+                    ..Settings::default()
+                };
+                let prompt = reply_system(&settings);
+                assert!(
+                    prompt.contains("only when their last message was in Portuguese"),
+                    "{reply_language}/{level} must scope the nudge to Portuguese messages"
+                );
+                assert!(
+                    prompt.contains("never reuse their own sentence as the target"),
+                    "{reply_language}/{level} must not hand the learner's own sentence back"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn detects_when_the_learner_already_wrote_english() {
+        assert!(looks_english("i played rocket league"));
+        assert!(looks_english("my weekend was cool, i went to the beach"));
+        assert!(!looks_english("eu joguei rocket league"));
+        assert!(!looks_english("não sei o que fazer"));
+        assert!(!looks_english("test"));
+        assert!(!looks_english("   "));
+    }
+
+    #[test]
+    fn an_english_message_carries_no_english_nudge() {
+        let settings = Settings {
+            level: "B1".to_string(),
+            reply_language: "pt".to_string(),
+            ..Settings::default()
+        };
+
+        let english = reply_body(
+            &settings,
+            &[ChatMsg {
+                role: "user".to_string(),
+                content: "i played rocket league".to_string(),
+            }],
+        )
+        .to_string();
+        assert!(english.contains("already in English"));
+        assert!(english.contains("never repeat their sentence back"));
+
+        let portuguese = reply_body(
+            &settings,
+            &[ChatMsg {
+                role: "user".to_string(),
+                content: "eu joguei rocket league".to_string(),
+            }],
+        )
+        .to_string();
+        assert!(portuguese.contains("one to three word starter"));
+        assert!(!portuguese.contains("already in English"));
+    }
+
+    #[test]
+    fn english_replies_need_no_nudge_state() {
+        let settings = Settings {
+            reply_language: "en".to_string(),
+            ..Settings::default()
+        };
+        let body = reply_body(
+            &settings,
+            &[ChatMsg {
+                role: "user".to_string(),
+                content: "eu joguei rocket league".to_string(),
+            }],
+        )
+        .to_string();
+        assert!(!body.contains("one to three word starter"));
     }
 
     #[test]
