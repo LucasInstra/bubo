@@ -156,6 +156,13 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
     }
   };
 
+  const announcement =
+    phase === "answered" && result
+      ? result.correct
+        ? `Certo. ${result.item.right}`
+        : `Quase. A correção é ${result.item.right}`
+      : "";
+
   return (
     <div
       className="settings"
@@ -177,6 +184,10 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
       </div>
 
       <div className="settings-body drill-body">
+        <p className="sr-only" role="status" aria-live="polite">
+          {announcement}
+        </p>
+
         {phase === "loading" && <p className="drill-hint">preparando um card…</p>}
 
         {phase === "error" && (
@@ -218,11 +229,15 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
         {(phase === "asking" || phase === "answered") && item && (
           <>
             <div className="drill-card">
-              <span className="drill-label">como você diria isto?</span>
+              <span className="drill-label" id="drill-question">
+                como você diria isto?
+              </span>
               {item.context && (
                 <span className="drill-context">você escreveu: “{item.context}”</span>
               )}
-              <span className="drill-wrong">{item.wrong}</span>
+              <span className="drill-wrong" id="drill-phrase">
+                {item.wrong}
+              </span>
               {/* The note says what to fix, so it belongs before the answer.
                   A note that spells out the correction would give it away. */}
               {phase === "asking" && item.note && !noteRevealsAnswer(item.note, item.right) && (
@@ -241,6 +256,7 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
                   ref={inputRef}
                   className="drill-input"
                   value={answer}
+                  aria-labelledby="drill-question drill-phrase"
                   placeholder="digite a frase corrigida"
                   onChange={(event) => setAnswer(event.target.value)}
                   onKeyDown={(event) => {

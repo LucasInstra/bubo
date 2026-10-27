@@ -75,6 +75,7 @@ export function Composer({
           ref={textareaRef}
           rows={1}
           value={value}
+          aria-label="Mensagem para o bubo"
           placeholder={disabled ? "o bubo está escrevendo..." : placeholder}
           onChange={(event) => {
             setValue(event.target.value);

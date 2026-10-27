@@ -355,6 +355,7 @@ export function Onboarding({ settings, onConnect, onDismiss, updateNotice }: Onb
                   key={id}
                   type="button"
                   className={`chip ${keyProvider === id ? "chip-on" : ""}`}
+                  aria-pressed={keyProvider === id}
                   onClick={() => chooseKeyProvider(id as KeyProvider)}
                 >
                   {label}

@@ -171,6 +171,18 @@
             : null,
         history: () =>
           mode === "empty" ? [] : bilingual ? bilingualStored : switched ? switchedStored : stored,
+        open_session: ({ id }) => {
+          const contents = {
+            1: [{ id: 1, role: "user", content: "weekend at the beach", fixes: null, createdAt: 1 }],
+            2: [
+              { id: 2, role: "user", content: "coffee order practice", fixes: null, createdAt: 2 },
+            ],
+            3: [
+              { id: 3, role: "user", content: "interview small talk", fixes: null, createdAt: 3 },
+            ],
+          };
+          return contents[id] ?? [];
+        },
         current_session: () => 1,
         lesson_progress: () => lessonProgress,
         save_lesson_progress: ({ lessonId, step, completed }) => {

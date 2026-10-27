@@ -612,9 +612,15 @@ export default function App() {
     setShowHistory(false);
   }, []);
 
+  const openSeq = useRef(0);
   const openSession = useCallback(async (id: number) => {
     if (statusRef.current !== "idle") return;
+    // Two fast clicks must not let the first fetch land last and show the
+    // wrong conversation.
+    const seq = openSeq.current + 1;
+    openSeq.current = seq;
     const stored = await ipc.openSession(id);
+    if (seq !== openSeq.current) return;
     setSessionId(id);
     setMessages(stored.map(fromStored));
     setContextTrimmed(false);
@@ -1205,6 +1211,10 @@ export default function App() {
           ) : (
             <div
               className="messages"
+              role="log"
+              aria-live="polite"
+              aria-relevant="additions"
+              aria-label="Conversa"
               ref={listRef}
               onScroll={() => {
                 const list = listRef.current;

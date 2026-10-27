@@ -266,6 +266,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
                     key={value}
                     type="button"
                     className={`chip ${draft.eyeStyle === value ? "chip-on" : ""}`}
+                    aria-pressed={draft.eyeStyle === value}
                     onClick={() => patch({ eyeStyle: value })}
                   >
                     {EYE_LABELS[value]}
@@ -281,6 +282,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
                       key={option}
                       type="button"
                       className={`swatch ${draft.eyeColor === option ? "on" : ""}`}
+                      aria-pressed={draft.eyeColor === option}
                       style={{
                         background:
                           option === "auto"
@@ -313,6 +315,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
                       key={value}
                       type="button"
                       className={`chip ${draft.eyeSize === value ? "chip-on" : ""}`}
+                      aria-pressed={draft.eyeSize === value}
                       onClick={() => patch({ eyeSize: value })}
                     >
                       {value === "small" ? "S" : value === "large" ? "L" : "M"}
@@ -329,6 +332,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
                       key={value}
                       type="button"
                       className={`chip ${draft.eyeSpacing === value ? "chip-on" : ""}`}
+                      aria-pressed={draft.eyeSpacing === value}
                       onClick={() => patch({ eyeSpacing: value })}
                     >
                       {label}
@@ -345,6 +349,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
                       key={value}
                       type="button"
                       className={`chip ${draft.eyeTilt === value ? "chip-on" : ""}`}
+                      aria-pressed={draft.eyeTilt === value}
                       onClick={() => patch({ eyeTilt: value })}
                     >
                       {label}
@@ -373,6 +378,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
                     key={value}
                     type="button"
                     className={`chip ${draft.mouthStyle === value ? "chip-on" : ""}`}
+                    aria-pressed={draft.mouthStyle === value}
                     onClick={() => patch({ mouthStyle: value })}
                   >
                     {label}
@@ -388,6 +394,7 @@ export function BuddyPanel({ settings, pinned, onTogglePin, onClose, onSave }: B
                       key={value}
                       type="button"
                       className={`chip ${draft.mouthSize === value ? "chip-on" : ""}`}
+                      aria-pressed={draft.mouthSize === value}
                       onClick={() => patch({ mouthSize: value })}
                     >
                       {label}

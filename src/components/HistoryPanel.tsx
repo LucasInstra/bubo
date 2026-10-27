@@ -196,7 +196,9 @@ export function HistoryPanel({
                       event.preventDefault();
                       void saveRename(session.id);
                     } else if (event.key === "Escape") {
+                      // Keep the panel open: Escape here only cancels the rename.
                       event.preventDefault();
+                      event.stopPropagation();
                       setEditingId(null);
                     }
                   }}

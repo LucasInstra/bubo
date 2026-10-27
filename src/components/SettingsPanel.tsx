@@ -490,6 +490,7 @@ export function SettingsPanel({
                     type="button"
                     key={level}
                     className={`chip ${draft.level === level ? "chip-on" : ""}`}
+                    aria-pressed={draft.level === level}
                     onClick={() => patch({ level })}
                   >
                     {level}
@@ -506,6 +507,7 @@ export function SettingsPanel({
                     type="button"
                     key={value}
                     className={`chip ${draft.replyLanguage === value ? "chip-on" : ""}`}
+                    aria-pressed={draft.replyLanguage === value}
                     onClick={() => chooseReplyLanguage(value)}
                   >
                     {label}
@@ -546,6 +548,7 @@ export function SettingsPanel({
                       type="button"
                       key={value}
                       className={`chip ${draft.studyFocus === value ? "chip-on" : ""}`}
+                      aria-pressed={draft.studyFocus === value}
                       onClick={() => patch({ studyFocus: value })}
                     >
                       {label}
@@ -588,6 +591,7 @@ export function SettingsPanel({
                 <button
                   type="button"
                   className={`chip ${draft.noteLanguage === "pt" ? "chip-on" : ""}`}
+                  aria-pressed={draft.noteLanguage === "pt"}
                   onClick={() => patch({ noteLanguage: "pt" })}
                 >
                   PT-BR
@@ -595,6 +599,7 @@ export function SettingsPanel({
                 <button
                   type="button"
                   className={`chip ${draft.noteLanguage === "en" ? "chip-on" : ""}`}
+                  aria-pressed={draft.noteLanguage === "en"}
                   onClick={() => patch({ noteLanguage: "en" })}
                 >
                   English
@@ -616,6 +621,7 @@ export function SettingsPanel({
                     key={preset.id}
                     type="button"
                     className={`chip ${provider.id === preset.id ? "chip-on" : ""}`}
+                    aria-pressed={provider.id === preset.id}
                     onClick={() => chooseProvider(preset)}
                   >
                     {preset.label}
@@ -880,6 +886,7 @@ export function SettingsPanel({
                     type="button"
                     key={value}
                     className={`chip ${draft.textSize === value ? "chip-on" : ""}`}
+                    aria-pressed={draft.textSize === value}
                     onClick={() => patch({ textSize: value })}
                   >
                     {label}
@@ -896,6 +903,7 @@ export function SettingsPanel({
                     type="button"
                     key={value}
                     className={`chip ${draft.theme === value ? "chip-on" : ""}`}
+                    aria-pressed={draft.theme === value}
                     onClick={() => patch({ theme: value })}
                   >
                     {label}
