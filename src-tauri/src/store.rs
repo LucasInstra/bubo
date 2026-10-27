@@ -385,37 +385,67 @@ pub fn open_session(
 }
 
 /// Removes a session and everything that belonged to it, returning the
-/// session that should be open next.
+/// session that should be open next. The cards the conversation produced go
+/// with it, and their copy is stripped from the remaining messages so the
+/// startup backfill cannot bring them back.
 pub fn delete_session(conn: &Connection, id: i64) -> rusqlite::Result<i64> {
-    let current = current_session(conn)?;
-    conn.execute(
-        "DELETE FROM reviews WHERE fix_id IN (
-            SELECT id FROM fixes WHERE message_id IN (
-                SELECT id FROM messages WHERE session_id = ?1
-            )
-        )",
-        [id],
-    )?;
-    conn.execute(
-        "DELETE FROM fixes WHERE message_id IN (SELECT id FROM messages WHERE session_id = ?1)",
-        [id],
-    )?;
-    conn.execute("DELETE FROM messages WHERE session_id = ?1", [id])?;
-    conn.execute("DELETE FROM sessions WHERE id = ?1", [id])?;
+    let tx = conn.unchecked_transaction()?;
+    let current = current_session(&tx)?;
+    let mut pairs = {
+        let mut statement = tx.prepare(
+            "SELECT DISTINCT wrong, right FROM fixes
+             WHERE message_id IN (SELECT id FROM messages WHERE session_id = ?1)",
+        )?;
+        let rows = statement.query_map([id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?;
+        rows.collect::<rusqlite::Result<Vec<_>>>()?
+    };
+    {
+        // Older cards lost their link to a message; the conversation JSON is
+        // the only place that still names them.
+        let mut statement =
+            tx.prepare("SELECT fixes FROM messages WHERE session_id = ?1 AND fixes IS NOT NULL")?;
+        let raws = statement
+            .query_map([id], |row| row.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        for raw in raws {
+            push_json_pairs(&mut pairs, &raw);
+        }
+    }
+    dedupe_pairs(&mut pairs);
 
-    if id == current {
-        let newest = conn.query_row("SELECT MAX(id) FROM sessions", [], |row| {
+    tx.execute("DELETE FROM messages WHERE session_id = ?1", [id])?;
+    tx.execute("DELETE FROM sessions WHERE id = ?1", [id])?;
+    for (wrong, right) in &pairs {
+        tx.execute(
+            "DELETE FROM reviews WHERE fix_id IN (
+                SELECT id FROM fixes WHERE wrong = ?1 AND right = ?2
+            )",
+            params![wrong, right],
+        )?;
+        tx.execute(
+            "DELETE FROM fixes WHERE wrong = ?1 AND right = ?2",
+            params![wrong, right],
+        )?;
+        remove_fix_from_messages(&tx, wrong, right)?;
+    }
+
+    let next = if id == current {
+        let newest = tx.query_row("SELECT MAX(id) FROM sessions", [], |row| {
             row.get::<_, Option<i64>>(0)
         })?;
         let next = match newest {
             Some(next) => next,
-            None => create_session(conn)?,
+            None => create_session(&tx)?,
         };
-        set_current_session(conn, next)?;
-        Ok(next)
+        set_current_session(&tx, next)?;
+        next
     } else {
-        Ok(current)
-    }
+        current
+    };
+    tx.commit()?;
+    Ok(next)
 }
 
 pub fn insert(
@@ -468,11 +498,13 @@ pub fn delete(conn: &Connection, id: i64) -> rusqlite::Result<()> {
 }
 
 /// Deletes a message together with the corrections that point at it. The
-/// correction text is also stripped from every remaining message so the
-/// startup backfill cannot bring a shared card back.
+/// correction JSON on the message counts too: a card points at the user row
+/// while its copy sits on the reply, so deleting either bubble removes both.
+/// The text is also stripped from every remaining message so the startup
+/// backfill cannot bring a shared card back.
 pub fn delete_message(conn: &Connection, id: i64) -> rusqlite::Result<()> {
     let tx = conn.unchecked_transaction()?;
-    let pairs = {
+    let mut pairs = {
         let mut statement = tx.prepare("SELECT wrong, right FROM fixes WHERE message_id = ?1")?;
         let rows = statement
             .query_map([id], |row| {
@@ -482,24 +514,55 @@ pub fn delete_message(conn: &Connection, id: i64) -> rusqlite::Result<()> {
         rows
     };
 
-    tx.execute(
-        "DELETE FROM reviews WHERE fix_id IN (SELECT id FROM fixes WHERE message_id = ?1)",
-        [id],
-    )?;
-    tx.execute("DELETE FROM fixes WHERE message_id = ?1", [id])?;
+    let own = tx
+        .query_row("SELECT fixes FROM messages WHERE id = ?1", [id], |row| {
+            row.get::<_, Option<String>>(0)
+        })
+        .optional()?
+        .flatten();
+    if let Some(raw) = own {
+        push_json_pairs(&mut pairs, &raw);
+    }
+    dedupe_pairs(&mut pairs);
+
+    tx.execute("DELETE FROM messages WHERE id = ?1", [id])?;
     for (wrong, right) in &pairs {
+        tx.execute(
+            "DELETE FROM reviews WHERE fix_id IN (
+                SELECT id FROM fixes WHERE wrong = ?1 AND right = ?2
+            )",
+            params![wrong, right],
+        )?;
+        tx.execute(
+            "DELETE FROM fixes WHERE wrong = ?1 AND right = ?2",
+            params![wrong, right],
+        )?;
         remove_fix_from_messages(&tx, wrong, right)?;
     }
-    tx.execute("DELETE FROM messages WHERE id = ?1", [id])?;
     tx.commit()
 }
 
-pub fn set_message_fixes(conn: &Connection, id: i64, fixes: Option<&str>) -> rusqlite::Result<()> {
+fn set_message_fixes(conn: &Connection, id: i64, fixes: Option<&str>) -> rusqlite::Result<()> {
     conn.execute(
         "UPDATE messages SET fixes = ?1 WHERE id = ?2",
         params![fixes, id],
     )?;
     Ok(())
+}
+
+/// Adds the corrections named by a stored message JSON to the pairs a removal
+/// has to take care of.
+fn push_json_pairs(pairs: &mut Vec<(String, String)>, raw: &str) {
+    if let Ok(fixes) = serde_json::from_str::<Vec<Fix>>(raw) {
+        for fix in fixes {
+            pairs.push((fix.wrong, fix.right));
+        }
+    }
+}
+
+fn dedupe_pairs(pairs: &mut Vec<(String, String)>) {
+    pairs.sort();
+    pairs.dedup();
 }
 
 /// Removes one correction from the JSON of every stored message.
@@ -597,15 +660,30 @@ fn row_to_item(row: &rusqlite::Row<'_>) -> rusqlite::Result<DrillItem> {
 /// This is the non-counting path: it is used by the startup backfill and by
 /// tests, so replaying the same correction never inflates its recurrence.
 pub fn save_fixes(conn: &Connection, fixes: &[Fix]) -> rusqlite::Result<()> {
-    save_fixes_inner(conn, fixes, None, false)
+    let tx = conn.unchecked_transaction()?;
+    save_fixes_inner(&tx, fixes, None, false)?;
+    tx.commit()
 }
 
-pub fn save_fixes_for_message(
+/// Saves the cards a turn produced and the JSON the reply displays in one
+/// transaction, so a card and its copy on the message never disagree.
+pub fn save_turn_fixes(
     conn: &Connection,
     fixes: &[Fix],
     message_id: Option<i64>,
+    reply_id: Option<i64>,
 ) -> rusqlite::Result<()> {
-    save_fixes_inner(conn, fixes, message_id, true)
+    let tx = conn.unchecked_transaction()?;
+    save_fixes_inner(&tx, fixes, message_id, true)?;
+    if let Some(reply_id) = reply_id {
+        let json = if fixes.is_empty() {
+            None
+        } else {
+            serde_json::to_string(fixes).ok()
+        };
+        set_message_fixes(&tx, reply_id, json.as_deref())?;
+    }
+    tx.commit()
 }
 
 fn save_fixes_inner(
@@ -850,9 +928,11 @@ pub fn skip_due(conn: &Connection) -> rusqlite::Result<usize> {
 /// Wipes the practice queue and the corrections stored on messages, so the
 /// backfill on the next start does not bring them back.
 pub fn reset_fixes(conn: &Connection) -> rusqlite::Result<usize> {
-    conn.execute("DELETE FROM reviews", [])?;
-    let removed = conn.execute("DELETE FROM fixes", [])?;
-    conn.execute("UPDATE messages SET fixes = NULL", [])?;
+    let tx = conn.unchecked_transaction()?;
+    tx.execute("DELETE FROM reviews", [])?;
+    let removed = tx.execute("DELETE FROM fixes", [])?;
+    tx.execute("UPDATE messages SET fixes = NULL", [])?;
+    tx.commit()?;
     Ok(removed)
 }
 
@@ -915,7 +995,8 @@ pub fn review_drill(
     id: i64,
     correct: bool,
 ) -> rusqlite::Result<Option<DrillItem>> {
-    let item = conn
+    let tx = conn.unchecked_transaction()?;
+    let item = tx
         .query_row(
             "SELECT f.id, f.wrong, f.right, f.note, f.streak, f.seen, m.content
              FROM fixes f LEFT JOIN messages m ON m.id = f.message_id
@@ -937,14 +1018,15 @@ pub fn review_drill(
     };
     let reviewed = now();
 
-    conn.execute(
+    tx.execute(
         "UPDATE fixes SET streak = ?1, due_at = ?2 WHERE id = ?3",
         params![streak, reviewed + delay, id],
     )?;
-    conn.execute(
+    tx.execute(
         "INSERT INTO reviews (fix_id, correct, reviewed_at) VALUES (?1, ?2, ?3)",
         params![id, if correct { 1 } else { 0 }, reviewed],
     )?;
+    tx.commit()?;
 
     Ok(Some(DrillItem { streak, ..item }))
 }
@@ -952,7 +1034,8 @@ pub fn review_drill(
 /// Marks the most recent review of a card as correct. This is the escape
 /// hatch for a valid alternative that the exact-match checker rejected.
 pub fn override_review(conn: &Connection, id: i64) -> rusqlite::Result<Option<DrillItem>> {
-    let item = conn
+    let tx = conn.unchecked_transaction()?;
+    let item = tx
         .query_row(
             "SELECT f.id, f.wrong, f.right, f.note, f.streak, f.seen, m.content
              FROM fixes f LEFT JOIN messages m ON m.id = f.message_id
@@ -970,15 +1053,16 @@ pub fn override_review(conn: &Connection, id: i64) -> rusqlite::Result<Option<Dr
     let streak = 1;
     let delay = INTERVALS_MS[0];
 
-    conn.execute(
+    tx.execute(
         "UPDATE fixes SET streak = ?1, due_at = ?2 WHERE id = ?3",
         params![streak, reviewed + delay, id],
     )?;
-    conn.execute(
+    tx.execute(
         "UPDATE reviews SET correct = 1
          WHERE id = (SELECT id FROM reviews WHERE fix_id = ?1 ORDER BY id DESC LIMIT 1)",
         [id],
     )?;
+    tx.commit()?;
 
     Ok(Some(DrillItem { streak, ..item }))
 }
@@ -1278,7 +1362,7 @@ mod tests {
 
         let conn = memory_db();
         let user_id = insert(&conn, "user", "i go yesterday", None).unwrap();
-        super::save_fixes_for_message(
+        super::save_turn_fixes(
             &conn,
             &[Fix {
                 wrong: "i go yesterday".to_string(),
@@ -1286,6 +1370,7 @@ mod tests {
                 note: String::new(),
             }],
             Some(user_id),
+            None,
         )
         .unwrap();
 
@@ -1299,7 +1384,7 @@ mod tests {
 
         let conn = memory_db();
         let user_id = insert(&conn, "user", "she don't know", None).unwrap();
-        super::save_fixes_for_message(
+        super::save_turn_fixes(
             &conn,
             &[Fix {
                 wrong: "she don't".to_string(),
@@ -1307,6 +1392,7 @@ mod tests {
                 note: String::new(),
             }],
             Some(user_id),
+            None,
         )
         .unwrap();
 
@@ -1409,7 +1495,7 @@ mod tests {
         let conn = memory_db();
         insert(&conn, "user", "i go yesterday", None).unwrap();
         let bot = insert(&conn, "assistant", "ok", None).unwrap();
-        super::save_fixes_for_message(
+        super::save_turn_fixes(
             &conn,
             &[Fix {
                 wrong: "i go".to_string(),
@@ -1417,6 +1503,7 @@ mod tests {
                 note: "passado".to_string(),
             }],
             Some(bot),
+            None,
         )
         .unwrap();
 
@@ -1478,8 +1565,8 @@ mod tests {
             note: "passado".to_string(),
         };
 
-        super::save_fixes_for_message(&conn, std::slice::from_ref(&fix), Some(user_id)).unwrap();
-        super::save_fixes_for_message(&conn, &[fix], Some(user_id)).unwrap();
+        super::save_turn_fixes(&conn, std::slice::from_ref(&fix), Some(user_id), None).unwrap();
+        super::save_turn_fixes(&conn, &[fix], Some(user_id), None).unwrap();
 
         let item = super::next_drill(&conn, false, None)
             .unwrap()
@@ -1566,7 +1653,7 @@ mod tests {
             Some(r#"[{"wrong":"i go","right":"I went","note":"passado"},{"wrong":"she don't","right":"she doesn't","note":""}]"#),
         )
         .unwrap();
-        super::save_fixes_for_message(&conn, &fixes, Some(bot)).unwrap();
+        super::save_turn_fixes(&conn, &fixes, Some(bot), None).unwrap();
 
         let item = super::focus_drill(&conn, "i go", "I went")
             .unwrap()
@@ -1632,7 +1719,7 @@ mod tests {
             Some(r#"[{"wrong":"i go","right":"I went","note":"past"}]"#),
         )
         .unwrap();
-        super::save_fixes_for_message(
+        super::save_turn_fixes(
             &conn,
             &[Fix {
                 wrong: "i go".to_string(),
@@ -1640,6 +1727,7 @@ mod tests {
                 note: "past".to_string(),
             }],
             Some(user),
+            None,
         )
         .unwrap();
 
@@ -1656,6 +1744,102 @@ mod tests {
         // The shared JSON was cleaned, so startup backfill stays empty.
         super::backfill_fixes(&conn).unwrap();
         assert_eq!(super::drill_stats(&conn).unwrap().total, 0);
+    }
+
+    #[test]
+    fn deleting_the_reply_removes_the_cards_it_showed() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        let user = insert(&conn, "user", "i go yesterday", None).unwrap();
+        let bot = insert(&conn, "assistant", "ok", None).unwrap();
+        let fixes = [Fix {
+            wrong: "i go".to_string(),
+            right: "I went".to_string(),
+            note: "past".to_string(),
+        }];
+
+        super::save_turn_fixes(&conn, &fixes, Some(user), Some(bot)).unwrap();
+        let stored: Option<String> = conn
+            .query_row("SELECT fixes FROM messages WHERE id = ?1", [bot], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert!(
+            stored.is_some(),
+            "the reply keeps the corrections it showed"
+        );
+
+        // The card points at the user row while its copy sits on the reply;
+        // deleting the reply has to take the card too.
+        super::delete_message(&conn, bot).unwrap();
+        assert_eq!(super::drill_stats(&conn).unwrap().total, 0);
+        super::backfill_fixes(&conn).unwrap();
+        assert_eq!(super::drill_stats(&conn).unwrap().total, 0);
+        assert!(super::next_drill(&conn, true, None).unwrap().is_none());
+    }
+
+    #[test]
+    fn deleting_a_session_takes_its_cards_and_their_shared_copy() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        let first = super::current_session(&conn).unwrap();
+        let user_a = insert(&conn, "user", "i go yesterday", None).unwrap();
+        let bot_a = insert(&conn, "assistant", "ok", None).unwrap();
+        let shared = Fix {
+            wrong: "i go".to_string(),
+            right: "I went".to_string(),
+            note: "past".to_string(),
+        };
+        super::save_turn_fixes(
+            &conn,
+            std::slice::from_ref(&shared),
+            Some(user_a),
+            Some(bot_a),
+        )
+        .unwrap();
+
+        let second = super::create_session(&conn).unwrap();
+        let user_b = insert(&conn, "user", "she don't know", None).unwrap();
+        let bot_b = insert(&conn, "assistant", "ok", None).unwrap();
+        let other = Fix {
+            wrong: "she don't".to_string(),
+            right: "she doesn't".to_string(),
+            note: "third person".to_string(),
+        };
+        super::save_turn_fixes(&conn, &[shared, other], Some(user_b), Some(bot_b)).unwrap();
+
+        super::delete_session(&conn, first).unwrap();
+
+        // The card the conversation produced is gone, and its copy on the other
+        // conversation was cleaned so the backfill cannot resurrect it.
+        assert!(super::focus_drill(&conn, "i go", "I went")
+            .unwrap()
+            .is_none());
+        assert!(super::focus_drill(&conn, "she don't", "she doesn't")
+            .unwrap()
+            .is_some());
+        assert_eq!(super::current_session(&conn).unwrap(), second);
+
+        super::backfill_fixes(&conn).unwrap();
+        assert!(super::focus_drill(&conn, "i go", "I went")
+            .unwrap()
+            .is_none());
+        assert_eq!(super::drill_stats(&conn).unwrap().total, 1);
+    }
+
+    #[test]
+    fn reviewing_a_missing_card_writes_nothing() {
+        let conn = memory_db();
+
+        assert!(super::review_drill(&conn, 999, true).unwrap().is_none());
+        assert!(super::override_review(&conn, 999).unwrap().is_none());
+
+        let reviews: i64 = conn
+            .query_row("SELECT COUNT(*) FROM reviews", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(reviews, 0);
     }
 
     #[test]
@@ -1758,13 +1942,14 @@ mod tests {
             "a correct review schedules ahead"
         );
 
-        super::save_fixes_for_message(
+        super::save_turn_fixes(
             &conn,
             &[Fix {
                 wrong: "i go".to_string(),
                 right: "I went".to_string(),
                 note: String::new(),
             }],
+            None,
             None,
         )
         .unwrap();

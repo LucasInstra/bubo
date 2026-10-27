@@ -736,18 +736,9 @@ async fn chat(
         let _ = app.emit("bubo-fixes", llm::fixes_event_payload(&request_id, &fixes));
     }
 
+    // One transaction: the cards and the JSON shown on the reply land together.
     if let Ok(db) = state.db.lock() {
-        let _ = store::save_fixes_for_message(&db, &fixes, user_row);
-    }
-
-    let fixes_json = if fixes.is_empty() {
-        None
-    } else {
-        serde_json::to_string(&fixes).ok()
-    };
-
-    if let (Ok(db), Some(id)) = (state.db.lock(), reply_row) {
-        let _ = store::set_message_fixes(&db, id, fixes_json.as_deref());
+        let _ = store::save_turn_fixes(&db, &fixes, user_row, reply_row);
     }
 
     log::write(
