@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { ipc } from "../lib/ipc";
 import { PROVIDERS, providerFromKey } from "../lib/providers";
 import type { Settings } from "../lib/types";
@@ -7,6 +8,10 @@ import { Mascot } from "./Mascot";
 interface OnboardingProps {
   settings: Settings;
   onConnect: (next: Settings, apiKey: string) => Promise<void>;
+  /** Leaves the wizard without a key so history, practice and settings are reachable. */
+  onDismiss: () => void;
+  /** Optional update pill, so a new release is not hidden behind the first run. */
+  updateNotice?: ReactNode;
 }
 
 type Mode = "groq" | "key" | "ollama" | "custom";
@@ -24,7 +29,7 @@ const PATHS: Array<{ mode: Mode; title: string; hint: string }> = [
   { mode: "custom", title: "Outro endpoint", hint: "Para quem já usa um proxy" },
 ];
 
-export function Onboarding({ settings, onConnect }: OnboardingProps) {
+export function Onboarding({ settings, onConnect, onDismiss, updateNotice }: OnboardingProps) {
   const [mode, setMode] = useState<Mode>("groq");
   const [keyProvider, setKeyProvider] = useState<KeyProvider>("groq");
   const [apiKey, setApiKey] = useState("");
@@ -192,15 +197,16 @@ export function Onboarding({ settings, onConnect }: OnboardingProps) {
           <button
             className="ghost icon onboarding-hide"
             type="button"
-            aria-label="Ocultar"
-            title="Ocultar"
-            onClick={() => void ipc.hideWindow()}
+            aria-label="Configurar depois"
+            title="Configurar depois"
+            onClick={onDismiss}
           >
             ×
           </button>
         </header>
 
         <div className="onboarding-body">
+          {updateNotice}
           <div className="onboarding-paths" role="tablist" aria-label="Formas de conectar">
             {PATHS.map((path) => (
               <button
@@ -409,6 +415,14 @@ export function Onboarding({ settings, onConnect }: OnboardingProps) {
               onClick={() => void test()}
             >
               {testing ? "testando..." : "Testar conexão"}
+            </button>
+            <button
+              type="button"
+              className="ghost onboarding-later"
+              disabled={busy}
+              onClick={onDismiss}
+            >
+              Depois
             </button>
           </div>
 

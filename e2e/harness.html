@@ -35,14 +35,21 @@
       const params = new URLSearchParams(location.search);
       const mode = params.get("case") ?? "app";
       const compact =
-        mode === "compact" || mode === "compact-bilingual" || mode === "compact-switched";
-      const popup = mode === "popup" || mode === "popup-reply";
+        mode === "compact" ||
+        mode === "compact-bilingual" ||
+        mode === "compact-switched" ||
+        mode === "compact-update";
+      const popup = mode === "popup" || mode === "popup-reply" || mode === "popup-update";
       const switched = mode === "switched" || mode === "compact-switched";
       const bilingual =
         mode === "bilingual" || mode === "bilingual-a1" || mode === "compact-bilingual";
       const level =
         params.get("level") ?? (mode === "bilingual-a1" ? "A1" : DEFAULT_SETTINGS.level);
-      const updateAvailable = mode === "update";
+      const updateAvailable =
+        mode === "update" ||
+        mode === "onboarding-update" ||
+        mode === "compact-update" ||
+        mode === "popup-update";
       const width = popup ? 380 : compact ? 400 : 420;
       const height = popup ? 380 : compact ? 280 : 640;
 
@@ -135,7 +142,7 @@
       const now = Date.now();
       const day = 86_400_000;
       let lessonProgress = [];
-      let savedKey = mode !== "onboarding";
+      let savedKey = mode !== "onboarding" && mode !== "onboarding-update";
 
       const handlers = {
         get_settings: () => settings,

@@ -1148,6 +1148,66 @@ button {
   font-size: 11px;
 }
 
+/* update notice for compact, popup and the first run */
+
+.update-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 10px 8px;
+  padding: 7px 9px;
+  border: 1px solid rgba(139, 125, 255, 0.28);
+  border-radius: 9px;
+  background: var(--accent-soft);
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.update-notice.is-error {
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.08);
+  color: var(--bad);
+}
+
+.update-notice-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.update-notice-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.update-notice-actions .primary,
+.update-notice-actions .ghost {
+  padding: 4px 8px;
+  font-size: 10px;
+}
+
+.connect-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 8px;
+  padding: 8px 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.connect-banner span {
+  flex: 1;
+}
+
+.connect-banner .ghost {
+  padding: 4px 9px;
+  font-size: 10.5px;
+}
+
 /* update settings card */
 
 .update-card,
@@ -3435,6 +3495,8 @@ button {
 }
 
 [data-theme="light"] .update-banner,
+[data-theme="light"] .update-notice,
+[data-theme="light"] .connect-banner,
 [data-theme="light"] .update-speech,
 [data-theme="light"] .status-pill,
 [data-theme="light"] .drill-empty,

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { splitReply, stripLegacyFixes } from "../lib/format";
@@ -19,6 +19,8 @@ interface PopupViewProps {
   onSend: (text: string) => boolean;
   onStop: () => void;
   onOpenChat: () => void;
+  /** Optional update pill, so the face still announces a release. */
+  updateNotice?: ReactNode;
 }
 
 /**
@@ -36,6 +38,7 @@ export function PopupView({
   onSend,
   onStop,
   onOpenChat,
+  updateNotice,
 }: PopupViewProps) {
   const innerRef = useRef<HTMLDivElement>(null);
   const clickTimer = useRef<number | null>(null);
@@ -226,6 +229,7 @@ export function PopupView({
 
   return (
     <div className={`popup-stage stage-${stage}`}>
+      {updateNotice}
       {stage === "reply" && (
         <div className="popup-reply">
           {lastAssistant && !pending ? (

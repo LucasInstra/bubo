@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { splitReply, stripLegacyFixes } from "../lib/format";
 import type { Mood, Msg, OrbState, Settings } from "../lib/types";
 import { Composer } from "./Composer";
@@ -15,6 +16,8 @@ interface CompactViewProps {
   onHide: () => void;
   onSend: (text: string) => boolean;
   onStop: () => void;
+  /** Optional update pill, so the small window still announces a release. */
+  updateNotice?: ReactNode;
 }
 
 /**
@@ -33,6 +36,7 @@ export function CompactView({
   onHide,
   onSend,
   onStop,
+  updateNotice,
 }: CompactViewProps) {
   const [translationsOpen, setTranslationsOpen] = useState<Record<string, boolean>>({});
   const lastUser = [...messages]
@@ -207,6 +211,8 @@ export function CompactView({
             </div>
           )}
         </div>
+
+        {updateNotice}
 
         <Composer
           disabled={status !== "idle"}

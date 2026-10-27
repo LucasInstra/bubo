@@ -18,6 +18,7 @@ import { PopupView, type PopupStage } from "./components/PopupView";
 import { ProgressPanel } from "./components/ProgressPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { UpdateBanner } from "./components/UpdateBanner";
+import { UpdateNotice } from "./components/UpdateNotice";
 import { BUILD_LABEL } from "./lib/build";
 import { trimContext } from "./lib/context";
 import { parseStoredFixes } from "./lib/format";
@@ -105,6 +106,7 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [updateDismissed, setUpdateDismissed] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(true);
 
   const updater = useUpdater();
 
@@ -693,6 +695,18 @@ export default function App() {
     updater.status === "downloading" ||
     updater.status === "ready" ||
     (updater.status === "available" && !updateDismissed && searchOpen);
+  const updateNotice = (
+    <UpdateNotice
+      version={updater.version}
+      build={updater.build}
+      status={updater.status}
+      progress={updater.progress}
+      error={updater.error}
+      dismissed={updateDismissed}
+      onInstall={() => void updater.install()}
+      onLater={() => setUpdateDismissed(true)}
+    />
+  );
   const accentVars = {
     "--accent": accent,
     "--accent-soft": withAlpha(accent, 0.16),
@@ -707,10 +721,15 @@ export default function App() {
     );
   }
 
-  if (!hasKey) {
+  if (!hasKey && onboardingOpen) {
     return (
       <div className={`app size-${settings.textSize}`} style={accentVars}>
-        <Onboarding settings={settings} onConnect={saveSettings} />
+        <Onboarding
+          settings={settings}
+          onConnect={saveSettings}
+          onDismiss={() => setOnboardingOpen(false)}
+          updateNotice={updateNotice}
+        />
       </div>
     );
   }
@@ -728,6 +747,7 @@ export default function App() {
           onOpenChat={exitPopup}
           onSend={sendFromPopup}
           onStop={stop}
+          updateNotice={updateNotice}
         />
       </div>
     );
@@ -747,6 +767,7 @@ export default function App() {
           onHide={() => void ipc.hideWindow()}
           onSend={send}
           onStop={stop}
+          updateNotice={updateNotice}
         />
       </div>
     );
@@ -1224,6 +1245,15 @@ export default function App() {
             {settings.replyLanguage !== "en" && (
               <span className="focus-nudge">· tente usar em inglês</span>
             )}
+          </div>
+        )}
+
+        {!hasKey && (
+          <div className="connect-banner" role="status">
+            <span>O bubo ainda não está conectado.</span>
+            <button className="ghost" type="button" onClick={() => setOnboardingOpen(true)}>
+              Conectar
+            </button>
           </div>
         )}
 
