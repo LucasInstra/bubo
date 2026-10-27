@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
 import pkg from "../package.json" with { type: "json" };
 import { BUILD_NUMBER } from "../src/lib/build";
 
@@ -169,7 +170,15 @@ test("settings shows what changed in the running version", async ({ page }) => {
   await card.scrollIntoViewIfNeeded();
   await expect(card).toContainText(`Novidades do build ${BUILD_NUMBER}`);
   await expect(card.locator("li").first()).toBeVisible();
-  await expect(card).toContainText("Avaliação");
+
+  // The card must show this build's own notes, not the version-level fallback.
+  const notes = readFileSync(
+    `release-notes/${pkg.version}.build${BUILD_NUMBER}.pt.md`,
+    "utf8",
+  );
+  const firstHighlight = /^- \*\*(.+?)\*\*/m.exec(notes)?.[1] ?? "";
+  expect(firstHighlight).not.toBe("");
+  await expect(card).toContainText(firstHighlight);
 });
 
 test("an available update shows its Portuguese highlights", async ({ page }) => {
