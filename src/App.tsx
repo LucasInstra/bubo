@@ -23,7 +23,7 @@ import { BUILD_LABEL } from "./lib/build";
 import { trimContext } from "./lib/context";
 import { parseStoredFixes } from "./lib/format";
 import { ipc } from "./lib/ipc";
-import { focusLabel, isBeginnerLevel, type Lesson } from "./lib/lessons";
+import { focusLabel, type Lesson } from "./lib/lessons";
 import { moodRequest } from "./lib/mood";
 import type { Fix, Mood, Msg, OrbState, Settings, StoredMessage } from "./lib/types";
 import { DEFAULT_SETTINGS } from "./lib/types";
@@ -517,40 +517,54 @@ export default function App() {
     [settings.autostart, settings.compact, settings.popup, pinned],
   );
 
+  const introPending = useRef(false);
   const startFocusPractice = useCallback(
     async (lesson: Lesson) => {
-      const next = { ...settings, studyFocus: lesson.focus };
+      // A double click used to append one intro and save two rows.
+      if (introPending.current) return;
+      introPending.current = true;
       try {
-        await ipc.saveSettings(next);
-      } catch (error) {
-        console.error("could not save the lesson focus", error);
-      }
-      setSettings(next);
-      setShowLessons(false);
+        const next = { ...settings, studyFocus: lesson.focus };
+        try {
+          await ipc.saveSettings(next);
+        } catch (error) {
+          console.error("could not save the lesson focus", error);
+        }
+        setSettings(next);
+        setShowLessons(false);
 
-      // The lesson ends in a conversation starter, not in an empty chat. The
-      // line is saved like any other assistant message, so history keeps it.
-      const intro: Msg = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: practiceIntro(lesson, next.replyLanguage),
-        fixes: [],
-      };
-      setMessages((current) => {
-        const last = current[current.length - 1];
-        if (last?.role === "assistant" && last.content === intro.content) return current;
-        return [...current, intro];
-      });
-      try {
-        const id = await ipc.saveAssistantMessage(intro.content);
-        setMessages((current) =>
-          current.map((message) => (message.id === intro.id ? { ...message, dbId: id } : message)),
-        );
-      } catch (error) {
-        console.error("could not save the lesson intro", error);
+        // The lesson ends in a conversation starter, not in an empty chat. The
+        // line is saved like any other assistant message, so history keeps it.
+        const content = practiceIntro(lesson, next.replyLanguage);
+        const last = messages[messages.length - 1];
+        if (last?.role === "assistant" && last.content === content) {
+          // The starter is already the last message: appending or saving it
+          // again would duplicate it after the next start.
+          return;
+        }
+
+        const intro: Msg = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content,
+          fixes: [],
+        };
+        setMessages((current) => [...current, intro]);
+        try {
+          const id = await ipc.saveAssistantMessage(intro.content);
+          setMessages((current) =>
+            current.map((message) =>
+              message.id === intro.id ? { ...message, dbId: id } : message,
+            ),
+          );
+        } catch (error) {
+          console.error("could not save the lesson intro", error);
+        }
+      } finally {
+        introPending.current = false;
       }
     },
-    [settings],
+    [messages, settings],
   );
 
   const enterPopup = useCallback(() => {
@@ -695,7 +709,6 @@ export default function App() {
     ? messages.filter((message) => message.content.toLowerCase().includes(normalizedSearch))
     : messages;
   const accent = settings.accentFromMascot ? settings.color : "#8b7dff";
-  const beginner = isBeginnerLevel(settings.level);
   const portugueseReplies = settings.replyLanguage === "pt";
   const suggestions = portugueseReplies ? SUGGESTIONS_PT : SUGGESTIONS_EN;
   const showUpdateSpeech =
@@ -1251,7 +1264,7 @@ export default function App() {
           )}
         </div>
 
-        {beginner && settings.studyFocus !== "free" && (
+        {settings.studyFocus !== "free" && (
           <div className="focus-bar">
             <span className="focus-dot" aria-hidden="true" />
             Foco: {focusLabel(settings.studyFocus)}

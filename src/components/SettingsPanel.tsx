@@ -10,7 +10,7 @@ import {
 import { releaseHighlights } from "../lib/highlights";
 import { BUILD_NUMBER } from "../lib/build";
 import { ipc } from "../lib/ipc";
-import { isBeginnerLevel, STUDY_FOCUSES } from "../lib/lessons";
+import { STUDY_FOCUSES } from "../lib/lessons";
 import { useModalFocus } from "../lib/modal";
 import { matchProvider, PROVIDERS, type ProviderPreset } from "../lib/providers";
 import { buildHighlights, hasBuildNotes } from "../lib/release-notes";
@@ -175,8 +175,6 @@ export function SettingsPanel({
     draft.model,
   );
   const dirty = apiKey.length > 0 || JSON.stringify(draft) !== JSON.stringify(settings);
-  const beginner = isBeginnerLevel(draft.level);
-
   const refreshQueue = useCallback(async () => {
     try {
       setQueue(await ipc.drillStats());
@@ -539,27 +537,25 @@ export function SettingsPanel({
               </div>
             )}
 
-            {beginner && (
-              <div className="field">
-                <span>Foco de estudo</span>
-                <div className="levels wrap focus-grid">
-                  {STUDY_FOCUSES.map(([value, label]) => (
-                    <button
-                      type="button"
-                      key={value}
-                      className={`chip ${draft.studyFocus === value ? "chip-on" : ""}`}
-                      aria-pressed={draft.studyFocus === value}
-                      onClick={() => patch({ studyFocus: value })}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <span className="hint">
-                  O bubo puxa esse assunto e prioriza correções relacionadas.
-                </span>
+            <div className="field">
+              <span>Foco de estudo</span>
+              <div className="levels wrap focus-grid">
+                {STUDY_FOCUSES.map(([value, label]) => (
+                  <button
+                    type="button"
+                    key={value}
+                    className={`chip ${draft.studyFocus === value ? "chip-on" : ""}`}
+                    aria-pressed={draft.studyFocus === value}
+                    onClick={() => patch({ studyFocus: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
-            )}
+              <span className="hint">
+                O bubo puxa esse assunto e prioriza correções relacionadas.
+              </span>
+            </div>
 
             <div className="field">
               <span>Mini-lições</span>

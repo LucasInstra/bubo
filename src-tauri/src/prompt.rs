@@ -131,17 +131,13 @@ pub fn reply_system(settings: &Settings) -> String {
     } else {
         "Reply in English like a friend texting.".to_string()
     };
-    let focus = if beginner {
-        study_focus_hint(&settings.study_focus)
-            .map(|hint| {
-                format!(
-                    "{hint} Create natural chances to use it only when it fits what the learner just said, keep the examples short, and never turn every reply into a drill or change the subject for it."
-                )
-            })
-            .unwrap_or_default()
-    } else {
-        String::new()
-    };
+    let focus = study_focus_hint(&settings.study_focus)
+        .map(|hint| {
+            format!(
+                "{hint} Create natural chances to use it only when it fits what the learner just said, keep the examples short, and never turn every reply into a drill or change the subject for it."
+            )
+        })
+        .unwrap_or_default();
     let beginner_rule = if beginner {
         format!(
             "- The learner is building confidence. Answer the learner's actual message first, even when it is just \"oi\" or a short sentence. React politely, then ask whether they want to learn words about that topic or just keep talking. Never change the subject to a grammar drill or to an unrelated phrase. After reacting, you may also invite them to try one short English starter of one to three words, never the full sentence, and keep it low pressure. {NUDGE_GUARD} If they ask how to say something, give one short hint first (the tense, the first word or a related word); if they ask again or say they are stuck, give the full English sentence and explain it in the language you are replying in. Keep replies short and concrete."
@@ -386,17 +382,13 @@ fn corrections_system(settings: &Settings) -> String {
     } else {
         "- Capitalization matters: flag a lowercase \"i\" or a lowercase day of the week."
     };
-    let focus_rule = if is_beginner_level(&settings.level) {
-        study_focus_hint(&settings.study_focus)
-            .map(|hint| {
-                format!(
-                    "\n- {hint} Prioritize mistakes in this area, but still include other clear mistakes."
-                )
-            })
-            .unwrap_or_default()
-    } else {
-        String::new()
-    };
+    let focus_rule = study_focus_hint(&settings.study_focus)
+        .map(|hint| {
+            format!(
+                "\n- {hint} Prioritize mistakes in this area, but still include other clear mistakes."
+            )
+        })
+        .unwrap_or_default();
 
     format!(
         r#"You are an English correction engine for a Brazilian learner at CEFR level {level}.
@@ -760,14 +752,22 @@ mod tests {
     }
 
     #[test]
-    fn focus_is_ignored_above_beginner_levels() {
-        let settings = Settings {
-            level: "B1".to_string(),
-            study_focus: "past_simple".to_string(),
-            ..Settings::default()
-        };
-        assert!(!reply_system(&settings).contains("focusing on the past simple"));
-        assert!(!correction_system_prompt(&settings).contains("Prioritize mistakes"));
+    fn focus_reaches_every_level() {
+        for level in ["A1", "B1", "B2"] {
+            let settings = Settings {
+                level: level.to_string(),
+                study_focus: "past_simple".to_string(),
+                ..Settings::default()
+            };
+            assert!(
+                reply_system(&settings).contains("focusing on the past simple"),
+                "{level} keeps the study focus in the reply"
+            );
+            assert!(
+                correction_system_prompt(&settings).contains("Prioritize mistakes"),
+                "{level} prioritizes the study focus in corrections"
+            );
+        }
     }
 
     #[test]

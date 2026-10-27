@@ -123,6 +123,39 @@ test("a correct step is kept even before advancing", async ({ page }) => {
   await expect(list.getByRole("button", { name: /Verbo to be/ })).toContainText("Passo 2 de 3");
 });
 
+test("completing the same lesson twice does not duplicate the intro", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=empty&level=A1");
+
+  const finish = async (viaSettings: boolean) => {
+    if (viaSettings) {
+      await page.getByRole("button", { name: "Configurações" }).click();
+      await page.getByRole("button", { name: "Abrir lições de gramática" }).click();
+    } else {
+      await page.getByRole("button", { name: "Mini-lições de gramática" }).click();
+    }
+    const dialog = page.getByRole("dialog", { name: "Lições" });
+    await dialog.getByRole("button", { name: /Verbo to be/ }).click();
+    for (const next of ["Próximo", "Próximo", "Concluir"]) {
+      await dialog.getByRole("button", { name: "Ver resposta" }).click();
+      await dialog.getByRole("button", { name: next }).click();
+    }
+    await dialog.getByRole("button", { name: "Praticar na conversa" }).click();
+    await expect(dialog).toHaveCount(0);
+  };
+
+  await finish(false);
+  await finish(true);
+
+  const intro = page.locator(".msg-bot", {
+    hasText: 'We just finished the "Verbo to be" lesson',
+  });
+  await expect(intro).toHaveCount(1);
+
+  // The reply is saved once, so reopening the app cannot show it twice.
+  const saved = (await calls(page)).filter((call) => call.cmd === "save_assistant_message");
+  expect(saved).toHaveLength(1);
+});
+
 test("higher levels can open their own lessons", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=empty&level=B1");
 

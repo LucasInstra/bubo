@@ -72,7 +72,7 @@ test("reply language offers English, bilingual and Portuguese-only replies", asy
   await expect(page.getByRole("button", { name: "PT-BR", exact: true })).toHaveClass(/chip-on/);
 });
 
-test("bilingual settings expose the English challenge and beginner focus", async ({ page }) => {
+test("bilingual settings expose the English challenge and the study focus", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app&level=A1");
   await page.getByRole("button", { name: "Configurações" }).click();
 
@@ -83,7 +83,7 @@ test("bilingual settings expose the English challenge and beginner focus", async
   await expect(page.getByText("Desafio antes do inglês")).toBeVisible();
 
   await page.getByRole("button", { name: "B1", exact: true }).click();
-  await expect(page.getByText("Foco de estudo")).toHaveCount(0);
+  await expect(page.getByText("Foco de estudo")).toBeVisible();
   await expect(page.getByText("Desafio antes do inglês")).toBeVisible();
 });
 
