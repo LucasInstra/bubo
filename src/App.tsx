@@ -107,6 +107,8 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [updateDismissed, setUpdateDismissed] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [startupNotice, setStartupNotice] = useState("");
 
   const updater = useUpdater();
 
@@ -133,40 +135,65 @@ export default function App() {
     moodTimer.current = window.setTimeout(() => setMood("idle"), ms);
   }, []);
 
+  const loadEverything = useCallback(async () => {
+    const [settingsResult, keyResult, historyResult, sessionResult] = await Promise.allSettled([
+      ipc.getSettings(),
+      ipc.hasApiKey(),
+      ipc.history(),
+      ipc.currentSession(),
+    ]);
+
+    // One failed call must not pretend this is a first run: showing onboarding
+    // would invite the learner to save defaults over a real configuration.
+    if (settingsResult.status !== "fulfilled" || keyResult.status !== "fulfilled") {
+      console.error("bubo failed to load settings", settingsResult, keyResult);
+      setLoadError("Não foi possível ler seus dados. Nada foi apagado.");
+      return;
+    }
+
+    const loadedSettings = settingsResult.value;
+    setSettings(loadedSettings);
+    setPinned(loadedSettings.pinned);
+    setHasKey(keyResult.value);
+
+    if (historyResult.status !== "fulfilled" || sessionResult.status !== "fulfilled") {
+      console.error("bubo failed to load history", historyResult, sessionResult);
+      setLoadError("Não foi possível carregar seu histórico. Nada foi apagado.");
+      return;
+    }
+
+    setSessionId(sessionResult.value);
+    setMessages(historyResult.value.map(fromStored));
+
+    if (loadedSettings.popup) {
+      if (keyResult.value) void ipc.setPopup(true);
+      else void ipc.setPopup(false);
+    } else {
+      void ipc.setCompact(loadedSettings.compact);
+    }
+
+    const stats = await ipc.drillStats().catch(() => null);
+    if (stats) setDue(stats.due);
+
+    const notice = await ipc.startupNotice().catch(() => null);
+    if (notice) setStartupNotice(notice);
+  }, []);
+
   useEffect(() => {
     let alive = true;
-    (async () => {
-      try {
-        const [loadedSettings, loadedKey, stored, loadedSession] = await Promise.all([
-          ipc.getSettings(),
-          ipc.hasApiKey(),
-          ipc.history(),
-          ipc.currentSession(),
-        ]);
-        if (!alive) return;
-        setSettings(loadedSettings);
-        setPinned(loadedSettings.pinned);
-        setHasKey(loadedKey);
-        setSessionId(loadedSession);
-        setMessages(stored.map(fromStored));
-        if (loadedSettings.popup) {
-          if (loadedKey) void ipc.setPopup(true);
-          else void ipc.setPopup(false);
-        } else {
-          void ipc.setCompact(loadedSettings.compact);
-        }
-        const stats = await ipc.drillStats();
-        if (alive) setDue(stats.due);
-      } catch (error) {
-        console.error("bubo failed to load", error);
-      } finally {
-        if (alive) setReady(true);
-      }
-    })();
+    void loadEverything().finally(() => {
+      if (alive) setReady(true);
+    });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [loadEverything]);
+
+  const retryLoad = useCallback(() => {
+    setLoadError("");
+    setReady(false);
+    void loadEverything().finally(() => setReady(true));
+  }, [loadEverything]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -666,13 +693,15 @@ export default function App() {
   }, []);
 
   const removeMessage = useCallback(async (message: Msg) => {
-    if (message.dbId) {
-      try {
-        await ipc.deleteMessage(message.dbId);
-      } catch (problem) {
-        console.error("could not delete the message", problem);
-        return;
-      }
+    // Without a database id the message was never persisted (a user turn still
+    // streaming, or an intro being saved); removing it from the screen would
+    // only make it come back on the next load.
+    if (!message.dbId) return;
+    try {
+      await ipc.deleteMessage(message.dbId);
+    } catch (problem) {
+      console.error("could not delete the message", problem);
+      return;
     }
     setMessages((current) => current.filter((item) => item.id !== message.id));
   }, []);
@@ -716,6 +745,7 @@ export default function App() {
   const showUpdateBanner =
     updater.status === "downloading" ||
     updater.status === "ready" ||
+    updater.status === "error" ||
     (updater.status === "available" && !updateDismissed && searchOpen);
   const updateNotice = (
     <UpdateNotice
@@ -739,6 +769,19 @@ export default function App() {
     return (
       <div className={`app size-${settings.textSize}`} style={accentVars}>
         <div className="boot">acendendo o bubo...</div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className={`app size-${settings.textSize}`} style={accentVars}>
+        <div className="boot" role="alert">
+          <span>{loadError}</span>
+          <button className="ghost" type="button" onClick={retryLoad}>
+            Tentar de novo
+          </button>
+        </div>
       </div>
     );
   }
@@ -1274,6 +1317,15 @@ export default function App() {
           </div>
         )}
 
+        {startupNotice && (
+          <div className="connect-banner" role="alert">
+            <span>{startupNotice}</span>
+            <button className="ghost" type="button" onClick={() => setStartupNotice("")}>
+              Fechar
+            </button>
+          </div>
+        )}
+
         {!hasKey && (
           <div className="connect-banner" role="status">
             <span>O bubo ainda não está conectado.</span>
@@ -1288,6 +1340,7 @@ export default function App() {
             version={updater.version}
             status={updater.status}
             progress={updater.progress}
+            error={updater.error}
             onInstall={() => void updater.install()}
             onLater={() => setUpdateDismissed(true)}
           />

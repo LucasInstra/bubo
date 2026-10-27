@@ -37,6 +37,7 @@ export function LessonsPanel({
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const savedFixes = useRef<Set<string>>(new Set());
+  const savingFixes = useRef<Set<string>>(new Set());
 
   useModalFocus(dialogRef);
 
@@ -134,16 +135,20 @@ export function LessonsPanel({
     const right = displayAnswer(lessonFixRight(typed, step.exercise));
     setResult({ kind: "wrong", answer: right });
     const key = `${selected.id}:${stepIndex}`;
-    if (savedFixes.current.has(key)) return;
-    savedFixes.current.add(key);
+    if (savedFixes.current.has(key) || savingFixes.current.has(key)) return;
+    // Only mark it as saved after the backend confirms: a failed save used to
+    // be silently skipped on the next try.
+    savingFixes.current.add(key);
     setBusy(true);
     try {
       await ipc.saveLessonFix(typed, right, `${step.exercise.prompt} · ${step.exercise.note}`);
+      savedFixes.current.add(key);
       onQueueChanged();
     } catch (problem) {
       console.error("could not save the lesson correction", problem);
-      setError("Não foi possível adicionar o erro à prática.");
+      setError("Não foi possível adicionar o erro à prática. Tente de novo.");
     } finally {
+      savingFixes.current.delete(key);
       setBusy(false);
     }
   };

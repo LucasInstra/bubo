@@ -229,6 +229,11 @@ export function PopupView({
 
   return (
     <div className={`popup-stage stage-${stage}`}>
+      <p className="sr-only" role="status" aria-live="polite">
+        {stage === "reply" && status === "idle" && lastAssistant && !lastAssistant.streaming
+          ? lastAssistant.content
+          : ""}
+      </p>
       {updateNotice}
       {stage === "reply" && (
         <div className="popup-reply">
@@ -276,6 +281,11 @@ export function PopupView({
               <div className="popup-bubble-text">pensando...</div>
               {tail}
             </div>
+          )}
+          {status !== "idle" && (
+            <button className="popup-reveal" type="button" onClick={onStop}>
+              Parar
+            </button>
           )}
         </div>
       )}

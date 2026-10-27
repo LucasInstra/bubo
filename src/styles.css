@@ -3629,7 +3629,10 @@ button {
 .boot {
   display: grid;
   place-items: center;
+  gap: 12px;
   height: 100%;
+  padding: 24px;
+  text-align: center;
   color: var(--muted);
   font-size: 12px;
   letter-spacing: 0.3px;

@@ -290,6 +290,12 @@ test("a new turn keeps the stop control while the previous corrections finish", 
   await textarea.press("Enter");
   await expect.poll(async () => (await chatBridge(page)).requests.length).toBe(1);
 
+  // The turn exists on screen but has no database id yet; deleting it would
+  // only hide it until the next load.
+  const firstUser = page.locator(".msg-user", { hasText: "first question" });
+  await expect(firstUser).toBeVisible();
+  await expect(firstUser.getByRole("button", { name: "excluir" })).toBeDisabled();
+
   await chatEvent(page, "delta", 0, "first answer");
   await chatEvent(page, "done", 0);
   await expect(page.locator(".msg-bot").last()).toContainText("first answer");

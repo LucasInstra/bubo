@@ -185,6 +185,8 @@ export const Message = memo(function Message({
           {onDelete && (
             <button
               className="danger"
+              disabled={!message.dbId}
+              title={message.dbId ? undefined : "Aguarde o bubo salvar esta mensagem"}
               onClick={() => {
                 if (confirming) {
                   setConfirming(false);

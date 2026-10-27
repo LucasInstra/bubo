@@ -147,7 +147,18 @@ export function CompactView({
           </div>
         </header>
 
-        <div className="compact-chat">
+        <div
+          className="compact-chat"
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions"
+          aria-label="Conversa"
+        >
+          <p className="sr-only" role="status" aria-live="polite">
+            {status === "idle" && lastAssistant && !lastAssistant.streaming
+              ? lastAssistant.content
+              : ""}
+          </p>
           {exchange.length === 0 && !pending && <p className="compact-empty">Diga oi em inglês.</p>}
 
           {exchange.map((message) => {

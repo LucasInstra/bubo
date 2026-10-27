@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { useComposerDraft } from "../lib/draft";
 
 interface ComposerProps {
   disabled: boolean;
@@ -19,12 +20,20 @@ export function Composer({
   onStop,
   onSearch,
 }: ComposerProps) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useComposerDraft();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (autoFocus) textareaRef.current?.focus();
   }, [autoFocus]);
+
+  // A draft restored from the store may already need two lines.
+  useEffect(() => {
+    const element = textareaRef.current;
+    if (!element || !element.value) return;
+    element.style.height = "0px";
+    element.style.height = `${Math.min(element.scrollHeight, 96)}px`;
+  }, []);
 
   const resize = () => {
     const element = textareaRef.current;

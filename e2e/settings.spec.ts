@@ -168,6 +168,18 @@ test("pinning from the settings header is not undone by saving", async ({ page }
       }),
     )
     .toBe(false);
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const calls = (window as unknown as { __calls: HarnessCall[] }).__calls.filter(
+          (call) => call.cmd === "set_pinned",
+        );
+        const last = calls.at(-1)?.args as { pinned?: boolean } | undefined;
+        return last?.pinned;
+      }),
+    )
+    .toBe(false);
 });
 
 test("onboarding can connect a local Ollama without a key", async ({ page }) => {

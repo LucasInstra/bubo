@@ -58,6 +58,7 @@ export const ipc = {
   setPopupStage: (stage: "face" | "input" | "reply") => invoke<void>("set_popup_stage", { stage }),
   onWindowBlur: (handler: () => void) => listen("bubo-blur", handler),
   history: () => invoke<StoredMessage[]>("history"),
+  startupNotice: () => invoke<string | null>("startup_notice"),
   currentSession: () => invoke<number>("current_session"),
   listSessions: () => invoke<SessionSummary[]>("list_sessions"),
   newSession: () => invoke<number>("new_session"),

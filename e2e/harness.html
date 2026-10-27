@@ -51,9 +51,13 @@
         params.get("level") ?? (mode === "bilingual-a1" ? "A1" : DEFAULT_SETTINGS.level);
       const updateAvailable =
         mode === "update" ||
+        mode === "update-error" ||
         mode === "onboarding-update" ||
         mode === "compact-update" ||
         mode === "popup-update";
+      const updateFails = mode === "update-error";
+      const recovered = mode === "recovered";
+      const popupStatus = params.get("status") ?? "idle";
       const width = popup ? 380 : compact ? 400 : 420;
       const height = popup ? 380 : compact ? 280 : 640;
 
@@ -175,6 +179,18 @@
                 },
               }
             : null,
+        "plugin:updater|download_and_install": ({ onEvent }) => {
+          if (updateFails) throw "assinatura do instalador inválida";
+          onEvent?.onmessage?.({ event: "Started", data: { contentLength: 100 } });
+          onEvent?.onmessage?.({ event: "Progress", data: { chunkLength: 100 } });
+          onEvent?.onmessage?.({ event: "Finished", data: {} });
+          return null;
+        },
+        "plugin:process|restart": () => null,
+        startup_notice: () =>
+          recovered
+            ? "O banco anterior não pôde ser lido e foi movido para bubo.db.corrupt-1. O bubo começou um histórico novo."
+            : null,
         history: () =>
           mode === "empty" ? [] : bilingual ? bilingualStored : switched ? switchedStored : stored,
         open_session: ({ id }) => {
@@ -190,6 +206,11 @@
           return contents[id] ?? [];
         },
         current_session: () => 1,
+        new_session: () => 99,
+        delete_session: () => 1,
+        rename_session: () => null,
+        archive_session: () => null,
+        set_pinned: () => null,
         lesson_progress: () => lessonProgress,
         save_lesson_progress: ({ lessonId, step, completed }) => {
           lessonProgress = lessonProgress.filter((row) => row.lessonId !== lessonId);
@@ -291,7 +312,13 @@
       window.__TAURI_INTERNALS__ = {
         invoke: async (cmd, args) => {
           calls.push({ cmd, args });
-          return handlers[cmd] ? handlers[cmd](args) : null;
+          if (handlers[cmd]) return handlers[cmd](args);
+          // A missing stub used to look like success. Make the gap visible
+          // without breaking the plugin commands the real window provides.
+          if (!cmd.startsWith("plugin:")) {
+            console.warn("harness has no stub for", cmd);
+          }
+          return null;
         },
         transformCallback: () => 0,
         unregisterCallback: () => {},
@@ -309,7 +336,7 @@
           React.createElement(PopupView, {
             settings,
             messages: switchedStored,
-            status: "idle",
+            status: popupStatus,
             mood: "happy",
             stage: "reply",
             onShowInput: () => {},
