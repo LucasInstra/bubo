@@ -36,6 +36,23 @@ const cargo = readFileSync(cargoPath, "utf8");
 const config = readFileSync(configPath, "utf8");
 const lock = readFileSync(lockPath, "utf8");
 
+// A regex that silently misses would make the check report "in sync" without
+// verifying anything, so fail loudly when a file no longer has the field.
+const cargoMatch = /^version = "([^"]+)"/m.exec(cargo);
+const configMatch = /"version":\s*"([^"]+)"/.exec(config);
+const lockMatch = /name = "bubo"\nversion = "([^"]+)"/.exec(lock);
+const missing = [
+  ["src-tauri/Cargo.toml", cargoMatch],
+  ["src-tauri/tauri.conf.json", configMatch],
+  ["src-tauri/Cargo.lock", lockMatch],
+].filter(([, match]) => !match);
+if (missing.length > 0) {
+  console.error(
+    `could not find the version field in: ${missing.map(([name]) => name).join(", ")}`,
+  );
+  process.exit(1);
+}
+
 const cargoNext = cargo.replace(/^version = "[^"]+"/m, `version = "${version}"`);
 const configNext = config.replace(/("version":\s*")[^"]+(")/, `$1${version}$2`);
 const lockNext = lock.replace(/(name = "bubo"\nversion = ")[^"]+(")/, `$1${version}$2`);

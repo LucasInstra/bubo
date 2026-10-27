@@ -36,6 +36,17 @@ jobs:
         shell: bash
         run: node scripts/sync-version.mjs --check --expect="${{ github.ref_name }}"
 
+      - name: Check the release notes exist
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          for file in "release-notes/${version}.md" "release-notes/${version}.pt.md"; do
+            if [ ! -f "$file" ]; then
+              echo "::error::missing $file for ${{ github.ref_name }}"
+              exit 1
+            fi
+          done
+
       - name: Read release notes
         id: notes
         shell: bash

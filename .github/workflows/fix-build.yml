@@ -6,7 +6,6 @@ on:
       tag:
         description: Existing release tag to update
         required: true
-        default: v0.9.1
 
 permissions:
   contents: write
@@ -17,6 +16,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # Build exactly the released commit, never whatever main happens to be.
+          ref: ${{ inputs.tag }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
