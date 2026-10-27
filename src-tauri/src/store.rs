@@ -94,9 +94,63 @@ pub struct ProgressStats {
 
 pub fn open(path: PathBuf) -> rusqlite::Result<Connection> {
     let conn = Connection::open(path)?;
+    // A backup tool or the antivirus can hold the file for a moment; without
+    // this the very next read or write fails and the turn is lost.
+    let _ = conn.busy_timeout(Duration::from_secs(5));
     init(&conn)?;
-    backfill_fixes(&conn)?;
+    backfill_once(&conn)?;
     Ok(conn)
+}
+
+/// Opens the database and, when the file is unreadable, parks it aside and
+/// starts a fresh one instead of letting the app die before the window exists.
+/// Returns the parked path when recovery happened.
+pub fn open_recovering(path: PathBuf) -> Result<(Connection, Option<PathBuf>), String> {
+    match open(path.clone()) {
+        Ok(conn) => Ok((conn, None)),
+        Err(error) => {
+            let parked = park_database(&path).map_err(|park| {
+                format!("{error}; could not move the unreadable database aside: {park}")
+            })?;
+            let conn = open(path).map_err(|retry| {
+                format!("{error}; after recovery the new database failed: {retry}")
+            })?;
+            Ok((conn, Some(parked)))
+        }
+    }
+}
+
+fn park_database(path: &Path) -> std::io::Result<PathBuf> {
+    let parked = path.with_extension(format!("db.corrupt-{}", now()));
+    std::fs::rename(path, &parked)?;
+    for suffix in ["-wal", "-shm"] {
+        let mut side = path.as_os_str().to_os_string();
+        side.push(suffix);
+        let side = PathBuf::from(side);
+        if !side.exists() {
+            continue;
+        }
+        let mut parked_side = parked.as_os_str().to_os_string();
+        parked_side.push(suffix);
+        let _ = std::fs::rename(&side, PathBuf::from(parked_side));
+    }
+    Ok(parked)
+}
+
+fn meta_value(conn: &Connection, key: &str) -> rusqlite::Result<Option<String>> {
+    conn.query_row("SELECT value FROM meta WHERE key = ?1", [key], |row| {
+        row.get(0)
+    })
+    .optional()
+}
+
+fn set_meta(conn: &Connection, key: &str, value: &str) -> rusqlite::Result<()> {
+    conn.execute(
+        "INSERT INTO meta (key, value) VALUES (?1, ?2)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        params![key, value],
+    )?;
+    Ok(())
 }
 
 /// Writes a consistent copy of the live database to a user-chosen file.
@@ -109,17 +163,27 @@ pub fn backup_to(conn: &Connection, path: &Path) -> rusqlite::Result<()> {
 
 /// True when the file looks like a bubo database with all the tables we need.
 pub fn is_backup(path: &Path) -> rusqlite::Result<bool> {
-    let source = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-    let tables: i64 = source.query_row(
+    let Ok(source) = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY) else {
+        return Ok(false);
+    };
+    // A random .db from another program is not a database we can read; that is
+    // a "no", not an error the caller has to explain.
+    let Ok(tables) = source.query_row(
         "SELECT COUNT(*) FROM sqlite_master
          WHERE type = 'table' AND name IN ('sessions', 'messages', 'fixes', 'reviews')",
         [],
-        |row| row.get(0),
-    )?;
+        |row| row.get::<_, i64>(0),
+    ) else {
+        return Ok(false);
+    };
     if tables != 4 {
         return Ok(false);
     }
-    let integrity: String = source.query_row("PRAGMA integrity_check", [], |row| row.get(0))?;
+    let Ok(integrity) =
+        source.query_row("PRAGMA integrity_check", [], |row| row.get::<_, String>(0))
+    else {
+        return Ok(false);
+    };
     Ok(integrity == "ok")
 }
 
@@ -134,6 +198,15 @@ pub fn restore_from(conn: &mut Connection, path: &Path) -> rusqlite::Result<()> 
     backfill_fixes(conn)?;
     Ok(())
 }
+/// Runs the legacy backfill once per database instead of on every launch.
+fn backfill_once(conn: &Connection) -> rusqlite::Result<()> {
+    if meta_value(conn, "backfill_done")?.is_some() {
+        return Ok(());
+    }
+    backfill_fixes(conn)?;
+    set_meta(conn, "backfill_done", "1")
+}
+
 /// Older databases stored corrections only inside messages; seed the drill
 /// table from them so history is practiceable right away. Idempotent.
 fn backfill_fixes(conn: &Connection) -> rusqlite::Result<()> {
@@ -428,8 +501,8 @@ pub fn delete_session(conn: &Connection, id: i64) -> rusqlite::Result<i64> {
             "DELETE FROM fixes WHERE wrong = ?1 AND right = ?2",
             params![wrong, right],
         )?;
-        remove_fix_from_messages(&tx, wrong, right)?;
     }
+    remove_fixes_from_messages(&tx, &pairs)?;
 
     let next = if id == current {
         let newest = tx.query_row("SELECT MAX(id) FROM sessions", [], |row| {
@@ -537,8 +610,8 @@ pub fn delete_message(conn: &Connection, id: i64) -> rusqlite::Result<()> {
             "DELETE FROM fixes WHERE wrong = ?1 AND right = ?2",
             params![wrong, right],
         )?;
-        remove_fix_from_messages(&tx, wrong, right)?;
     }
+    remove_fixes_from_messages(&tx, &pairs)?;
     tx.commit()
 }
 
@@ -565,8 +638,21 @@ fn dedupe_pairs(pairs: &mut Vec<(String, String)>) {
     pairs.dedup();
 }
 
-/// Removes one correction from the JSON of every stored message.
-fn remove_fix_from_messages(conn: &Connection, wrong: &str, right: &str) -> rusqlite::Result<()> {
+/// Removes the given corrections from the JSON of every stored message in one
+/// scan, so deleting a session with many cards does not rescan everything once
+/// per pair.
+fn remove_fixes_from_messages(
+    conn: &Connection,
+    pairs: &[(String, String)],
+) -> rusqlite::Result<()> {
+    if pairs.is_empty() {
+        return Ok(());
+    }
+    let wanted: HashSet<(&str, &str)> = pairs
+        .iter()
+        .map(|(wrong, right)| (wrong.as_str(), right.as_str()))
+        .collect();
+
     let mut statement = conn.prepare("SELECT id, fixes FROM messages WHERE fixes IS NOT NULL")?;
     let rows = statement
         .query_map([], |row| {
@@ -580,7 +666,7 @@ fn remove_fix_from_messages(conn: &Connection, wrong: &str, right: &str) -> rusq
             continue;
         };
         let before = fixes.len();
-        fixes.retain(|fix| !(fix.wrong == wrong && fix.right == right));
+        fixes.retain(|fix| !wanted.contains(&(fix.wrong.as_str(), fix.right.as_str())));
         if fixes.len() == before {
             continue;
         }
@@ -615,7 +701,7 @@ pub fn delete_fix(
         "DELETE FROM fixes WHERE wrong = ?1 AND right = ?2",
         params![wrong, right],
     )?;
-    remove_fix_from_messages(&tx, wrong, right)?;
+    remove_fixes_from_messages(&tx, &[(wrong.to_string(), right.to_string())])?;
     tx.commit()
 }
 
@@ -674,6 +760,15 @@ pub fn save_turn_fixes(
     reply_id: Option<i64>,
 ) -> rusqlite::Result<()> {
     let tx = conn.unchecked_transaction()?;
+    // The corrections run after the reply is already on screen, so the learner
+    // may delete the message or the whole conversation meanwhile. Creating a
+    // card that points at a row that no longer exists would leave it
+    // unreachable for every future delete.
+    for id in [message_id, reply_id].into_iter().flatten() {
+        if !message_exists(&tx, id)? {
+            return Ok(());
+        }
+    }
     save_fixes_inner(&tx, fixes, message_id, true)?;
     if let Some(reply_id) = reply_id {
         let json = if fixes.is_empty() {
@@ -684,6 +779,13 @@ pub fn save_turn_fixes(
         set_message_fixes(&tx, reply_id, json.as_deref())?;
     }
     tx.commit()
+}
+
+fn message_exists(conn: &Connection, id: i64) -> rusqlite::Result<bool> {
+    Ok(conn
+        .query_row("SELECT 1 FROM messages WHERE id = ?1", [id], |_| Ok(()))
+        .optional()?
+        .is_some())
 }
 
 fn save_fixes_inner(
@@ -904,14 +1006,16 @@ pub fn purge_case_only(conn: &Connection) -> rusqlite::Result<usize> {
 
     let tx = conn.unchecked_transaction()?;
     let mut removed = 0;
+    let mut pairs: Vec<(String, String)> = Vec::new();
     for (id, wrong, right) in rows {
         if wrong.trim().to_lowercase() == right.trim().to_lowercase() {
             tx.execute("DELETE FROM reviews WHERE fix_id = ?1", [id])?;
             tx.execute("DELETE FROM fixes WHERE id = ?1", [id])?;
-            remove_fix_from_messages(&tx, &wrong, &right)?;
+            pairs.push((wrong, right));
             removed += 1;
         }
     }
+    remove_fixes_from_messages(&tx, &pairs)?;
     tx.commit()?;
     Ok(removed)
 }
@@ -1070,6 +1174,58 @@ pub fn override_review(conn: &Connection, id: i64) -> rusqlite::Result<Option<Dr
 #[cfg(test)]
 mod tests {
     use super::{delete, insert, list, StoredMessage};
+
+    #[test]
+    fn a_corrupt_database_is_parked_and_replaced() {
+        let path = std::env::temp_dir().join(format!(
+            "bubo-recover-{}-{}.db",
+            std::process::id(),
+            super::now()
+        ));
+        std::fs::write(&path, b"this is not a database").unwrap();
+
+        let (conn, parked) = super::open_recovering(path.clone()).unwrap();
+        let parked = parked.expect("the unreadable file is parked");
+        assert!(parked.exists());
+        assert_eq!(std::fs::read(&parked).unwrap(), b"this is not a database");
+        assert_eq!(super::drill_stats(&conn).unwrap().total, 0);
+
+        drop(conn);
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&parked);
+    }
+
+    #[test]
+    fn a_text_file_is_not_a_backup() {
+        let path = std::env::temp_dir().join(format!(
+            "bubo-not-backup-{}-{}.db",
+            std::process::id(),
+            super::now()
+        ));
+        std::fs::write(&path, b"plain text, not sqlite").unwrap();
+        assert!(!super::is_backup(&path).unwrap());
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn a_turn_whose_messages_were_deleted_saves_no_cards() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        super::save_turn_fixes(
+            &conn,
+            &[Fix {
+                wrong: "i go".to_string(),
+                right: "I went".to_string(),
+                note: String::new(),
+            }],
+            Some(999),
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(super::drill_stats(&conn).unwrap().total, 0);
+    }
 
     #[test]
     fn renames_and_archives_sessions() {

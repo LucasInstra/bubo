@@ -96,8 +96,20 @@ pub fn load_settings(app: &AppHandle) -> Result<Settings, String> {
     if !path.exists() {
         return Ok(Settings::default());
     }
-    let raw = fs::read_to_string(path).map_err(|e| e.to_string())?;
-    let value: serde_json::Value = serde_json::from_str(&raw).unwrap_or_default();
+    let raw = fs::read_to_string(path.clone()).map_err(|e| e.to_string())?;
+    let value: serde_json::Value = match serde_json::from_str(&raw) {
+        Ok(value) => value,
+        Err(_) => {
+            // Keep the broken file next to the original so nothing is lost, and
+            // start from defaults instead of failing to open the app.
+            let stamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|elapsed| elapsed.as_millis())
+                .unwrap_or(0);
+            let _ = fs::copy(&path, path.with_extension(format!("json.bad-{stamp}")));
+            return Ok(Settings::default());
+        }
+    };
     Ok(settings_from_value(value))
 }
 
@@ -146,13 +158,40 @@ fn settings_from_value(mut value: serde_json::Value) -> Settings {
         map.insert("studyFocus".to_string(), serde_json::Value::String(focus));
     }
 
-    serde_json::from_value(value).unwrap_or_default()
+    match serde_json::from_value::<Settings>(value.clone()) {
+        Ok(settings) => settings,
+        // A single bad value used to wipe every preference. Keep the fields that
+        // still validate and fall back to the default only for the broken ones.
+        Err(_) => keep_valid_fields(value),
+    }
+}
+
+fn keep_valid_fields(value: serde_json::Value) -> Settings {
+    let defaults = Settings::default();
+    let Some(map) = value.as_object() else {
+        return defaults;
+    };
+    let mut kept = serde_json::to_value(&defaults).unwrap_or_default();
+    for (key, raw) in map {
+        let mut candidate = kept.clone();
+        if let Some(entry) = candidate.as_object_mut() {
+            entry.insert(key.clone(), raw.clone());
+        }
+        if serde_json::from_value::<Settings>(candidate.clone()).is_ok() {
+            kept = candidate;
+        }
+    }
+    serde_json::from_value(kept).unwrap_or(defaults)
 }
 
 pub fn save_settings_file(app: &AppHandle, settings: &Settings) -> Result<(), String> {
     let path = settings_path(app)?;
     let raw = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
-    fs::write(path, raw).map_err(|e| e.to_string())
+    // Write beside the real file and swap it in: a crash mid-write would
+    // otherwise leave a truncated settings.json.
+    let temp = path.with_extension("json.tmp");
+    fs::write(&temp, raw).map_err(|e| e.to_string())?;
+    fs::rename(&temp, &path).map_err(|e| e.to_string())
 }
 
 const SERVICE: &str = "bubo";
@@ -218,6 +257,23 @@ mod tests {
         assert_eq!(value["translationChallenge"], true);
         assert_eq!(value["studyFocus"], "free");
         assert!(value.get("translateReplies").is_none());
+    }
+
+    #[test]
+    fn one_bad_field_does_not_reset_the_whole_settings() {
+        let value = serde_json::json!({
+            "level": "A2",
+            "theme": "light",
+            "dailyGoal": "ten",
+            "pinned": null,
+            "hotkey": "Ctrl+Alt+K"
+        });
+        let settings = settings_from_value(value);
+        assert_eq!(settings.level, "A2");
+        assert_eq!(settings.theme, "light");
+        assert_eq!(settings.hotkey, "Ctrl+Alt+K");
+        assert_eq!(settings.daily_goal, Settings::default().daily_goal);
+        assert_eq!(settings.pinned, Settings::default().pinned);
     }
 
     #[test]

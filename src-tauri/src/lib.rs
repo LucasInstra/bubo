@@ -27,6 +27,7 @@ struct AppState {
     popup_origin: Mutex<Option<(i32, i32)>>,
     popup_stage: Mutex<PopupStage>,
     last_window_save: Mutex<Option<Instant>>,
+    startup_notice: Mutex<Option<String>>,
 }
 
 fn http_client(settings: &config::Settings) -> Result<reqwest::Client, String> {
@@ -92,7 +93,17 @@ fn save_settings(
     state: State<'_, AppState>,
     settings: config::Settings,
 ) -> Result<(), String> {
-    let current = config::load_settings(&app).unwrap_or_default();
+    let current = match config::load_settings(&app) {
+        Ok(current) => current,
+        Err(error) => {
+            log::write(
+                &app,
+                "warn",
+                &format!("could not read the current settings: {error}"),
+            );
+            config::Settings::default()
+        }
+    };
     if current.hotkey.trim() != settings.hotkey.trim() {
         install_hotkey(&app, &state.shortcut, &settings.hotkey)?;
     }
@@ -628,17 +639,16 @@ async fn chat(
     let client = http_client(&settings)?;
     let api_key = config::load_api_key()?.unwrap_or_default();
 
-    let user_row = messages
-        .iter()
-        .rev()
-        .find(|message| message.role == "user")
-        .and_then(|last| {
-            state
-                .db
-                .lock()
-                .ok()
-                .and_then(|db| store::insert(&db, "user", &last.content, None).ok())
-        });
+    let user_row = match messages.iter().rev().find(|message| message.role == "user") {
+        Some(last) => {
+            let db = state.db.lock().map_err(|e| e.to_string())?;
+            Some(
+                store::insert(&db, "user", &last.content, None)
+                    .map_err(|error| format!("Não foi possível salvar sua mensagem: {error}"))?,
+            )
+        }
+        None => None,
+    };
 
     log::write(
         &app,
@@ -663,7 +673,7 @@ async fn chat(
         &api_key,
         reply_body,
         &request_id,
-        cancel,
+        cancel.clone(),
     )
     .await;
 
@@ -696,11 +706,18 @@ async fn chat(
 
     // Persist the reply before the correction pass so a quit during corrections
     // never leaves a user message without an answer.
-    let reply_row = state
-        .db
-        .lock()
-        .ok()
-        .and_then(|db| store::insert(&db, "assistant", &text, None).ok());
+    let reply_row =
+        state
+            .db
+            .lock()
+            .ok()
+            .and_then(|db| match store::insert(&db, "assistant", &text, None) {
+                Ok(id) => Some(id),
+                Err(error) => {
+                    log::write(&app, "error", &format!("could not save the reply: {error}"));
+                    None
+                }
+            });
 
     let _ = app.emit(
         "bubo-saved",
@@ -708,7 +725,7 @@ async fn chat(
     );
     let _ = app.emit("bubo-reply-done", json!({ "requestId": request_id }));
 
-    if full.cancelled {
+    if full.cancelled || cancel.load(Ordering::Relaxed) {
         log::write(&app, "info", "reply cancelled, skipping corrections");
         return Ok(text);
     }
@@ -738,7 +755,13 @@ async fn chat(
 
     // One transaction: the cards and the JSON shown on the reply land together.
     if let Ok(db) = state.db.lock() {
-        let _ = store::save_turn_fixes(&db, &fixes, user_row, reply_row);
+        if let Err(error) = store::save_turn_fixes(&db, &fixes, user_row, reply_row) {
+            log::write(
+                &app,
+                "error",
+                &format!("could not save the corrections: {error}"),
+            );
+        }
     }
 
     log::write(
@@ -833,20 +856,84 @@ fn clear_history(state: State<'_, AppState>) -> Result<(), String> {
     store::clear(&db).map_err(|e| e.to_string())
 }
 
-#[tauri::command]
-fn backup_data(state: State<'_, AppState>, path: String) -> Result<(), String> {
-    let db = state.db.lock().map_err(|e| e.to_string())?;
-    store::backup_to(&db, std::path::Path::new(&path)).map_err(|e| e.to_string())
+fn same_file(a: &std::path::Path, b: &std::path::Path) -> bool {
+    match (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => a
+            .to_string_lossy()
+            .eq_ignore_ascii_case(&b.to_string_lossy()),
+    }
+}
+
+fn timestamp() -> u128 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_millis())
+        .unwrap_or(0)
 }
 
 #[tauri::command]
-fn restore_data(state: State<'_, AppState>, path: String) -> Result<(), String> {
-    let source = std::path::Path::new(&path);
-    if !store::is_backup(source).map_err(|e| e.to_string())? {
+fn backup_data(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<(), String> {
+    let target = std::path::PathBuf::from(&path);
+    let live = paths::data_dir(&app)?.join("bubo.db");
+    if same_file(&target, &live) {
+        return Err(
+            "Escolha outro arquivo: esse é o banco que o bubo está usando agora.".to_string(),
+        );
+    }
+    if target.exists() {
+        let ours = store::is_backup(&target).unwrap_or(false);
+        let empty = std::fs::metadata(&target)
+            .map(|meta| meta.len() == 0)
+            .unwrap_or(false);
+        if !ours && !empty {
+            return Err(
+                "Já existe um arquivo aí que não é um backup do bubo. Escolha outro nome."
+                    .to_string(),
+            );
+        }
+    }
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::backup_to(&db, &target)
+        .map_err(|error| format!("Não foi possível salvar o backup: {error}"))
+}
+
+#[tauri::command]
+fn restore_data(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<(), String> {
+    let source = std::path::PathBuf::from(&path);
+    let live = paths::data_dir(&app)?.join("bubo.db");
+    if same_file(&source, &live) {
+        return Err("Esse é o banco em uso. Escolha um arquivo de backup.".to_string());
+    }
+    if !store::is_backup(&source).map_err(|e| e.to_string())? {
         return Err("Esse arquivo não é um backup do bubo.".to_string());
     }
     let mut db = state.db.lock().map_err(|e| e.to_string())?;
-    store::restore_from(&mut db, source).map_err(|e| e.to_string())
+    // Keep the current history recoverable even if the restore dies halfway.
+    let safety = live.with_extension(format!("db.pre-restore-{}", timestamp()));
+    if let Err(error) = store::backup_to(&db, &safety) {
+        return Err(format!(
+            "Não foi possível proteger o banco atual antes de restaurar: {error}"
+        ));
+    }
+    match store::restore_from(&mut db, &source) {
+        Ok(()) => Ok(()),
+        Err(error) => {
+            let _ = store::restore_from(&mut db, &safety);
+            Err(format!(
+                "Não foi possível restaurar o backup: {error}. O banco anterior foi mantido."
+            ))
+        }
+    }
+}
+
+#[tauri::command]
+fn startup_notice(state: State<'_, AppState>) -> Option<String> {
+    state
+        .startup_notice
+        .lock()
+        .ok()
+        .and_then(|notice| notice.clone())
 }
 
 #[tauri::command]
@@ -1104,7 +1191,7 @@ fn save_window_state(app: &AppHandle, force: bool) {
 }
 
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
@@ -1136,10 +1223,27 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
-            paths::migrate_legacy(app.handle())?;
+            // A failed legacy migration must not keep the app from starting: the
+            // old folder stays where it is and the new one is used from now on.
+            if let Err(error) = paths::migrate_legacy(app.handle()) {
+                log::write(
+                    app.handle(),
+                    "warn",
+                    &format!("legacy data migration failed: {error}"),
+                );
+            }
             let data_dir = paths::data_dir(app.handle())?;
             std::fs::create_dir_all(&data_dir)?;
-            let connection = store::open(data_dir.join("bubo.db"))?;
+            let (connection, parked_db) = store::open_recovering(data_dir.join("bubo.db"))?;
+            let startup_notice = parked_db.map(|path| {
+                format!(
+                    "O banco anterior não pôde ser lido e foi movido para {}. O bubo começou um histórico novo; dá para restaurar um backup nos ajustes.",
+                    path.display()
+                )
+            });
+            if let Some(notice) = &startup_notice {
+                log::write(app.handle(), "error", notice);
+            }
             let settings = config::load_settings(app.handle()).unwrap_or_default();
 
             app.manage(AppState {
@@ -1152,11 +1256,14 @@ pub fn run() {
                 popup_origin: Mutex::new(None),
                 popup_stage: Mutex::new(PopupStage::Face),
                 last_window_save: Mutex::new(None),
+                startup_notice: Mutex::new(startup_notice),
             });
 
             if settings.ignore_capitalization {
                 if let Ok(db) = app.state::<AppState>().db.lock() {
-                    let _ = store::purge_case_only(&db);
+                    if let Err(error) = store::purge_case_only(&db) {
+                        log::write(app.handle(), "warn", &format!("could not purge case cards: {error}"));
+                    }
                 }
             }
 
@@ -1318,6 +1425,7 @@ pub fn run() {
             clear_history,
             backup_data,
             restore_data,
+            startup_notice,
             open_data_folder,
             open_feedback,
             open_provider_site,
@@ -1333,9 +1441,32 @@ pub fn run() {
             drill_reset,
             hide_window,
             quit_app
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running bubo");
+        ]);
+    let run = app.run(tauri::generate_context!());
+
+    if let Err(error) = run {
+        // There is no console in a release build, so leave a trail next to the
+        // data folder instead of dying without a word.
+        record_startup_error(&format!("bubo failed to start: {error}"));
+        std::process::exit(1);
+    }
+}
+
+fn record_startup_error(message: &str) {
+    let Some(base) = std::env::var_os("APPDATA").map(std::path::PathBuf::from) else {
+        return;
+    };
+    let dir = base.join("bubo");
+    let _ = std::fs::create_dir_all(&dir);
+    let path = dir.join("startup-error.log");
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
+        use std::io::Write;
+        let _ = writeln!(file, "{message}");
+    }
 }
 
 #[cfg(test)]

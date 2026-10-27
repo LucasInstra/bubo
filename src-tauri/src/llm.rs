@@ -122,18 +122,43 @@ pub async fn stream_reply(
     request_id: &str,
     cancel: Arc<AtomicBool>,
 ) -> Result<Reply, String> {
-    let response = post(&client, settings, api_key, &body).await?;
+    if cancel.load(Ordering::Relaxed) {
+        return Ok(Reply {
+            text: String::new(),
+            cancelled: true,
+        });
+    }
+
+    // Stop must interrupt the connection itself, not just the parsing: a silent
+    // provider would otherwise keep the request (and the bill) alive.
+    let response = tokio::select! {
+        _ = wait_for_cancel(&cancel) => {
+            return Ok(Reply {
+                text: String::new(),
+                cancelled: true,
+            });
+        }
+        response = post(&client, settings, api_key, &body) => response?,
+    };
     let mut chunks = response.bytes_stream();
     let mut pending: Vec<u8> = Vec::new();
     let mut full = String::new();
 
-    while let Some(chunk) = chunks.next().await {
+    loop {
         if cancel.load(Ordering::Relaxed) {
             return Ok(Reply {
                 text: full,
                 cancelled: true,
             });
         }
+
+        let next = tokio::select! {
+            _ = tokio::time::sleep(Duration::from_millis(40)) => continue,
+            chunk = chunks.next() => chunk,
+        };
+        let Some(chunk) = next else {
+            break;
+        };
 
         let chunk = chunk.map_err(|error| format!("erro no stream: {error}"))?;
         pending.extend_from_slice(&chunk);
@@ -187,6 +212,13 @@ pub async fn stream_reply(
         text: tidy(&full),
         cancelled: false,
     })
+}
+
+/// Resolves as soon as the learner presses Stop.
+async fn wait_for_cancel(cancel: &AtomicBool) {
+    while !cancel.load(Ordering::Relaxed) {
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
 }
 
 /// Non-streaming call, used for the correction pass.
