@@ -628,6 +628,8 @@ fn save_fixes_inner(
                  VALUES (?1, ?2, ?3, ?4, ?4, ?5, 1)
                  ON CONFLICT(wrong, right) DO UPDATE SET
                    seen = fixes.seen + 1,
+                   streak = 0,
+                   due_at = excluded.due_at,
                    note = CASE WHEN excluded.note != '' THEN excluded.note ELSE fixes.note END,
                    message_id = COALESCE(fixes.message_id, excluded.message_id)",
                 params![fix.wrong, fix.right, fix.note, now, message_id],
@@ -694,6 +696,9 @@ pub fn save_lesson_progress(
 
 /// A wrong answer from a lesson goes into the same spaced-repetition queue as
 /// a chat correction, but without a message to link back to.
+///
+/// Like a live chat recurrence, repeating the same mistake counts a new `seen`
+/// and brings the card back immediately instead of leaving it scheduled ahead.
 pub fn save_manual_fix(
     conn: &Connection,
     wrong: &str,
@@ -705,7 +710,7 @@ pub fn save_manual_fix(
         right: right.to_string(),
         note: note.to_string(),
     };
-    save_fixes_inner(conn, &[fix], None, false)
+    save_fixes_inner(conn, &[fix], None, true)
 }
 
 const STREAK_SQL: &str = "
@@ -1724,5 +1729,127 @@ mod tests {
         assert_eq!(item.right, "I went");
         assert_eq!(item.note, "past simple");
         assert!(item.context.is_none());
+    }
+
+    #[test]
+    fn a_live_recurrence_reschedules_the_card() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        super::save_fixes(
+            &conn,
+            &[Fix {
+                wrong: "i go".to_string(),
+                right: "I went".to_string(),
+                note: "passado".to_string(),
+            }],
+        )
+        .unwrap();
+
+        let item = super::next_drill(&conn, true, None).unwrap().unwrap();
+        super::review_drill(&conn, item.id, true).unwrap();
+        let scheduled_due: i64 = conn
+            .query_row("SELECT due_at FROM fixes WHERE id = ?1", [item.id], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert!(
+            scheduled_due > super::now(),
+            "a correct review schedules ahead"
+        );
+
+        super::save_fixes_for_message(
+            &conn,
+            &[Fix {
+                wrong: "i go".to_string(),
+                right: "I went".to_string(),
+                note: String::new(),
+            }],
+            None,
+        )
+        .unwrap();
+
+        let (due_at, streak, seen): (i64, i64, i64) = conn
+            .query_row(
+                "SELECT due_at, streak, seen FROM fixes WHERE id = ?1",
+                [item.id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert!(due_at <= super::now(), "the recurrence is due immediately");
+        assert_eq!(streak, 0);
+        assert_eq!(seen, 2);
+    }
+
+    #[test]
+    fn a_repeated_lesson_fix_reschedules_the_card() {
+        let conn = memory_db();
+        super::save_manual_fix(&conn, "I go", "I went", "past simple").unwrap();
+
+        let item = super::next_drill(&conn, true, None).unwrap().unwrap();
+        super::review_drill(&conn, item.id, true).unwrap();
+
+        super::save_manual_fix(&conn, "I go", "I went", "past simple").unwrap();
+
+        let (due_at, streak, seen): (i64, i64, i64) = conn
+            .query_row(
+                "SELECT due_at, streak, seen FROM fixes WHERE id = ?1",
+                [item.id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert!(
+            due_at <= super::now(),
+            "the repeated fix is due immediately"
+        );
+        assert_eq!(streak, 0);
+        assert_eq!(seen, 2);
+    }
+
+    #[test]
+    fn backfill_does_not_reschedule_existing_cards() {
+        use crate::llm::Fix;
+
+        let conn = memory_db();
+        super::save_fixes(
+            &conn,
+            &[Fix {
+                wrong: "i go".to_string(),
+                right: "I went".to_string(),
+                note: "passado".to_string(),
+            }],
+        )
+        .unwrap();
+        insert(
+            &conn,
+            "assistant",
+            "ok",
+            Some(r#"[{"wrong":"i go","right":"I went","note":"passado"}]"#),
+        )
+        .unwrap();
+
+        let item = super::next_drill(&conn, true, None).unwrap().unwrap();
+        super::review_drill(&conn, item.id, true).unwrap();
+        let before: (i64, i64, i64) = conn
+            .query_row(
+                "SELECT due_at, streak, seen FROM fixes WHERE id = ?1",
+                [item.id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(before.1, 1);
+        assert_eq!(before.2, 1);
+
+        super::backfill_fixes(&conn).unwrap();
+        super::backfill_fixes(&conn).unwrap();
+
+        let after: (i64, i64, i64) = conn
+            .query_row(
+                "SELECT due_at, streak, seen FROM fixes WHERE id = ?1",
+                [item.id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(after, before, "backfill must not reschedule the card");
     }
 }

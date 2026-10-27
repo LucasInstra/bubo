@@ -3,6 +3,7 @@ use crate::log;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -218,49 +219,185 @@ pub async fn complete(
 pub struct Fix {
     pub wrong: String,
     pub right: String,
+    #[serde(default, deserialize_with = "deserialize_note")]
     pub note: String,
 }
 
-pub fn parse_fixes(raw: &str) -> Vec<Fix> {
-    let start = raw.find('[');
-    let end = raw.rfind(']');
-    let (Some(start), Some(end)) = (start, end) else {
-        return Vec::new();
-    };
-    if end <= start {
-        return Vec::new();
+/// A missing note is harmless; a literal `null` should not fail the whole
+/// correction pass either, so both collapse to an empty string.
+fn deserialize_note<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(Option::<String>::deserialize(deserializer)?.unwrap_or_default())
+}
+
+/// Byte spans of balanced `open`/`close` pairs in `raw`, ignoring pairs inside
+/// JSON strings. Only outermost pairs are returned, so `[{"a":1}]` yields the
+/// array span and `{"a":{"b":1}}` yields the outer object span.
+fn balanced_segments(raw: &str, open: u8, close: u8) -> Vec<(usize, usize)> {
+    let mut segments = Vec::new();
+    let mut stack = Vec::new();
+    let mut in_string = false;
+    let mut escaped = false;
+
+    for (index, byte) in raw.as_bytes().iter().copied().enumerate() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'"' {
+                in_string = false;
+            }
+            continue;
+        }
+
+        match byte {
+            b'"' => in_string = true,
+            byte if byte == open => stack.push(index),
+            byte if byte == close => {
+                if let Some(start) = stack.pop() {
+                    if stack.is_empty() {
+                        segments.push((start, index + 1));
+                    }
+                }
+            }
+            _ => {}
+        }
     }
 
-    let Ok(items) = serde_json::from_str::<Vec<Fix>>(&raw[start..=end]) else {
+    segments
+}
+
+fn sanitize_fix(mut fix: Fix) -> Option<Fix> {
+    fix.wrong = fix.wrong.trim().to_string();
+    fix.right = tidy(fix.right.trim());
+    fix.note = tidy(fix.note.trim());
+
+    if fix.wrong.is_empty() || fix.right.is_empty() {
+        return None;
+    }
+
+    Some(fix)
+}
+
+fn fixes_from_array(raw: &str) -> Vec<Fix> {
+    let Ok(items) = serde_json::from_str::<Vec<Value>>(raw) else {
         return Vec::new();
     };
 
     items
         .into_iter()
-        .filter(|fix| !fix.wrong.trim().is_empty() && !fix.right.trim().is_empty())
-        .take(4)
-        .map(|mut fix| {
-            fix.wrong = fix.wrong.trim().to_string();
-            fix.right = tidy(fix.right.trim());
-            fix.note = tidy(fix.note.trim());
-            fix
-        })
+        .filter_map(|item| serde_json::from_value::<Fix>(item).ok())
+        .filter_map(sanitize_fix)
         .collect()
+}
+
+/// Per-object salvage for a single object, a malformed array or a reply cut off
+/// mid-stream: parse every complete object on its own and keep the ones that
+/// look like a correction.
+fn fixes_from_objects(raw: &str) -> Vec<Fix> {
+    balanced_segments(raw, b'{', b'}')
+        .into_iter()
+        .filter_map(|(start, end)| serde_json::from_str::<Fix>(&raw[start..end]).ok())
+        .filter_map(sanitize_fix)
+        .collect()
+}
+
+pub fn parse_fixes(raw: &str) -> Vec<Fix> {
+    let mut fixes = Vec::new();
+
+    for (start, end) in balanced_segments(raw, b'[', b']') {
+        fixes.extend(fixes_from_array(&raw[start..end]));
+    }
+
+    // Always salvage complete objects too. This covers a bare object, several
+    // arrays, a malformed array and an array cut off mid-object; duplicates
+    // from the well-formed path are removed below.
+    fixes.extend(fixes_from_objects(raw));
+
+    let mut seen = HashSet::new();
+    fixes.retain(|fix| seen.insert((normalize_answer(&fix.wrong), normalize_answer(&fix.right))));
+    fixes
 }
 
 pub fn fixes_event_payload(request_id: &str, fixes: &[Fix]) -> Value {
     json!({ "requestId": request_id, "fixes": fixes })
 }
 
-/// True when the only difference is letter case, which informal chat usually
-/// does not want flagged.
+/// Comparison form shared with the lesson answer checker: lowercase,
+/// punctuation removed and whitespace collapsed.
+pub fn normalize_answer(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    let mut pending_space = false;
+
+    for character in value.chars() {
+        if character.is_whitespace() {
+            pending_space = !out.is_empty();
+            continue;
+        }
+
+        if matches!(
+            character,
+            '.' | ','
+                | '!'
+                | '?'
+                | ';'
+                | ':'
+                | '\u{2026}'
+                | '\u{2014}'
+                | '\u{2013}'
+                | '\u{201c}'
+                | '\u{201d}'
+                | '\u{00ab}'
+                | '\u{00bb}'
+                | '('
+                | ')'
+                | '['
+                | ']'
+                | '{'
+                | '}'
+        ) {
+            continue;
+        }
+
+        if pending_space {
+            out.push(' ');
+            pending_space = false;
+        }
+
+        let character = match character {
+            '\u{2019}' | '\u{2018}' => '\'',
+            other => other,
+        };
+        out.extend(character.to_lowercase());
+    }
+
+    out
+}
+
+/// True when the only difference is letter case, punctuation or spacing, which
+/// informal chat usually does not want flagged.
 pub fn only_case_differs(wrong: &str, right: &str) -> bool {
-    wrong.trim().to_lowercase() == right.trim().to_lowercase()
+    normalize_answer(wrong) == normalize_answer(right)
+}
+
+/// True when `needle` appears as a contiguous run of whole words in `haystack`.
+/// Both inputs are expected to be normalized with [`normalize_answer`].
+pub fn contains_words(haystack: &str, needle: &str) -> bool {
+    let hay: Vec<&str> = haystack.split_whitespace().collect();
+    let needle: Vec<&str> = needle.split_whitespace().collect();
+    if needle.is_empty() || needle.len() > hay.len() {
+        return false;
+    }
+    hay.windows(needle.len())
+        .any(|window| window == needle.as_slice())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::parse_fixes;
+    use super::{contains_words, normalize_answer, only_case_differs, parse_fixes};
 
     #[test]
     fn parses_a_clean_array() {
@@ -289,14 +426,88 @@ mod tests {
     }
 
     #[test]
+    fn missing_and_null_notes_are_tolerated() {
+        let missing = parse_fixes(r#"[{"wrong":"i go","right":"I went"}]"#);
+        assert_eq!(missing.len(), 1);
+        assert_eq!(missing[0].note, "");
+
+        let null = parse_fixes(r#"[{"wrong":"i go","right":"I went","note":null}]"#);
+        assert_eq!(null.len(), 1);
+        assert_eq!(null[0].note, "");
+    }
+
+    #[test]
+    fn accepts_a_single_object_without_an_array() {
+        let fixes = parse_fixes(r#"{"wrong":"i go","right":"I went","note":"past"}"#);
+        assert_eq!(fixes.len(), 1);
+        assert_eq!(fixes[0].right, "I went");
+    }
+
+    #[test]
+    fn ignores_brackets_in_chatter_and_reads_every_array() {
+        let raw = r#"Here [see below] is the first: [{"wrong":"a did","right":"I did","note":"x"}] and also [{"wrong":"he go","right":"he goes","note":"y"}]."#;
+        let fixes = parse_fixes(raw);
+        assert_eq!(fixes.len(), 2);
+        assert_eq!(fixes[0].wrong, "a did");
+        assert_eq!(fixes[1].wrong, "he go");
+    }
+
+    #[test]
+    fn salvages_objects_from_a_truncated_reply() {
+        let raw =
+            r#"[{"wrong":"a did","right":"I did","note":"x"},{"wrong":"he go","right":"he go"#;
+        let fixes = parse_fixes(raw);
+        assert_eq!(fixes.len(), 1);
+        assert_eq!(fixes[0].wrong, "a did");
+    }
+
+    #[test]
+    fn salvages_objects_from_a_malformed_array() {
+        let raw = r#"[{"wrong":"a did","right":"I did","note":"x"},]"#;
+        let fixes = parse_fixes(raw);
+        assert_eq!(fixes.len(), 1);
+        assert_eq!(fixes[0].wrong, "a did");
+    }
+
+    #[test]
+    fn dedupes_repeated_corrections() {
+        let raw = r#"[{"wrong":"i go","right":"I went","note":""},{"wrong":"I  go","right":"I went.","note":"again"}]"#;
+        assert_eq!(parse_fixes(raw).len(), 1);
+    }
+
+    #[test]
+    fn keeps_every_fix_so_lib_can_filter_before_capping() {
+        let raw = (0..8)
+            .map(|index| format!(r#"{{"wrong":"w{index}","right":"r{index}","note":""}}"#))
+            .collect::<Vec<_>>()
+            .join(",");
+        assert_eq!(parse_fixes(&format!("[{raw}]")).len(), 8);
+    }
+
+    #[test]
     fn detects_case_only_corrections() {
-        use super::only_case_differs;
         assert!(only_case_differs(
             "i went out on friday",
-            "I went out on Friday"
+            "I went out on Friday."
         ));
+        assert!(only_case_differs("i  went, out", "I went out"));
         assert!(!only_case_differs("was very good", "It was very good"));
         assert!(!only_case_differs("i go", "I went"));
+    }
+
+    #[test]
+    fn normalizes_like_the_answer_checker() {
+        assert_eq!(normalize_answer("  I  went, out!  "), "i went out");
+        assert_eq!(normalize_answer("it\u{2019}s fine"), "it's fine");
+        assert_eq!(normalize_answer("a \u{2014} b"), "a b");
+    }
+
+    #[test]
+    fn grounds_a_fix_on_whole_words_only() {
+        assert!(contains_words("i am good at this", "good"));
+        assert!(!contains_words("i am good at this", "go"));
+        assert!(contains_words("she is not my boss", "is not"));
+        assert!(!contains_words("she is not my boss", "not my bossy"));
     }
 
     #[test]
@@ -309,14 +520,5 @@ mod tests {
         assert_eq!(tidy("pulse\u{2011}analytics"), "pulse-analytics");
         assert_eq!(tidy("2020\u{2013}2021"), "2020, 2021");
         assert_eq!(tidy("no dash here"), "no dash here");
-    }
-
-    #[test]
-    fn caps_the_list_at_four() {
-        let raw = (0..8)
-            .map(|index| format!(r#"{{"wrong":"w{index}","right":"r{index}","note":""}}"#))
-            .collect::<Vec<_>>()
-            .join(",");
-        assert_eq!(parse_fixes(&format!("[{raw}]")).len(), 4);
     }
 }

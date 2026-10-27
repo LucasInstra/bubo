@@ -389,7 +389,15 @@ export default function App() {
               ? problem.message
               : "Algo deu errado.";
         if (reason === "cancelled") {
-          setMessages((current) => current.filter((message) => message.id !== botMessage.id));
+          // Backend contract: a reply cancelled before any text is not
+          // persisted at all — Rust deletes the user row and returns
+          // "cancelled" (lib.rs). Drop both bubbles here, otherwise the user
+          // line stays on screen and only disappears on a reload.
+          setMessages((current) =>
+            current.filter(
+              (message) => message.id !== botMessage.id && message.id !== userMessage.id,
+            ),
+          );
         } else {
           react("sad", 1600);
           setMessages((current) =>
@@ -401,13 +409,15 @@ export default function App() {
           );
         }
       } finally {
-        requestRef.current = null;
-        // A newer turn owns the status now; do not reset it under its feet.
+        // `onDone` frees the composer while the corrections pass is still
+        // running, so a newer turn may already own the refs by the time this
+        // old request settles. Only release what this turn still owns.
+        if (requestRef.current === requestId) requestRef.current = null;
         if (turnRef.current === turn) {
+          busyRef.current = false;
           setStatus("idle");
           setEnergy(0);
         }
-        busyRef.current = false;
         void ipc
           .drillStats()
           .then((stats) => setDue(stats.due))

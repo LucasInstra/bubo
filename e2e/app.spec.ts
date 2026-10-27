@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 test("compact bilingual replies start in Portuguese and reveal the English", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=compact-bilingual");
@@ -128,4 +128,187 @@ test("mascot accepts a drag gesture", async ({ page }) => {
   await page.mouse.up();
   await expect(hit).toHaveCSS("cursor", "grab");
   await expect(page.locator("vite-error-overlay")).toHaveCount(0);
+});
+
+interface ChatBridgeState {
+  requests: string[];
+  cancelled: string[];
+  drills: number;
+}
+
+/**
+ * The shared harness stubs `invoke` but knows nothing about `chat` or the Tauri
+ * event bus, so a reply can neither stream nor stay pending there. This wraps
+ * the harness internals inside the page: `chat` only resolves when the test
+ * says so (standing in for the corrections pass that runs after
+ * `bubo-reply-done`) and the test can emit the same events Rust emits. Without
+ * that delay the race below cannot be reproduced.
+ */
+async function installChatBridge(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    type Handler = (event: unknown) => void;
+    interface Chat {
+      requestId: string;
+      resolve: (text: string) => void;
+      reject: (reason: string) => void;
+    }
+
+    const scope = window as unknown as {
+      __TAURI_INTERNALS__: {
+        invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
+        transformCallback: (callback: Handler) => number;
+      };
+      __TAURI_EVENT_PLUGIN_INTERNALS__?: { unregisterListener: () => void };
+      __calls: Array<{ cmd: string; args?: unknown }>;
+      __buboChat: unknown;
+    };
+    const internals = scope.__TAURI_INTERNALS__;
+    const passthrough = internals.invoke.bind(internals);
+    const callbacks = new Map<number, Handler>();
+    const listeners = new Map<number, { event: string; handler: number }>();
+    const chats: Chat[] = [];
+    let nextId = 1;
+
+    const emit = (event: string, payload: unknown) => {
+      for (const listener of listeners.values()) {
+        if (listener.event !== event) continue;
+        callbacks.get(listener.handler)?.({ event, id: listener.handler, payload });
+      }
+    };
+
+    const bridge = {
+      requests: [] as string[],
+      cancelled: [] as string[],
+      drills: 0,
+      delta(index: number, text: string) {
+        emit("bubo-delta", { requestId: chats[index].requestId, delta: text });
+      },
+      done(index: number) {
+        emit("bubo-reply-done", { requestId: chats[index].requestId });
+      },
+      finish(index: number, text: string) {
+        chats[index].resolve(text);
+      },
+    };
+
+    scope.__buboChat = bridge;
+    scope.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener: () => {} };
+    internals.transformCallback = (callback) => {
+      const id = nextId++;
+      callbacks.set(id, callback);
+      return id;
+    };
+    internals.invoke = async (cmd, args = {}) => {
+      if (cmd === "plugin:event|listen") {
+        const eventId = nextId++;
+        listeners.set(eventId, { event: String(args.event), handler: Number(args.handler) });
+        return eventId;
+      }
+      if (cmd === "plugin:event|unlisten") {
+        listeners.delete(Number(args.eventId));
+        return null;
+      }
+      if (cmd === "chat") {
+        scope.__calls.push({ cmd, args });
+        const requestId = String(args.requestId);
+        bridge.requests.push(requestId);
+        return new Promise<string>((resolve, reject) => {
+          chats.push({ requestId, resolve, reject });
+        });
+      }
+      if (cmd === "cancel_reply") {
+        // Rust stops the stream; a reply cancelled before any text deletes the
+        // user row and rejects with "cancelled".
+        scope.__calls.push({ cmd, args });
+        const requestId = String(args.requestId);
+        bridge.cancelled.push(requestId);
+        chats.find((chat) => chat.requestId === requestId)?.reject("cancelled");
+        return null;
+      }
+      if (cmd === "drill_stats") bridge.drills += 1;
+      return passthrough(cmd, args);
+    };
+  });
+}
+
+async function chatBridge(page: Page): Promise<ChatBridgeState> {
+  return page.evaluate(() => {
+    const bridge = (window as unknown as { __buboChat: ChatBridgeState }).__buboChat;
+    return {
+      requests: [...bridge.requests],
+      cancelled: [...bridge.cancelled],
+      drills: bridge.drills,
+    };
+  });
+}
+
+async function chatEvent(
+  page: Page,
+  action: "delta" | "done",
+  index: number,
+  text = "",
+): Promise<void> {
+  await page.evaluate(
+    ({ action, index, text }) => {
+      const bridge = (window as unknown as {
+        __buboChat: { delta: (index: number, text: string) => void; done: (index: number) => void };
+      }).__buboChat;
+      if (action === "delta") bridge.delta(index, text);
+      else bridge.done(index);
+    },
+    { action, index, text },
+  );
+}
+
+async function finishChat(page: Page, index: number, text: string): Promise<void> {
+  await page.evaluate(
+    ({ index, text }) => {
+      (window as unknown as { __buboChat: { finish: (i: number, t: string) => void } }).__buboChat.finish(
+        index,
+        text,
+      );
+    },
+    { index, text },
+  );
+}
+
+test("a new turn keeps the stop control while the previous corrections finish", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=app");
+  await expect(page.locator(".composer textarea")).toBeVisible();
+  await installChatBridge(page);
+
+  const textarea = page.locator(".composer textarea");
+  const stop = page.getByRole("button", { name: "Parar" });
+
+  await textarea.fill("first question");
+  await textarea.press("Enter");
+  await expect.poll(async () => (await chatBridge(page)).requests.length).toBe(1);
+
+  await chatEvent(page, "delta", 0, "first answer");
+  await chatEvent(page, "done", 0);
+  await expect(page.locator(".msg-bot").last()).toContainText("first answer");
+  // The reply is done, so the composer is free even though the first `chat`
+  // call (the corrections pass) is still in flight.
+  await expect(stop).toHaveCount(0);
+
+  await textarea.fill("second question");
+  await textarea.press("Enter");
+  await expect.poll(async () => (await chatBridge(page)).requests.length).toBe(2);
+  await expect(stop).toBeVisible();
+
+  // The first turn settles now. Its finally must not clear the second turn's
+  // request, or Stop would have nothing to cancel.
+  const before = await chatBridge(page);
+  await finishChat(page, 0, "first answer");
+  await expect.poll(async () => (await chatBridge(page)).drills).toBe(before.drills + 1);
+  await expect(stop).toBeVisible();
+
+  const secondRequest = (await chatBridge(page)).requests[1];
+  await stop.click();
+  await expect.poll(async () => (await chatBridge(page)).cancelled).toEqual([secondRequest]);
+
+  // Cancelled before any text: the backend deletes the user row, so the user
+  // bubble goes away with the bot one instead of reappearing after a reload.
+  await expect(page.locator(".msg-user", { hasText: "second question" })).toHaveCount(0);
+  await expect(page.locator(".msg-user", { hasText: "first question" })).toBeVisible();
 });

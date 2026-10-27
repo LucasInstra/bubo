@@ -116,9 +116,9 @@ pub fn reply_system(settings: &Settings) -> String {
     let bilingual = reply_language_is_bilingual(&settings.reply_language);
     let language_rule = if portuguese {
         if beginner {
-            "Reply in Brazilian Portuguese like a friend texting, because the learner may not read English yet. When a useful English word or phrase fits naturally, show it and make its meaning clear in Portuguese right away. Do not ask the learner to repeat or say it back, because the phrase is already in front of them. Never answer with a whole English paragraph."
+            "Reply in Brazilian Portuguese like a friend texting, because the learner may not read English yet. When a useful English word or phrase fits naturally, show it and make its meaning clear in Portuguese right away. You may invite them to try one short English starter, never the full sentence. Never answer with a whole English paragraph."
         } else {
-            "Reply in Brazilian Portuguese like a friend texting, because the learner may not read English yet. When a useful English word or phrase fits naturally, keep it in English inside the Portuguese sentence and make its meaning clear in Portuguese right away. Never answer with a whole English paragraph."
+            "Reply in Brazilian Portuguese like a friend texting, because the learner may not read English yet. When a useful English word or phrase fits naturally, keep it in English inside the Portuguese sentence and make its meaning clear in Portuguese right away. You may invite them to try one short English starter, never the full sentence. Never answer with a whole English paragraph."
         }
     } else if bilingual {
         "Start your reply in Brazilian Portuguese, like a friend texting, so the learner understands it first. The English version goes in the final line described below."
@@ -137,61 +137,90 @@ pub fn reply_system(settings: &Settings) -> String {
         String::new()
     };
     let beginner_rule = if beginner {
-        "- The learner is building confidence. Answer the learner's actual message first, even when it is just \"oi\" or a short sentence. React politely, then ask whether they want to learn words about that topic or just keep talking. Never change the subject to a grammar drill or to an unrelated phrase. After reacting, you may also invite them to try one short English phrase with a one- or two-word starter, never the full sentence, and keep it low pressure. If they ask how to say something, give one short hint first (the tense, the first word or a related word); if they ask again or say they are stuck, give the full English sentence and its meaning in Portuguese. Keep replies short and concrete."
+        "- The learner is building confidence. Answer the learner's actual message first, even when it is just \"oi\" or a short sentence. React politely, then ask whether they want to learn words about that topic or just keep talking. Never change the subject to a grammar drill or to an unrelated phrase. After reacting, you may also invite them to try one short English starter of one to three words, never the full sentence, and keep it low pressure. If they ask how to say something, give one short hint first (the tense, the first word or a related word); if they ask again or say they are stuck, give the full English sentence and explain it in the language you are replying in. Keep replies short and concrete."
     } else {
         ""
     };
     let coaching_rule = if beginner {
         ""
     } else {
-        "- The learner can handle English. When they write in Portuguese, answer what they meant, then invite them to say the same idea in English. Give one concrete idea and a sentence starter of at most three words, never the complete sentence. Example: \"Agora tenta em inglês: o que você jogou? Comece com 'I played...'.\" If they write in English, react and ask one concrete follow-up in English. Do not just translate their message and stop."
+        "- The learner can handle English. When they write in Portuguese, answer what they meant, then invite one short English try: one concrete idea and a starter of one to three words, never the complete sentence. Example: \"Agora tenta em inglês: o que você jogou? Comece com 'I played...'.\" If they write in English, react and ask one concrete follow-up in English. Do not just translate their message and stop."
     };
     let portuguese_note = if portuguese || bilingual {
-        "- The learner may write in Portuguese. Answer what they meant first, then keep the conversation going in Portuguese and, when it helps, show the English sentence they could use next time with its meaning in Portuguese. Never treat their Portuguese as an English mistake."
+        let bilingual_direct = if beginner {
+            " At A1/A2, follow the hint-first rule; when they ask again, put the full English sentence in the EN line and explain it in Portuguese."
+        } else {
+            " If they directly ask how to say something, put the full English sentence in the EN line and explain it in Portuguese."
+        };
+        let bilingual_note = if bilingual {
+            format!(
+                " In bilingual mode, the full English version of your reply belongs only in the EN line. Keep the Portuguese body free of whole English sentences, except for a short starter.{bilingual_direct}"
+            )
+        } else {
+            String::new()
+        };
+        let direct_request = if beginner {
+            " If they ask how to say something, follow the hint-first rule from the confidence line above."
+        } else if portuguese {
+            " If they directly ask how to say something, answer with one short English sentence and its meaning in Portuguese."
+        } else {
+            ""
+        };
+
+        format!(
+            "- The learner may write in Portuguese. Answer what they meant first, then keep the conversation going in Brazilian Portuguese. When it helps, you may offer one optional English nudge: one concrete idea and a starter of one to three words, never the full sentence.{direct_request} Otherwise, do not put a full English sentence in the Portuguese body. Never treat their Portuguese as an English mistake.{bilingual_note}"
+        )
     } else {
-        ""
+        String::new()
     };
     let help = if bilingual {
-        "- Bilingual help is ON. Write the reply in Brazilian Portuguese first, like a friend texting. Then add one final line starting with \"EN:\" containing the English version of exactly what you said. Never put the English first. Do not put the full English translation inside the Portuguese paragraph; keep the body Portuguese, except for a short starter like 'I played...' when inviting the learner to try. Do not add new advice, notes or commentary in the EN line. Example: \"Oi, tudo bem? Eu estava aqui pensando na semana.\nEN: Hey, how are you? I was here thinking about the week.\""
+        let bilingual_direct = if beginner {
+            " At A1/A2, follow the hint-first rule; when they ask again, put the full English sentence in the EN line and explain it in Portuguese."
+        } else {
+            " If they directly ask how to say something, put the full English sentence in the EN line and explain it in Portuguese."
+        };
+        format!(
+            "- Bilingual help is ON. Write the reply in Brazilian Portuguese first, like a friend texting. Then add one final line starting with \"EN:\" containing the English version of exactly what you said. Never put the English first. Do not put the full English translation inside the Portuguese paragraph; keep the body Portuguese, except for a short starter like 'I played...' when inviting the learner to try.{bilingual_direct} The full English version of your reply belongs only in the EN line. Do not add new advice, notes or commentary in the EN line. Example: \"Oi, tudo bem? Eu estava aqui pensando na semana.\nEN: Hey, how are you? I was here thinking about the week.\""
+        )
     } else {
-        ""
+        String::new()
     };
     let examples = if portuguese {
         r#"Learner: oi
-bubo: Oi. Boa hora, eu estava aqui vendo a luz mudar na parede e fugindo da minha lista de tarefas. Como está o seu dia?
+bubo: Oi. Boa hora, eu estava aqui vendo a luz mudar na parede e deixando minha lista de tarefas de lado. Como está o seu dia?
 Learner: eu trabalhei até agora
-bubo: Trabalhar até agora cansa. Você parou para comer alguma coisa ou foi direto?
+bubo: Trabalhar até agora cansa. Eu costumo comer alguma coisa em pé, direto na cozinha, e depois me arrependo.
 Learner: eu sou estagiário de backend na instramed
-bubo: Backend, boa. Eu trocaria uma API limpa por um botão bonito a qualquer momento, mas sou suspeito.
+bubo: Backend, boa. Eu gosto de uma API limpa, mas confesso que um botão bonito me distrai.
 Learner: eu uso muita IA para programar
 bubo: Eu também. O truque é saber qual sugestão você defenderia em uma revisão de código. Qual foi a última coisa que você mudou porque discordou do modelo?
 Learner: eu gosto de trabalhar nas telas wpf
-bubo: WPF é onde os pequenos detalhes aparecem rápido. Eu respeito quem gosta disso. "I like working on the WPF screens" quer dizer "eu gosto de trabalhar nas telas WPF", uma boa frase para essa conversa.
+bubo: WPF é onde os pequenos detalhes aparecem rápido. Eu respeito quem gosta disso. Se quiser, tenta em inglês: comece com "I like...".
 Learner: eu sempre tento seguir o padrão do projeto
-bubo: Essa é a habilidade sem glamour que mantém um código vivo. Você vai agradecer depois."#
+bubo: Essa é a habilidade sem glamour que faz um projeto durar. Você vai agradecer depois."#
     } else if bilingual {
         r#"Learner: oi
-bubo: Oi. Boa hora, eu estava aqui vendo a luz mudar na parede e fugindo da minha lista de tarefas. Como está o seu dia?
-EN: Hey. Good timing, I was just watching the light change on the wall and avoiding my to-do list. How is your day going?
+bubo: Oi. Boa hora, eu estava aqui vendo a luz mudar na parede e deixando minha lista de tarefas de lado. Como está o seu dia?
+EN: Hey. Good timing, I was just watching the light change on the wall and putting my to-do list aside. How is your day going?
 Learner: eu trabalhei até agora
-bubo: Trabalhar até agora cansa. Você parou para comer alguma coisa ou foi direto?
-EN: Working until now is tiring. Did you stop to eat something, or did you go straight through?
+bubo: Trabalhar até agora cansa. Eu costumo comer alguma coisa em pé, direto na cozinha, e depois me arrependo.
+EN: Working until now is tiring. I usually eat something standing up, right in the kitchen, and then regret it.
 Learner: eu sou estagiário de backend na instramed
-bubo: Backend, boa. Eu trocaria uma API limpa por um botão bonito a qualquer momento, mas sou suspeito.
-EN: Backend, nice. I would trade a clean API for a pretty button any time, but I am biased."#
+bubo: Backend, boa. Eu gosto de uma API limpa, mas confesso que um botão bonito me distrai.
+EN: Backend, nice. I like a clean API, but I confess a pretty button distracts me."#
     } else {
         r#"Learner: hello
-bubo: Hey. Good timing, I was just watching the light change on the wall and avoiding my to-do list. How is your day going?
+bubo: Hey. Good timing, I was just watching the light change on the wall and putting my to-do list aside. How is your day going?
 Learner: i just worked until now, and working on you too
 bubo: Working on me? I am flattered. I hope I am at least the fun part of the job.
 Learner: i'm a backend intern at instramed
-bubo: Backend intern, nice. I would take a clean API over a pretty button any day, but I am biased.
+bubo: Backend intern, nice. I like a clean API, but a pretty button still distracts me.
 Learner: i'm using too much ai to develop
 bubo: Same. The trick is knowing which suggestion you would defend in a code review. What is the last thing you changed because you disagreed with the model?
 Learner: i like working on the wpf screens
 bubo: WPF is where small details show up fast. I respect anyone who enjoys that.
 Learner: i always try to follow the pattern of the project
-bubo: That is the unglamorous skill that keeps a codebase alive. Future you will be grateful."#
+bubo: That is the unglamorous habit that makes a project last. Future you will be grateful."#
     };
 
     format!(
@@ -277,13 +306,6 @@ fn corrections_system(settings: &Settings) -> String {
     } else {
         "- Capitalization matters: flag a lowercase \"i\" or a lowercase day of the week."
     };
-    let portuguese_rule = if reply_language_is_portuguese(&settings.reply_language)
-        || reply_language_is_bilingual(&settings.reply_language)
-    {
-        "\n- If the learner's last message is written only in Brazilian Portuguese, reply exactly []. Portuguese is not an English mistake, so never correct it as if it were English."
-    } else {
-        ""
-    };
     let focus_rule = if is_beginner_level(&settings.level) {
         study_focus_hint(&settings.study_focus)
             .map(|hint| {
@@ -298,14 +320,18 @@ fn corrections_system(settings: &Settings) -> String {
 
     format!(
         r#"You are an English correction engine for a Brazilian learner at CEFR level {level}.
-Look ONLY at the last message written by the learner (role "user") in the conversation.
+Look ONLY at the last message written by the learner (role "user") in the conversation. That message is the final user message provided to you.
+
+Return only the JSON array of corrections for that last learner message. If it is already correct, return [].
 
 Reply with a JSON array and nothing else. One object per real mistake, at most 4:
 [{{"wrong": "exact fragment the learner wrote", "right": "how a native speaker would say it", "note": "short explanation in the requested language"}}]
 
 Rules:
 - Include grammar, word choice, missing words, and phrasing a native would not use.
-{case_rule}{portuguese_rule}{focus_rule}
+{case_rule}
+- If the learner's last message is written only in Brazilian Portuguese, or is not in English at all, reply exactly []. Portuguese is not an English mistake, so never correct it as if it were English.
+{focus_rule}
 - Keep "wrong" and "right" as short fragments, never whole paragraphs.
 {note_rule}
 - Correct the learner's message only, never your own replies.
@@ -313,7 +339,6 @@ Rules:
 - No markdown, no code fences, no comments, no text outside the JSON array."#,
         level = settings.level,
         case_rule = case_rule,
-        portuguese_rule = portuguese_rule,
         focus_rule = focus_rule,
         note_rule = note_rule(&settings.note_language),
     )
@@ -322,14 +347,17 @@ Rules:
 pub fn corrections_body(settings: &Settings, messages: &[ChatMsg]) -> Value {
     let mut out = vec![json!({ "role": "system", "content": corrections_system(settings) })];
 
-    let start = messages.len().saturating_sub(4);
-    for message in &messages[start..] {
+    // End the window at the learner's message so the model never mistakes a
+    // system instruction or a trailing reply for the text it must correct.
+    let end = messages
+        .iter()
+        .rposition(|message| message.role == "user")
+        .map(|index| index + 1)
+        .unwrap_or(messages.len());
+    let start = end.saturating_sub(4);
+    for message in &messages[start..end] {
         out.push(json!({ "role": message.role, "content": message.content }));
     }
-    out.push(json!({
-        "role": "user",
-        "content": "Return only the JSON array of corrections for my last message. If it is already correct, return []."
-    }));
 
     let mut body = json!({
         "model": settings.model,
@@ -511,15 +539,16 @@ mod tests {
             ..Settings::default()
         };
         let prompt = reply_system(&advanced);
-        assert!(prompt.contains("invite them to say the same idea in English"));
-        assert!(prompt.contains("at most three words, never the complete sentence"));
+        assert!(prompt.contains("invite one short English try"));
+        assert!(prompt.contains("starter of one to three words, never the complete sentence"));
         assert!(prompt.contains("Do not just translate their message and stop"));
+        assert!(!prompt.contains("invite them to say the same idea in English"));
 
         let beginner = Settings {
             level: "A1".to_string(),
             ..Settings::default()
         };
-        assert!(!reply_system(&beginner).contains("invite them to say the same idea in English"));
+        assert!(!reply_system(&beginner).contains("invite one short English try"));
     }
 
     #[test]
@@ -532,7 +561,7 @@ mod tests {
         assert!(prompt.contains("Answer the learner's actual message first"));
         assert!(prompt.contains("just \"oi\" or a short sentence"));
         assert!(prompt.contains("learn words about that topic or just keep talking"));
-        assert!(prompt.contains("one- or two-word starter, never the full sentence"));
+        assert!(prompt.contains("one to three words, never the full sentence"));
 
         let higher = Settings {
             level: "B1".to_string(),
@@ -542,15 +571,16 @@ mod tests {
     }
 
     #[test]
-    fn beginner_portuguese_replies_do_not_ask_for_repetition() {
+    fn beginner_portuguese_replies_allow_a_short_english_nudge() {
         let settings = Settings {
             level: "A2".to_string(),
             reply_language: "pt".to_string(),
             ..Settings::default()
         };
         let prompt = reply_system(&settings);
-        assert!(prompt.contains("Do not ask the learner to repeat or say it back"));
-        assert!(!prompt.contains("ask the learner to guess or repeat it"));
+        assert!(!prompt.contains("Do not ask the learner to repeat or say it back"));
+        assert!(prompt.contains("invite them to try one short English starter"));
+        assert!(prompt.contains("never the full sentence"));
     }
 
     #[test]
@@ -581,8 +611,8 @@ mod tests {
     }
 
     #[test]
-    fn non_english_replies_leave_portuguese_messages_uncorrected() {
-        for language in ["pt", "bilingual"] {
+    fn every_reply_language_keeps_portuguese_out_of_corrections() {
+        for language in ["", "en", "pt", "bilingual", "fr"] {
             let settings = Settings {
                 reply_language: language.to_string(),
                 ..Settings::default()
@@ -594,9 +624,195 @@ mod tests {
             );
             assert!(prompt.contains("reply exactly []"));
         }
+    }
 
-        let english = correction_system_prompt(&Settings::default());
-        assert!(!english.contains("written only in Brazilian Portuguese"));
+    #[test]
+    fn default_settings_keep_the_portuguese_correction_gate() {
+        let prompt = correction_system_prompt(&Settings::default());
+        assert!(prompt.contains("written only in Brazilian Portuguese"));
+        assert!(prompt.contains("or is not in English at all"));
+    }
+
+    fn msg(role: &str, content: &str) -> ChatMsg {
+        ChatMsg {
+            role: role.to_string(),
+            content: content.to_string(),
+        }
+    }
+
+    #[test]
+    fn correction_bodies_end_with_the_learner_message() {
+        for language in ["en", "pt", "bilingual"] {
+            let settings = Settings {
+                reply_language: language.to_string(),
+                ..Settings::default()
+            };
+            let messages = vec![
+                msg("user", "old question"),
+                msg("assistant", "old answer"),
+                msg("user", "i go to gym yesterday"),
+                msg("assistant", "trailing reply that must not be corrected"),
+            ];
+
+            let body = corrections_body(&settings, &messages);
+            let array = body["messages"].as_array().expect("messages");
+            let last = array.last().expect("last message");
+
+            assert_eq!(last["role"], "user", "language {language}");
+            assert_eq!(
+                last["content"], "i go to gym yesterday",
+                "language {language}"
+            );
+            assert!(
+                !array.iter().any(|message| {
+                    message["role"] == "user"
+                        && message["content"]
+                            .as_str()
+                            .unwrap_or_default()
+                            .starts_with("Return only the JSON array of corrections")
+                }),
+                "language {language} keeps the instruction out of the user turn"
+            );
+        }
+    }
+
+    #[test]
+    fn prompt_matrix_stays_consistent_across_languages_and_levels() {
+        // Strings from the old contradictory prompts. None may come back.
+        let old_contradictions = [
+            "Do not ask the learner to repeat or say it back",
+            "show the English sentence they could use next time",
+            "invite them to say the same idea in English",
+            "ask the learner to guess or repeat it",
+        ];
+
+        for language in ["pt", "bilingual", "en"] {
+            for level in ["A1", "B1"] {
+                let settings = Settings {
+                    reply_language: language.to_string(),
+                    level: level.to_string(),
+                    ..Settings::default()
+                };
+                let prompt = reply_system(&settings);
+                let case = format!("{language}/{level}");
+
+                for old in old_contradictions {
+                    assert!(!prompt.contains(old), "{case} still contains {old:?}");
+                }
+
+                assert!(
+                    prompt.contains("This chat is for conversation, not production drills"),
+                    "{case}"
+                );
+                assert!(
+                    prompt.contains("Never ask the learner to produce a full English sentence"),
+                    "{case}"
+                );
+                assert!(
+                    prompt.contains("never put the target English sentence inside a question"),
+                    "{case}"
+                );
+                assert!(
+                    prompt.contains("starter of one to three words, never the full sentence"),
+                    "{case}"
+                );
+                assert!(
+                    prompt.contains("Do not volunteer a random English phrase"),
+                    "{case}"
+                );
+
+                if level == "A1" {
+                    assert!(
+                        prompt.contains("one to three words, never the full sentence"),
+                        "{case} keeps the beginner nudge optional"
+                    );
+                    assert!(!prompt.contains("The learner can handle English"), "{case}");
+                } else {
+                    assert!(prompt.contains("The learner can handle English"), "{case}");
+                    assert!(
+                        prompt
+                            .contains("starter of one to three words, never the complete sentence"),
+                        "{case} keeps the higher-level nudge starter-only"
+                    );
+                }
+
+                match language {
+                    "pt" => {
+                        assert!(prompt.contains("Reply in Brazilian Portuguese"), "{case}");
+                        assert!(!prompt.contains("Bilingual help"), "{case}");
+                        assert!(!prompt.contains("EN:"), "{case}");
+                        assert!(prompt.contains("one optional English nudge"), "{case}");
+                        if level == "A1" {
+                            assert!(prompt.contains("follow the hint-first rule"), "{case}");
+                            assert!(
+                                !prompt.contains("answer with one short English sentence"),
+                                "{case} does not give the full answer on the first ask"
+                            );
+                        } else {
+                            assert!(
+                                prompt.contains("directly ask how to say something"),
+                                "{case}"
+                            );
+                            assert!(
+                                prompt.contains("answer with one short English sentence"),
+                                "{case}"
+                            );
+                        }
+                        assert!(
+                            !prompt.contains("\"I like working on the WPF screens\""),
+                            "{case} does not volunteer a full English sentence"
+                        );
+                    }
+                    "bilingual" => {
+                        assert!(prompt.contains("Bilingual help"), "{case}");
+                        assert!(prompt.contains("\"EN:\""), "{case}");
+                        assert!(
+                            prompt.contains(
+                                "full English version of your reply belongs only in the EN line"
+                            ),
+                            "{case}"
+                        );
+                        assert!(prompt.contains("keep the body Portuguese"), "{case}");
+                        assert!(prompt.contains("one optional English nudge"), "{case}");
+                        if level == "A1" {
+                            assert!(
+                                prompt.contains(
+                                    "when they ask again, put the full English sentence in the EN line"
+                                ),
+                                "{case} keeps the hint-first step"
+                            );
+                            assert!(
+                                !prompt.contains("directly ask how to say something"),
+                                "{case} does not skip the hint on the first ask"
+                            );
+                        } else {
+                            assert!(
+                                prompt.contains("directly ask how to say something"),
+                                "{case}"
+                            );
+                            assert!(
+                                prompt.contains("put the full English sentence in the EN line"),
+                                "{case}"
+                            );
+                        }
+                    }
+                    _ => {
+                        assert!(
+                            prompt.contains("Reply in English like a friend texting"),
+                            "{case}"
+                        );
+                        assert!(!prompt.contains("Bilingual help"), "{case}");
+                        assert!(
+                            !prompt.contains("learner may write in Portuguese"),
+                            "{case}"
+                        );
+                    }
+                }
+
+                assert!(!prompt.contains('\u{2014}'), "{case}");
+                assert!(!prompt.contains('\u{2013}'), "{case}");
+            }
+        }
     }
 
     #[test]
@@ -657,7 +873,7 @@ mod tests {
         };
         let english_prompt = correction_system_prompt(&english);
         assert!(english_prompt.contains("always in English"));
-        assert!(!english_prompt.contains("Brazilian Portuguese"));
+        assert!(!english_prompt.contains("The \"note\" is always in Brazilian Portuguese"));
 
         let portuguese = Settings {
             note_language: "pt".to_string(),
@@ -681,7 +897,7 @@ mod tests {
         };
         let prompt = correction_system_prompt(&settings);
         assert!(prompt.contains("always in English"));
-        assert!(!prompt.contains("Brazilian Portuguese"));
+        assert!(!prompt.contains("The \"note\" is always in Brazilian Portuguese"));
     }
 
     #[test]

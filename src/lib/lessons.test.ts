@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { isCorrectAnswer, normalizeAnswer, noteRevealsAnswer } from "./answer";
+import {
+  isCorrectAnswer,
+  isCorrectExerciseAnswer,
+  normalizeAnswer,
+  noteRevealsAnswer,
+} from "./answer";
 import {
   displayAnswer,
   focusLabel,
   isBeginnerLevel,
   LESSONS,
+  lessonFixRight,
   STUDY_FOCUSES,
-  type LessonExercise,
 } from "./lessons";
 
 const LEVELS = new Set(["A1", "A2", "B1", "B2"]);
@@ -55,16 +60,15 @@ describe("lesson catalog", () => {
       for (const step of lesson.steps) {
         for (const answer of step.exercise.answers) {
           expect(isCorrectAnswer(answer, answer), `${lesson.id}: ${answer}`).toBe(true);
+          expect(isCorrectExerciseAnswer(answer, step.exercise), `${lesson.id}: ${answer}`).toBe(
+            true,
+          );
         }
       }
     }
   });
 
   it("accepts the full sentence for fill-in-the-blank exercises", () => {
-    const accepts = (typed: string, exercise: LessonExercise) =>
-      exercise.answers.some((target) => isCorrectAnswer(typed, target)) ||
-      (exercise.sentences ?? []).some((target) => isCorrectAnswer(typed, target));
-
     for (const lesson of LESSONS) {
       for (const step of lesson.steps) {
         if (!step.exercise.prompt.includes("___")) continue;
@@ -73,7 +77,10 @@ describe("lesson catalog", () => {
           `${lesson.id}: fill-in exercise without full sentences`,
         ).toBeGreaterThan(0);
         for (const sentence of step.exercise.sentences ?? []) {
-          expect(accepts(sentence, step.exercise), `${lesson.id}: ${sentence}`).toBe(true);
+          expect(
+            isCorrectExerciseAnswer(sentence, step.exercise),
+            `${lesson.id}: ${sentence}`,
+          ).toBe(true);
         }
       }
     }
@@ -81,10 +88,19 @@ describe("lesson catalog", () => {
     const conditionals = LESSONS.find((lesson) => lesson.id === "conditionals");
     const second = conditionals?.steps[1].exercise;
     if (!second) throw new Error("conditionals lesson is missing");
-    expect(accepts("if i had more time, i would travel", second)).toBe(true);
-    expect(accepts("If I had more time I would travel", second)).toBe(true);
-    expect(accepts("had", second)).toBe(true);
-    expect(accepts("have", second)).toBe(false);
+    expect(isCorrectExerciseAnswer("if i had more time, i would travel", second)).toBe(true);
+    expect(isCorrectExerciseAnswer("If I had more time I would travel", second)).toBe(true);
+    expect(isCorrectExerciseAnswer("had", second)).toBe(true);
+    expect(isCorrectExerciseAnswer("have", second)).toBe(false);
+  });
+
+  it("does not accept a sentence that only contains a fill-in fragment", () => {
+    const present = LESSONS.find((lesson) => lesson.id === "present_simple");
+    const works = present?.steps[0].exercise;
+    if (!works) throw new Error("present simple lesson is missing");
+    expect(isCorrectExerciseAnswer("He works here.", works)).toBe(true);
+    expect(isCorrectExerciseAnswer("She works here.", works)).toBe(false);
+    expect(isCorrectExerciseAnswer("works", works)).toBe(true);
   });
 
   it("never hands a full answer over in the body or examples", () => {
@@ -128,5 +144,30 @@ describe("lesson catalog", () => {
     expect(focusLabel("conditionals")).toBe("Condicionais");
     expect(focusLabel("passive")).toBe("Voz passiva");
     expect(focusLabel("unknown")).toBe("Livre");
+  });
+});
+
+describe("lessonFixRight", () => {
+  const negative = LESSONS.find((lesson) => lesson.id === "to_be")?.steps[1].exercise;
+  if (!negative) throw new Error("to be negative exercise is missing");
+  const translation = LESSONS.find((lesson) => lesson.id === "past_simple")?.steps[1].exercise;
+  if (!translation) throw new Error("past simple translation exercise is missing");
+
+  it("keeps the blank answer when the learner typed a fragment", () => {
+    expect(lessonFixRight("are", negative)).toBe("isn't");
+    expect(lessonFixRight("in", negative)).toBe("isn't");
+    expect(lessonFixRight("", negative)).toBe("isn't");
+  });
+
+  it("uses the full sentence when the learner attempted a sentence", () => {
+    expect(lessonFixRight("She is my boss.", negative)).toBe("She isn't my boss.");
+    expect(lessonFixRight("she are my boss", negative)).toBe("She isn't my boss.");
+  });
+
+  it("keeps the canonical answer when the exercise has no sentences", () => {
+    expect(lessonFixRight("i go to the beach", translation)).toBe("i went to the beach");
+    expect(lessonFixRight("i went to the beach yesterday", translation)).toBe(
+      "i went to the beach",
+    );
   });
 });

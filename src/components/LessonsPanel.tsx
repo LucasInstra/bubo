@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { isCorrectAnswer } from "../lib/answer";
+import { isCorrectExerciseAnswer } from "../lib/answer";
 import { ipc } from "../lib/ipc";
-import { focusLabel, LESSONS, displayAnswer, type Lesson } from "../lib/lessons";
+import { focusLabel, LESSONS, displayAnswer, lessonFixRight, type Lesson } from "../lib/lessons";
 import { useModalFocus } from "../lib/modal";
 import type { LessonProgress, Settings } from "../lib/types";
 import { Mascot } from "./Mascot";
@@ -108,9 +108,7 @@ export function LessonsPanel({
     if (!selected || !step) return;
     const typed = answer.trim();
     if (!typed) return;
-    const correct =
-      step.exercise.answers.some((target) => isCorrectAnswer(typed, target)) ||
-      (step.exercise.sentences ?? []).some((target) => isCorrectAnswer(typed, target));
+    const correct = isCorrectExerciseAnswer(typed, step.exercise);
     if (correct) {
       setResult({ kind: "correct" });
       return;
@@ -125,17 +123,14 @@ export function LessonsPanel({
       return;
     }
 
-    setResult({ kind: "wrong", answer: displayAnswer(step.exercise.answers[0]) });
+    const right = displayAnswer(lessonFixRight(typed, step.exercise));
+    setResult({ kind: "wrong", answer: right });
     const key = `${selected.id}:${stepIndex}`;
     if (savedFixes.current.has(key)) return;
     savedFixes.current.add(key);
     setBusy(true);
     try {
-      await ipc.saveLessonFix(
-        typed,
-        displayAnswer(step.exercise.answers[0]),
-        `${step.exercise.prompt} · ${step.exercise.note}`,
-      );
+      await ipc.saveLessonFix(typed, right, `${step.exercise.prompt} · ${step.exercise.note}`);
       onQueueChanged();
     } catch (problem) {
       console.error("could not save the lesson correction", problem);
@@ -148,7 +143,10 @@ export function LessonsPanel({
   const reveal = () => {
     if (!step) return;
     setAttempts(2);
-    setResult({ kind: "revealed", answer: displayAnswer(step.exercise.answers[0]) });
+    setResult({
+      kind: "revealed",
+      answer: displayAnswer(lessonFixRight(answer, step.exercise)),
+    });
   };
 
   const retry = () => {

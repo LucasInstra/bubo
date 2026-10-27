@@ -1,3 +1,5 @@
+import { answerTokens } from "./answer";
+
 export interface LessonExercise {
   prompt: string;
   placeholder: string;
@@ -48,6 +50,19 @@ export const focusLabel = (focus: string) =>
 
 /** Answers are stored lowercase for comparison; fix the pronoun for display. */
 export const displayAnswer = (answer: string) => answer.trim().replace(/\bi\b/g, "I");
+
+/**
+ * What the saved correction should say. A learner who attempted the whole
+ * sentence gets the sentence as the target, otherwise the drill would ask them
+ * to reproduce a bare fragment they never had to type. A one-word attempt keeps
+ * the blank's own answer.
+ */
+export const lessonFixRight = (typed: string, exercise: LessonExercise) => {
+  const sentences = exercise.sentences ?? [];
+  const looksLikeSentence = answerTokens(typed).length > 1;
+  if (looksLikeSentence && sentences.length > 0) return sentences[0];
+  return exercise.answers[0];
+};
 
 export const LESSONS: Lesson[] = [
   {

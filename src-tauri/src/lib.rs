@@ -579,6 +579,44 @@ fn save_assistant_message(state: State<'_, AppState>, content: String) -> Result
     store::insert(&db, "assistant", &content, None).map_err(|e| e.to_string())
 }
 
+const MAX_FIXES: usize = 4;
+
+/// Keeps only corrections that quote the learner's last message, drops the
+/// ones the settings ignore, removes duplicates, then caps the list. The model
+/// likes to invent fixes or quote its own reply, so grounding comes first.
+fn filter_fixes(
+    fixes: Vec<llm::Fix>,
+    last_user_message: &str,
+    ignore_capitalization: bool,
+) -> Vec<llm::Fix> {
+    let message = llm::normalize_answer(last_user_message);
+    let mut seen = std::collections::HashSet::new();
+    let mut kept = Vec::new();
+
+    for fix in fixes {
+        let wrong = llm::normalize_answer(&fix.wrong);
+        if wrong.is_empty() || !llm::contains_words(&message, &wrong) {
+            continue;
+        }
+
+        if ignore_capitalization && llm::only_case_differs(&fix.wrong, &fix.right) {
+            continue;
+        }
+
+        let right = llm::normalize_answer(&fix.right);
+        if !seen.insert((wrong, right)) {
+            continue;
+        }
+
+        kept.push(fix);
+        if kept.len() == MAX_FIXES {
+            break;
+        }
+    }
+
+    kept
+}
+
 #[tauri::command]
 async fn chat(
     app: AppHandle,
@@ -676,18 +714,23 @@ async fn chat(
     }
 
     let corrections_body = prompt::corrections_body(&settings, &messages);
-    let mut fixes = match llm::complete(&app, &client, &settings, &api_key, corrections_body).await
-    {
-        Ok(raw) => llm::parse_fixes(&raw),
+    let last_user_message = messages
+        .iter()
+        .rev()
+        .find(|message| message.role == "user")
+        .map(|message| message.content.as_str())
+        .unwrap_or_default();
+    let fixes = match llm::complete(&app, &client, &settings, &api_key, corrections_body).await {
+        Ok(raw) => filter_fixes(
+            llm::parse_fixes(&raw),
+            last_user_message,
+            settings.ignore_capitalization,
+        ),
         Err(error) => {
             log::write(&app, "warn", &format!("corrections failed: {error}"));
             Vec::new()
         }
     };
-
-    if settings.ignore_capitalization {
-        fixes.retain(|fix| !llm::only_case_differs(&fix.wrong, &fix.right));
-    }
 
     if !fixes.is_empty() {
         let _ = app.emit("bubo-fixes", llm::fixes_event_payload(&request_id, &fixes));
@@ -1369,5 +1412,95 @@ mod hotkey_tests {
         ] {
             assert!(chord.parse::<Shortcut>().is_ok(), "{chord} should parse");
         }
+    }
+}
+
+#[cfg(test)]
+mod correction_tests {
+    use super::filter_fixes;
+    use crate::llm::Fix;
+
+    fn fix(wrong: &str, right: &str) -> Fix {
+        Fix {
+            wrong: wrong.to_string(),
+            right: right.to_string(),
+            note: String::new(),
+        }
+    }
+
+    #[test]
+    fn keeps_only_fixes_grounded_in_the_learner_message() {
+        let fixes = vec![
+            fix("goed", "went"),
+            fix("I goed to the gym", "I went to the gym"),
+            fix("random mistake", "random fix"),
+        ];
+
+        let kept = filter_fixes(fixes, "Yesterday I goed to the gym", true);
+
+        assert_eq!(kept.len(), 2);
+        assert_eq!(kept[0].wrong, "goed");
+        assert_eq!(kept[1].wrong, "I goed to the gym");
+    }
+
+    #[test]
+    fn grounding_ignores_case_punctuation_and_spacing() {
+        let kept = filter_fixes(
+            vec![fix("I  went, out", "I went out")],
+            "i went out on friday",
+            false,
+        );
+        assert_eq!(kept.len(), 1);
+    }
+
+    #[test]
+    fn empty_or_missing_learner_text_drops_everything() {
+        assert!(filter_fixes(vec![fix("i go", "I went")], "", true).is_empty());
+    }
+
+    #[test]
+    fn drops_case_and_punctuation_only_fixes_when_capitalization_is_ignored() {
+        let fixes = vec![
+            fix("i went out on friday", "I went out on Friday."),
+            fix("i go", "I went"),
+        ];
+
+        let kept = filter_fixes(fixes, "i go out on friday", true);
+
+        assert_eq!(kept.len(), 1);
+        assert_eq!(kept[0].wrong, "i go");
+    }
+
+    #[test]
+    fn keeps_case_fixes_when_capitalization_matters() {
+        let kept = filter_fixes(
+            vec![fix("i went out on friday", "I went out on Friday")],
+            "i went out on friday",
+            false,
+        );
+        assert_eq!(kept.len(), 1);
+    }
+
+    #[test]
+    fn dedupes_and_caps_after_filtering() {
+        let mut fixes = vec![
+            fix("a", "A"),
+            fix("b", "B"),
+            fix("c", "C"),
+            fix("d", "D"),
+            fix("e", "E"),
+            fix("f", "F"),
+        ];
+        fixes.push(fix("a", "A"));
+
+        let kept = filter_fixes(fixes, "a b c d e f", false);
+
+        assert_eq!(kept.len(), 4);
+        assert_eq!(
+            kept.iter()
+                .map(|fix| fix.wrong.as_str())
+                .collect::<Vec<_>>(),
+            vec!["a", "b", "c", "d"]
+        );
     }
 }
