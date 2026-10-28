@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { isCorrectAnswer, noteRevealsAnswer } from "../lib/answer";
 import { ipc } from "../lib/ipc";
 import { useModalFocus } from "../lib/modal";
+import { stopSpeaking } from "../lib/speech";
+import { SpeakerButton } from "./SpeakerButton";
 import {
   DEFAULT_SETTINGS,
   type DrillItem,
@@ -38,6 +40,8 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
   const focusedKey = useRef<string | null>(null);
 
   useModalFocus(dialogRef);
+
+  useEffect(() => () => stopSpeaking(), []);
 
   const load = useCallback(async (includeFuture = allowFuture.current, allowRepeat = false) => {
     allowFuture.current = includeFuture;
@@ -319,20 +323,27 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
                     </div>
                   </div>
                   {result.item.note && <span className="drill-note">{result.item.note}</span>}
-                  {!result.correct && (
-                    <button className="ghost" type="button" onClick={() => void overrideCorrect()}>
-                      eu estava certo
+                  <div className="drill-actions">
+                    <SpeakerButton text={result.item.right} />
+                    {!result.correct && (
+                      <button
+                        className="ghost"
+                        type="button"
+                        onClick={() => void overrideCorrect()}
+                      >
+                        eu estava certo
+                      </button>
+                    )}
+                    <button
+                      className="primary"
+                      onClick={() => void load()}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") void load();
+                      }}
+                    >
+                      Próximo card
                     </button>
-                  )}
-                  <button
-                    className="primary"
-                    onClick={() => void load()}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") void load();
-                    }}
-                  >
-                    Próximo card
-                  </button>
+                  </div>
                 </div>
               )
             )}

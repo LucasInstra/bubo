@@ -2,6 +2,7 @@ import { memo, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { splitReply, stripLegacyFixes } from "../lib/format";
 import { ipc } from "../lib/ipc";
+import { SpeakerButton } from "./SpeakerButton";
 import type { Fix, Msg } from "../lib/types";
 
 interface MessageProps {
@@ -227,6 +228,7 @@ export const Message = memo(function Message({
                   <div className="fix-error">{explainError}</div>
                 )}
                 <div className="fix-actions">
+                  <SpeakerButton text={fix.right} label="Ouvir a correção" />
                   <button
                     aria-label="Explicar esta correção"
                     disabled={explaining === key}

@@ -3,8 +3,10 @@ import { isCorrectExerciseAnswer } from "../lib/answer";
 import { ipc } from "../lib/ipc";
 import { focusLabel, LESSONS, displayAnswer, lessonFixRight, type Lesson } from "../lib/lessons";
 import { useModalFocus } from "../lib/modal";
+import { stopSpeaking } from "../lib/speech";
 import type { LessonProgress, Settings } from "../lib/types";
 import { Mascot } from "./Mascot";
+import { SpeakerButton } from "./SpeakerButton";
 
 interface LessonsPanelProps {
   settings: Settings;
@@ -40,6 +42,8 @@ export function LessonsPanel({
   const savingFixes = useRef<Set<string>>(new Set());
 
   useModalFocus(dialogRef);
+
+  useEffect(() => () => stopSpeaking(), []);
 
   useEffect(() => {
     let alive = true;
@@ -446,6 +450,7 @@ export function LessonsPanel({
 
               {result && (result.kind === "wrong" || result.kind === "revealed") && (
                 <div className="lesson-actions">
+                  <SpeakerButton text={result.answer} label="Ouvir a resposta" />
                   <button type="button" className="ghost" onClick={retry}>
                     Tentar de novo
                   </button>
@@ -457,6 +462,7 @@ export function LessonsPanel({
 
               {result?.kind === "correct" && (
                 <div className="lesson-actions">
+                  <SpeakerButton text={answer} label="Ouvir a resposta" />
                   <button type="button" className="primary" onClick={advance}>
                     {stepIndex === selected.steps.length - 1 ? "Concluir" : "Próximo"}
                   </button>
