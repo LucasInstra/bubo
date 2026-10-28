@@ -16,15 +16,28 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        with:
-          # Build exactly the released commit, never whatever main happens to be.
-          ref: ${{ inputs.tag }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+
+      - name: Check the build is newer than the published one
+        shell: pwsh
+        run: |
+          $tag = "${{ inputs.tag }}"
+          $source = Get-Content src/lib/build.ts -Raw
+          $build = [int][regex]::Match($source, 'BUILD_NUMBER\s*=\s*(\d+)').Groups[1].Value
+          try {
+            $latest = Invoke-RestMethod "https://github.com/LucasInstra/bubo/releases/download/$tag/latest.json"
+            $published = [int]$latest.build
+          } catch {
+            Write-Host "no published manifest for $tag yet"
+            $published = 0
+          }
+          Write-Host "building build $build over published build $published"
+          if ($build -le $published) { throw "build $build is not newer than the published build $published" }
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
