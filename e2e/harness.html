@@ -136,6 +136,22 @@
         context: "i go to the gym yesterday and i feel good",
       };
 
+      // A small queue so the next-card flow can be exercised like the real one:
+      // answered cards stop being due, and the requested card is excluded.
+      const drillQueue = [
+        drillItem,
+        {
+          id: 2,
+          wrong: "she don't know",
+          right: "she doesn't know",
+          note: "third person",
+          streak: 1,
+          seen: 2,
+          context: null,
+        },
+      ];
+      const answered = new Set();
+
       const dayStats = Array.from({ length: 14 }, (_, index) => {
         const date = new Date();
         date.setDate(date.getDate() - (13 - index));
@@ -245,10 +261,24 @@
             preview: "tell me about yourself",
           },
         ],
-        drill_stats: () => (mode === "empty" ? { total: 0, due: 0 } : { total: 6, due: 2 }),
-        drill_next: () => drillItem,
-        drill_review: () => ({ ...drillItem, streak: 3 }),
-        drill_focus: () => drillItem,
+        drill_stats: () =>
+          mode === "empty"
+            ? { total: 0, due: 0 }
+            : {
+                total: drillQueue.length,
+                due: drillQueue.filter((item) => !answered.has(item.id)).length,
+              },
+        drill_next: ({ includeFuture, excludeId }) =>
+          drillQueue.find(
+            (item) =>
+              item.id !== excludeId && (includeFuture || !answered.has(item.id)),
+          ) ?? null,
+        drill_review: ({ id }) => {
+          answered.add(id);
+          return drillQueue.find((item) => item.id === id) ?? null;
+        },
+        drill_focus: ({ wrong, right }) =>
+          drillQueue.find((item) => item.wrong === wrong && item.right === right) ?? null,
         delete_fix: () => null,
         explain_fix: () =>
           "Use the past simple for a finished action. Add a time marker when it helps.\n\nI went to the gym yesterday. She called me last night.",

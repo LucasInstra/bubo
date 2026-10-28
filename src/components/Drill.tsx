@@ -39,7 +39,7 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
 
   useModalFocus(dialogRef);
 
-  const load = useCallback(async (includeFuture = allowFuture.current) => {
+  const load = useCallback(async (includeFuture = allowFuture.current, allowRepeat = false) => {
     allowFuture.current = includeFuture;
     setPhase("loading");
     setResult(null);
@@ -49,20 +49,19 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
       const freshStats = await ipc.drillStats();
       setStats(freshStats);
 
-      let next = await ipc.drillNext(includeFuture, lastAnswered.current);
+      // The card that was just answered never comes back on "Próximo": with a
+      // single saved card that looped forever. Extra practice asks for it
+      // explicitly and is the only path allowed to repeat it.
+      const exclude = allowRepeat ? null : lastAnswered.current;
+      let next = await ipc.drillNext(includeFuture, exclude);
       let practicingAhead = includeFuture;
 
-      // Nothing due but there is material: keep the session going instead of
-      // dead-ending on "all caught up".
-      if (!next && !includeFuture && freshStats.total > 0) {
-        next = await ipc.drillNext(true, lastAnswered.current);
+      // On entering the practice with nothing due, keep the session going
+      // instead of dead-ending on "all caught up". After an answer this would
+      // cycle the same cards again, so it only applies to a fresh session.
+      if (!next && !includeFuture && freshStats.total > 0 && lastAnswered.current === null) {
+        next = await ipc.drillNext(true, exclude);
         practicingAhead = true;
-      }
-
-      // The only saved card was just answered: allow it back instead of
-      // leaving "Praticar mesmo assim" pointing at an excluded card.
-      if (!next && includeFuture && lastAnswered.current !== null) {
-        next = await ipc.drillNext(true, null);
       }
 
       setAhead(practicingAhead);
@@ -220,7 +219,7 @@ export function Drill({ onClose, focus, settings = DEFAULT_SETTINGS }: DrillProp
             <p className="drill-hint">
               Você tem {stats.total} correções salvas. Nenhuma está pendente agora.
             </p>
-            <button className="primary" onClick={() => void load(true)}>
+            <button className="primary" onClick={() => void load(true, true)}>
               Praticar mesmo assim
             </button>
           </div>

@@ -54,6 +54,34 @@ test("corrections and drills label the before and after", async ({ page }) => {
   await expect(result.locator(".drill-right")).toHaveText("I went to the gym yesterday");
 });
 
+test("next never repeats the card that was just answered", async ({ page }) => {
+  await page.goto("/e2e/harness.html?case=practice");
+  const dialog = page.getByRole("dialog", { name: "Prática" });
+  const input = dialog.getByPlaceholder("digite a frase corrigida");
+
+  await expect(dialog.getByText("i go to the gym yesterday", { exact: true })).toBeVisible();
+  await input.fill("I went to the gym yesterday");
+  await dialog.getByRole("button", { name: "Conferir" }).click();
+  await expect(dialog.getByText("exatamente certo")).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Próximo card" }).click();
+  await expect(dialog.getByText("she don't know", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("i go to the gym yesterday", { exact: true })).toHaveCount(0);
+
+  await input.fill("she doesn't know");
+  await dialog.getByRole("button", { name: "Conferir" }).click();
+  await expect(dialog.getByText("exatamente certo")).toBeVisible();
+
+  // With nothing left, the session ends instead of looping on the last card.
+  await dialog.getByRole("button", { name: "Próximo card" }).click();
+  await expect(dialog.getByText("Tudo em dia")).toBeVisible();
+  await expect(dialog.locator(".drill-wrong")).toHaveCount(0);
+
+  // Asking for extra practice is the explicit way to see a card again.
+  await dialog.getByRole("button", { name: "Praticar mesmo assim" }).click();
+  await expect(dialog.locator(".drill-wrong")).toBeVisible();
+});
+
 test("deletes a correction from the card", async ({ page }) => {
   await page.goto("/e2e/harness.html?case=app");
   await expect(page.locator(".fixes")).toBeVisible();
