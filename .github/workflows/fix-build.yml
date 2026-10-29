@@ -107,7 +107,7 @@ jobs:
           gh release edit $tag --title "bubo $tag build $build" --notes "Build $build of $tag.`n`n$body"
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bubo-setup-fix
           path: |
