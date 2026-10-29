@@ -28,7 +28,7 @@
     "@tauri-apps/plugin-updater": "^2.14.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-markdown": "^9.1.0"
+    "react-markdown": "^10.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
